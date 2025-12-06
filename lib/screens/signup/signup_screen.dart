@@ -1,0 +1,461 @@
+import 'package:flutter/material.dart';
+import 'package:lakbyke_mobile/utils/constants.dart';
+import 'package:lakbyke_mobile/widgets/service_tag_input.dart';
+
+// ============================================================================
+// SignupScreen
+// ============================================================================
+
+/// SignupScreen allows new users to create an account.
+/// Displays a form with user details (name, email, username, service tag),
+/// password fields, terms checkbox, and signup button.
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
+
+  @override
+  State<SignupScreen> createState() => _SignupScreenState();
+}
+
+class _SignupScreenState extends State<SignupScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _middleNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _serviceTagController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _agreedToTerms = false;
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _middleNameController.dispose();
+    _emailController.dispose();
+    _serviceTagController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _handleSignup() {
+    if (_formKey.currentState!.validate() && _agreedToTerms) {
+      String firstName = _firstNameController.text;
+      String lastName = _lastNameController.text;
+      String middleName = _middleNameController.text;
+      String email = _emailController.text;
+      String serviceTag = _serviceTagController.text;
+      String password = _passwordController.text;
+
+      debugPrint('Signup Data:');
+      debugPrint('First Name: $firstName');
+      debugPrint('Last Name: $lastName');
+      debugPrint('Middle Name: $middleName');
+      debugPrint('Email: $email');
+      debugPrint('Service Tag: $serviceTag');
+      debugPrint('Password: $password');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.loginSuccess),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Navigate to dashboard after brief delay
+      Future.delayed(const Duration(seconds: 2), () {
+        Navigator.of(context).pushReplacementNamed(
+          '/dashboard',
+        );
+      });
+    } else if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to the Terms and Conditions'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return AppStrings.errorEmptyEmail;
+    }
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+      return AppStrings.errorInvalidEmail;
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return AppStrings.errorEmptyPassword;
+    }
+    if (value.length < 6) {
+      return AppStrings.errorPasswordTooShort;
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  String? _validateRequired(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'This field is required';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(40),
+                topRight: Radius.circular(40),
+              ),
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+                  // Centered title
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                    child: Text(
+                      AppStrings.signupTitle,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
+                    ),
+                  ),
+
+                  // Form content with padding
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // First Name (floating label)
+                        _buildTextField(
+                          controller: _firstNameController,
+                          label: AppStrings.firstNameLabel,
+                          hintText: AppStrings.firstNameHint,
+                          validator: _validateRequired,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Last Name (floating label)
+                        _buildTextField(
+                          controller: _lastNameController,
+                          label: AppStrings.lastNameLabel,
+                          hintText: AppStrings.lastNameHint,
+                          validator: _validateRequired,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Middle Name (floating label)
+                        _buildTextField(
+                          controller: _middleNameController,
+                          label: AppStrings.middleNameLabel,
+                          hintText: AppStrings.middleNameHint,
+                          validator: _validateRequired,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Email (floating label)
+                        _buildTextField(
+                          controller: _emailController,
+                          label: AppStrings.emailLabel,
+                          hintText: AppStrings.emailHint,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: _validateEmail,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Service Tag
+                        ServiceTagInput(
+                          controller: _serviceTagController,
+                          validator: _validateServiceTag,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Password (floating label)
+                        _buildPasswordField(
+                          controller: _passwordController,
+                          label: AppStrings.passwordLabel,
+                          isVisible: _passwordVisible,
+                          onVisibilityToggle: () {
+                            setState(() => _passwordVisible = !_passwordVisible);
+                          },
+                          validator: _validatePassword,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Confirm Password (floating label)
+                        _buildPasswordField(
+                          controller: _confirmPasswordController,
+                          label: AppStrings.confirmPasswordLabel,
+                          isVisible: _confirmPasswordVisible,
+                          onVisibilityToggle: () {
+                            setState(() =>
+                                _confirmPasswordVisible = !_confirmPasswordVisible);
+                          },
+                          validator: _validateConfirmPassword,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Terms and Conditions Checkbox
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Checkbox(
+                              value: _agreedToTerms,
+                              onChanged: (value) {
+                                setState(() => _agreedToTerms = value ?? false);
+                              },
+                              activeColor: AppColors.primary,
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 12.0),
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: AppStrings.termsAgreement,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.textSecondary,
+                                            ),
+                                      ),
+                                      TextSpan(
+                                        text: AppStrings.termsLink,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w600,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Sign Up Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _handleSignup,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppDimensions.buttonPadding,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppDimensions.radiusRound),
+                              ),
+                            ),
+                            child: Text(
+                              AppStrings.signUpButton.toUpperCase(),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Login Link
+                        Center(
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: AppStrings.alreadyHaveAccount,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 14,
+                                        ),
+                                  ),
+                                  TextSpan(
+                                    text: AppStrings.logIn,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w600,
+                                          decoration: TextDecoration.underline,
+                                          fontSize: 14,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    String? label,
+    required String hintText,
+    required String? Function(String?) validator,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        hintStyle: const TextStyle(color: AppColors.textTertiary),
+        filled: true,
+        fillColor: AppColors.surfaceDim,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC), width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC), width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.paddingMedium,
+          vertical: 14,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    String? label,
+    required bool isVisible,
+    required VoidCallback onVisibilityToggle,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: !isVisible,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: AppStrings.passwordHint,
+        hintStyle: const TextStyle(color: AppColors.textTertiary),
+        filled: true,
+        fillColor: AppColors.surfaceDim,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC), width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC), width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.paddingMedium,
+          vertical: 14,
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            isVisible ? Icons.visibility : Icons.visibility_off,
+            color: AppColors.textSecondary,
+          ),
+          onPressed: onVisibilityToggle,
+        ),
+      ),
+    );
+  }
+
+  String? _validateServiceTag(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Service tag is required';
+    }
+    String cleaned = value.replaceAll(' ', '');
+    if (cleaned.length != 7) {
+      return 'Service tag must be 7 alphanumeric characters';
+    }
+    return null;
+  }
+}
