@@ -105,30 +105,17 @@ class _SidebarPanel extends StatelessWidget {
                             padding: EdgeInsets.zero,
                             onPressed: () => Navigator.of(context).pop(),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ResponsiveImage(
-                                  assetPath: AppAssets.logoWhite,
-                                  maxWidthPercent: 0.4,
-                                  minWidth: 80.0,
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Divider(color: Colors.white12, thickness: 1, height: 1),
+                    
                     _menuItem(context, Icons.directions_bike, AppStrings.dashboard, onTap: () {
                                       final navigator = Navigator.of(context);
                                       navigator.pop();
                                       navigator.push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
                     }),
-                    const Divider(color: Colors.white12, height: 1),
+                    
                     _menuItem(context, Icons.battery_std, 'kWh History', onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
@@ -136,7 +123,7 @@ class _SidebarPanel extends StatelessWidget {
                         builder: (_) => const KwhHistoryScreen(),
                       ));
                     }),
-                    const Divider(color: Colors.white12, height: 1),
+                    
                     _menuItem(context, Icons.list_alt, 'Transaction History', onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
@@ -144,11 +131,11 @@ class _SidebarPanel extends StatelessWidget {
                         builder: (_) => const TransactionHistoryScreen(),
                       ));
                     }),
-                    const Divider(color: Colors.white12, height: 1),
+                    
                     _menuItem(context, Icons.info_outline, 'About', onTap: () {
                       Navigator.of(context).pop();
                     }),
-                    const Divider(color: Colors.white12, height: 1),
+                    
                     _menuItem(context, Icons.logout, 'Logout', onTap: () {
                       final navigator = Navigator.of(context);
                       // Close sidebar first then show confirmation dialog
@@ -175,6 +162,22 @@ class _SidebarPanel extends StatelessWidget {
                       });
                     }),
                     const Spacer(),
+                    // Place lakbike_logo5 between logout and bottom, centered and sized to sidebar width
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final sidebarWidth = MediaQuery.of(context).size.width * (MediaQuery.of(context).orientation == Orientation.portrait ? 0.6 : 0.3);
+                        return Container(
+                          width: sidebarWidth,
+                          alignment: Alignment.center,
+                          margin: const EdgeInsets.only(bottom: 24.0),
+                          child: Image.asset(
+                            'assets/images/lakbike_logo5.png',
+                            width: sidebarWidth * 0.8,
+                            fit: BoxFit.contain,
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

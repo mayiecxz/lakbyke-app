@@ -11,7 +11,7 @@ class ScreenTitle extends StatelessWidget {
     return Container(
       height: 42,
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        color: AppColors.dashboardPrimary,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
