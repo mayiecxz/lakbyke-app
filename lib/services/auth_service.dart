@@ -9,8 +9,14 @@ class AuthService {
       UserCredential result = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return result.user;
+    } on FirebaseAuthException catch (e) {
+      // Catching SPECIFICALLY FirebaseAuthException prevents the web crash
+      // because Dart knows exactly what 'e' is.
+      print('Firebase Auth Error: ${e.code} - ${e.message}');
+      return null;
     } catch (e) {
-      print('Error signing in: $e');
+      // Catching generic errors (like network issues)
+      print('General Error signing in: $e');
       return null;
     }
   }
@@ -21,8 +27,11 @@ class AuthService {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
       return result.user;
+    } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error: ${e.code} - ${e.message}');
+      return null;
     } catch (e) {
-      print('Error registering: $e');
+      print('General Error registering: $e');
       return null;
     }
   }
