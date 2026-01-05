@@ -3,6 +3,8 @@ import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/dashboard/dashboard_screen.dart';
 import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
+import 'package:lakbyke_mobile/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// LoginModal is a reusable, embeddable login dialog/modal widget. It does
 /// not use a Scaffold (so it can appear inside other pages) and exposes a
@@ -20,31 +22,39 @@ class _LoginModalState extends State<LoginModal> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _rememberMe = false; // For the "Remember Me" checkbox
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      // 1. Keep your dummy data printing for debug/console tracking
-      String email = _emailController.text;
-      String password = _passwordController.text;
-      
-      print('Attempting login with:');
-      print('Email: $email');
-      print('Password: $password');
-      print('Remember Me: $_rememberMe');
-
-      // 2. Keep your temporary UI feedback (SnackBar)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.loginSuccess)),
+      User? user = await _authService.signIn(
+        _emailController.text.trim(), // .trim() removes accidental spaces
+        _passwordController.text.trim(),
       );
 
-      // 3. Add the navigation command
-      // Use pushReplacement to prevent the user from going back to the login page
-      // by pressing the back button.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
-      );
+      // Check the result
+      if (user != null && mounted) {
+        // --- SUCCESS CASE ---
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.loginSuccess)),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      } else {
+        // --- FAILURE CASE ---
+        // If user is null, the login failed (wrong password, user not found, etc.)
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Login failed. Please check your email and password."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -57,12 +67,11 @@ class _LoginModalState extends State<LoginModal> {
 
   @override
   Widget build(BuildContext context) {
-    // Full-width modal from bottom, matching dashboard style
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(40),
           topRight: Radius.circular(40),
         ),
@@ -73,11 +82,11 @@ class _LoginModalState extends State<LoginModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Centered title (no close button)
-              Padding(
-                padding: const EdgeInsets.all(AppDimensions.loginModalPadding),
+              // Centered title
+              const Padding(
+                padding: EdgeInsets.all(AppDimensions.loginModalPadding),
                 child: Center(
-                  child: const Text(
+                  child: Text(
                     AppStrings.loginTitle,
                     style: TextStyle(
                       fontSize: 30,
@@ -88,7 +97,6 @@ class _LoginModalState extends State<LoginModal> {
                 ),
               ),
               
-              // Form content with padding
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppDimensions.loginModalPadding),
                 child: Column(
@@ -96,7 +104,7 @@ class _LoginModalState extends State<LoginModal> {
                   children: [
                     const SizedBox(height: 20),
 
-                    // Email Input Field
+                    // Email Input
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -131,7 +139,7 @@ class _LoginModalState extends State<LoginModal> {
                     
                     const SizedBox(height: 20),
 
-                    // Password Input Field
+                    // Password Input
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -202,7 +210,7 @@ class _LoginModalState extends State<LoginModal> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _login,
+                        onPressed: _login, // This now calls the async function
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF70D2C8),
                           minimumSize: const Size(double.infinity, 55),
@@ -218,7 +226,9 @@ class _LoginModalState extends State<LoginModal> {
                     ),
 
                     const SizedBox(height: 20),
-
+                    
+                    // ... (The rest of your UI remains exactly the same: Dividers, Google Button, Signup Link) ...
+                    
                     // Or Divider
                     Row(
                       children: [
@@ -262,7 +272,7 @@ class _LoginModalState extends State<LoginModal> {
 
                     const SizedBox(height: 30),
 
-                    // Don't have an account? Sign up
+                    // Sign up link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -286,7 +296,6 @@ class _LoginModalState extends State<LoginModal> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 40),
                   ],
                 ),
