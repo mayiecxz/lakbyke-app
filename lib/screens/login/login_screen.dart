@@ -5,6 +5,7 @@ import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart'; // Added for Realtime Database
 
 /// LoginModal is a reusable, embeddable login dialog/modal widget. It does
 /// not use a Scaffold (so it can appear inside other pages) and exposes a
@@ -25,29 +26,80 @@ class _LoginModalState extends State<LoginModal> {
   final AuthService _authService = AuthService();
   bool _rememberMe = false; // For the "Remember Me" checkbox
 
+  // Updated Login Function
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
+      
+      // 1. Sign In with Firebase Auth
       User? user = await _authService.signIn(
-        _emailController.text.trim(), // .trim() removes accidental spaces
+        _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      // Check the result
-      if (user != null && mounted) {
-        // --- SUCCESS CASE ---
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.loginSuccess)),
-        );
+      if (user != null) {
+        try {
+          // 2. Fetch User Data from Realtime Database
+          final DatabaseReference userRef = 
+              FirebaseDatabase.instance.ref("userTable/${user.uid}");
+          
+          final DataSnapshot snapshot = await userRef.get();
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
+          if (snapshot.exists) {
+            // Convert the data to a Map to access fields easily
+            final Map<dynamic, dynamic> userData = 
+                snapshot.value as Map<dynamic, dynamic>;
+            
+            // 3. CHECK ROLE: Only allow "cyclist"
+            String? role = userData['role'];
+
+            if (role == 'cyclist') {
+              // --- SUCCESS: Valid Credentials AND Role is Cyclist ---
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text(AppStrings.loginSuccess)),
+                );
+
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                );
+              }
+            } else {
+              // --- FAILURE: Correct password, but WRONG role ---
+              await FirebaseAuth.instance.signOut(); // Kick them out
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Access Denied: Only cyclists can login here."),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } else {
+            // --- FAILURE: User authenticated, but NO record in database ---
+            await FirebaseAuth.instance.signOut();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Account not found in our records."),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("System error: $e"), backgroundColor: Colors.red),
+            );
+          }
+        }
       } else {
-        // --- FAILURE CASE ---
-        // If user is null, the login failed (wrong password, user not found, etc.)
+        // --- FAILURE: Auth failed (Wrong email/pass) ---
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Login failed. Please check your email and password."),
               backgroundColor: Colors.red,
@@ -210,7 +262,7 @@ class _LoginModalState extends State<LoginModal> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _login, // This now calls the async function
+                        onPressed: _login, // This calls the updated async function
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF70D2C8),
                           minimumSize: const Size(double.infinity, 55),
@@ -226,8 +278,6 @@ class _LoginModalState extends State<LoginModal> {
                     ),
 
                     const SizedBox(height: 20),
-                    
-                    // ... (The rest of your UI remains exactly the same: Dividers, Google Button, Signup Link) ...
                     
                     // Or Divider
                     Row(
