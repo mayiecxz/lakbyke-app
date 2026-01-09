@@ -5,11 +5,8 @@ import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart'; // Added for Realtime Database
+import 'package:firebase_database/firebase_database.dart'; 
 
-/// LoginModal is a reusable, embeddable login dialog/modal widget. It does
-/// not use a Scaffold (so it can appear inside other pages) and exposes a
-/// [onClose] callback so parent widgets can hide the modal.
 class LoginModal extends StatefulWidget {
   const LoginModal({super.key, this.onClose});
 
@@ -24,9 +21,9 @@ class _LoginModalState extends State<LoginModal> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  bool _rememberMe = false; // For the "Remember Me" checkbox
+  bool _rememberMe = false; 
 
-  // Updated Login Function
+  // Updated Login Function with Email Verification Check
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       
@@ -37,8 +34,29 @@ class _LoginModalState extends State<LoginModal> {
       );
 
       if (user != null) {
+        // ---------------------------------------------------------
+        // 2. NEW CHECK: Is Email Verified?
+        // ---------------------------------------------------------
+        if (!user.emailVerified) {
+          // Failure: Email not verified
+          await FirebaseAuth.instance.signOut(); // Kick them out immediately
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Please verify your email address before logging in."),
+                backgroundColor: Colors.orange, // Orange is good for warnings
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+          return; // Stop execution here
+        }
+        
+        // ---------------------------------------------------------
+        // 3. Continue to Database Check (Role & Existence)
+        // ---------------------------------------------------------
         try {
-          // 2. Fetch User Data from Realtime Database
           final DatabaseReference userRef = 
               FirebaseDatabase.instance.ref("userTable/${user.uid}");
           
@@ -49,11 +67,11 @@ class _LoginModalState extends State<LoginModal> {
             final Map<dynamic, dynamic> userData = 
                 snapshot.value as Map<dynamic, dynamic>;
             
-            // 3. CHECK ROLE: Only allow "cyclist"
+            // 4. CHECK ROLE: Only allow "cyclist"
             String? role = userData['role'];
 
             if (role == 'cyclist') {
-              // --- SUCCESS: Valid Credentials AND Role is Cyclist ---
+              // --- SUCCESS: Verified Email + Valid Credentials + Role is Cyclist ---
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text(AppStrings.loginSuccess)),
@@ -66,7 +84,7 @@ class _LoginModalState extends State<LoginModal> {
               }
             } else {
               // --- FAILURE: Correct password, but WRONG role ---
-              await FirebaseAuth.instance.signOut(); // Kick them out
+              await FirebaseAuth.instance.signOut(); 
               
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -262,7 +280,7 @@ class _LoginModalState extends State<LoginModal> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _login, // This calls the updated async function
+                        onPressed: _login, // Calls our updated logic
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF70D2C8),
                           minimumSize: const Size(double.infinity, 55),

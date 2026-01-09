@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart'; // CHANGED: Realtime Database Import
+import 'package:firebase_database/firebase_database.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/widgets/service_tag_input.dart';
 
@@ -43,7 +43,7 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // UPDATED: Logic for Realtime Database
+  // UPDATED: Signup Logic with Email Verification
   Future<void> _handleSignup() async {
     // 1. Validation
     if (!_formKey.currentState!.validate()) return;
@@ -74,10 +74,10 @@ class _SignupScreenState extends State<SignupScreen> {
         password: _passwordController.text.trim(),
       );
 
-      String uid = userCredential.user!.uid;
+      User? user = userCredential.user;
+      String uid = user!.uid;
 
       // 4. SAVE TO REALTIME DATABASE
-      // This creates a path: userTable -> [USER_ID] -> {user data}
       DatabaseReference userRef = FirebaseDatabase.instance.ref("userTable/$uid");
 
       await userRef.set({
@@ -87,24 +87,49 @@ class _SignupScreenState extends State<SignupScreen> {
         'middleName': _middleNameController.text.trim(),
         'email': _emailController.text.trim(),
         'serviceTag': _serviceTagController.text.trim(),
-        'createdAt': ServerValue.timestamp, // Special timestamp for Realtime DB
+        'createdAt': ServerValue.timestamp,
         'role': 'cyclist', 
       });
 
-      // 5. Hide Loading
+      // 5. SEND EMAIL VERIFICATION
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+
+      // 6. SIGN OUT (Prevent auto-login until verified)
+      await FirebaseAuth.instance.signOut();
+
+      // 7. Hide Loading
       if (mounted) Navigator.pop(context);
 
-      // 6. Success & Navigate
+      // 8. Show Success Dialog & Navigate to Login
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.loginSuccess),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
+        showDialog(
+          context: context,
+          barrierDismissible: false, // User must click button
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Verify your email"),
+              content: Text(
+                  "Account created successfully!\n\n"
+                  "We have sent a verification link to:\n"
+                  "${_emailController.text.trim()}\n\n"
+                  "Please check your email and click the link to verify your account before logging in."
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // Close the dialog
+                    Navigator.of(context).pop();
+                    // Navigate back to Login Screen
+                    Navigator.of(context).pop(); 
+                  },
+                  child: const Text("OK, I'll check it"),
+                ),
+              ],
+            );
+          },
         );
-
-        Navigator.of(context).pushReplacementNamed('/dashboard');
       }
 
     } on FirebaseAuthException catch (e) {
