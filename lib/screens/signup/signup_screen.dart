@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart'; // CHANGED: Realtime Database Import
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/widgets/service_tag_input.dart';
 
@@ -6,9 +8,6 @@ import 'package:lakbyke_mobile/widgets/service_tag_input.dart';
 // SignupScreen
 // ============================================================================
 
-/// SignupScreen allows new users to create an account.
-/// Displays a form with user details (name, email, username, service tag),
-/// password fields, terms checkbox, and signup button.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -18,6 +17,8 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _middleNameController = TextEditingController();
@@ -25,6 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _serviceTagController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  
   bool _agreedToTerms = false;
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
@@ -41,50 +43,108 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
-    if (_formKey.currentState!.validate() && _agreedToTerms) {
-      String firstName = _firstNameController.text;
-      String lastName = _lastNameController.text;
-      String middleName = _middleNameController.text;
-      String email = _emailController.text;
-      String serviceTag = _serviceTagController.text;
-      String password = _passwordController.text;
+  // UPDATED: Logic for Realtime Database
+  Future<void> _handleSignup() async {
+    // 1. Validation
+    if (!_formKey.currentState!.validate()) return;
 
-      debugPrint('Signup Data:');
-      debugPrint('First Name: $firstName');
-      debugPrint('Last Name: $lastName');
-      debugPrint('Middle Name: $middleName');
-      debugPrint('Email: $email');
-      debugPrint('Service Tag: $serviceTag');
-      debugPrint('Password: $password');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppStrings.loginSuccess),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      // Navigate to dashboard after brief delay
-      Future.delayed(const Duration(seconds: 2), () {
-        Navigator.of(context).pushReplacementNamed(
-          '/dashboard',
-        );
-      });
-    } else if (!_agreedToTerms) {
+    if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please agree to the Terms and Conditions'),
+          backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
         ),
       );
+      return;
+    }
+
+    // 2. Show Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // 3. Create User in Auth
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      String uid = userCredential.user!.uid;
+
+      // 4. SAVE TO REALTIME DATABASE
+      // This creates a path: userTable -> [USER_ID] -> {user data}
+      DatabaseReference userRef = FirebaseDatabase.instance.ref("userTable/$uid");
+
+      await userRef.set({
+        'uid': uid,
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'middleName': _middleNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'serviceTag': _serviceTagController.text.trim(),
+        'createdAt': ServerValue.timestamp, // Special timestamp for Realtime DB
+        'role': 'cyclist', 
+      });
+
+      // 5. Hide Loading
+      if (mounted) Navigator.pop(context);
+
+      // 6. Success & Navigate
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppStrings.loginSuccess),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      }
+
+    } on FirebaseAuthException catch (e) {
+      if (mounted) Navigator.pop(context); // Hide loading
+
+      String errorMessage = 'Signup failed.';
+      if (e.code == 'weak-password') {
+        errorMessage = 'The password provided is too weak.';
+      } else if (e.code == 'email-already-in-use') {
+        errorMessage = 'The account already exists for that email.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'The email address is not valid.';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Hide loading
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
+  // --- Validation Logic (Unchanged) ---
+
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return AppStrings.errorEmptyEmail;
-    }
+    if (value == null || value.isEmpty) return AppStrings.errorEmptyEmail;
     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
       return AppStrings.errorInvalidEmail;
     }
@@ -92,31 +152,30 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return AppStrings.errorEmptyPassword;
-    }
-    if (value.length < 6) {
-      return AppStrings.errorPasswordTooShort;
-    }
+    if (value == null || value.isEmpty) return AppStrings.errorEmptyPassword;
+    if (value.length < 6) return AppStrings.errorPasswordTooShort;
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (value != _passwordController.text) {
-      return 'Passwords do not match';
-    }
+    if (value == null || value.isEmpty) return 'Please confirm your password';
+    if (value != _passwordController.text) return 'Passwords do not match';
     return null;
   }
 
   String? _validateRequired(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'This field is required';
-    }
+    if (value == null || value.isEmpty) return 'This field is required';
     return null;
   }
+
+  String? _validateServiceTag(String? value) {
+    if (value == null || value.isEmpty) return 'Service tag is required';
+    String cleaned = value.replaceAll(' ', '');
+    if (cleaned.length != 7) return 'Service tag must be 7 alphanumeric characters';
+    return null;
+  }
+
+  // --- UI Build Method ---
 
   @override
   Widget build(BuildContext context) {
@@ -144,9 +203,9 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Form(
               key: _formKey,
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-                  // Centered title
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Title
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
                     child: Text(
@@ -159,13 +218,12 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
 
-                  // Form content with padding
+                  // Fields
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // First Name (floating label)
                         _buildTextField(
                           controller: _firstNameController,
                           label: AppStrings.firstNameLabel,
@@ -174,7 +232,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Last Name (floating label)
                         _buildTextField(
                           controller: _lastNameController,
                           label: AppStrings.lastNameLabel,
@@ -183,7 +240,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Middle Name (floating label)
                         _buildTextField(
                           controller: _middleNameController,
                           label: AppStrings.middleNameLabel,
@@ -192,7 +248,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Email (floating label)
                         _buildTextField(
                           controller: _emailController,
                           label: AppStrings.emailLabel,
@@ -202,14 +257,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Service Tag
                         ServiceTagInput(
                           controller: _serviceTagController,
                           validator: _validateServiceTag,
                         ),
                         const SizedBox(height: 20),
 
-                        // Password (floating label)
                         _buildPasswordField(
                           controller: _passwordController,
                           label: AppStrings.passwordLabel,
@@ -221,7 +274,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Confirm Password (floating label)
                         _buildPasswordField(
                           controller: _confirmPasswordController,
                           label: AppStrings.confirmPasswordLabel,
@@ -234,7 +286,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Terms and Conditions Checkbox
+                        // Terms
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -256,9 +308,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
-                                            ?.copyWith(
-                                              color: AppColors.textSecondary,
-                                            ),
+                                            ?.copyWith(color: AppColors.textSecondary),
                                       ),
                                       TextSpan(
                                         text: AppStrings.termsLink,
@@ -280,7 +330,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Sign Up Button
+                        // Signup Button
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
@@ -350,14 +400,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
             ),
-
           ),
         ),
       ),
     );
   }
 
-
+  // --- Helper Widgets ---
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -446,16 +495,5 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       ),
     );
-  }
-
-  String? _validateServiceTag(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Service tag is required';
-    }
-    String cleaned = value.replaceAll(' ', '');
-    if (cleaned.length != 7) {
-      return 'Service tag must be 7 alphanumeric characters';
-    }
-    return null;
   }
 }
