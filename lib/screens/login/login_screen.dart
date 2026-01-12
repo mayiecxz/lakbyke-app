@@ -33,7 +33,7 @@ class _LoginModalState extends State<LoginModal> {
         _passwordController.text.trim(),
       );
 
-      if (user != null) {
+      if (user != null) { 
         // ---------------------------------------------------------
         // 2. NEW CHECK: Is Email Verified?
         // ---------------------------------------------------------
