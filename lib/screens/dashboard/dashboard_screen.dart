@@ -155,11 +155,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Widget for the main "DASHBOARD" title and green background curve is now in ScreenTitle component.
 
+  // Helper method to safely convert values to numeric types
+  double _getNumericValue(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
   // Widget for the Battery Status
   Widget _buildBatteryStatus() {
     // Battery = mountBatteryPercentage from deviceEnergyData
-    final batteryLevel = _dashboardData?['mountBatteryPercentage'] ?? 85;
-    final batteryPercent = batteryLevel is int ? batteryLevel : (batteryLevel as num).toInt();
+    final batteryLevel = _dashboardData?['mountBatteryPercentage'];
+    int batteryPercent = 0;
+    
+    if (batteryLevel != null) {
+      if (batteryLevel is int) {
+        batteryPercent = batteryLevel;
+      } else if (batteryLevel is num) {
+        batteryPercent = batteryLevel.toInt();
+      } else if (batteryLevel is String) {
+        batteryPercent = int.tryParse(batteryLevel) ?? 0;
+      }
+    }
     
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -194,9 +212,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Distance = totalDistanceKm
     // Effort = powerGeneratedInWatts
     // Generated = totalKwh
-    final distance = _dashboardData?['totalDistanceKm'] ?? 0.00;
-    final effort = _dashboardData?['powerGeneratedInWatts'] ?? 0.00;
-    final generated = _dashboardData?['totalKwh'] ?? 0.00;
+    final distance = _dashboardData?['totalDistanceKm'] ?? 0.0;
+    final effort = _dashboardData?['powerGeneratedInWatts'] ?? 0.0;
+    final generated = _dashboardData?['totalKwh'] ?? 0.0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),
@@ -205,17 +223,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           _MetricItem(
             icon: Icons.directions_bike,
-            value: _isLoading ? '...' : '${(distance as num).toStringAsFixed(1)}km',
+            value: _isLoading ? '...' : '${_getNumericValue(distance).toStringAsFixed(2)}km',
             label: 'Distance',
           ),
           _MetricItem(
             icon: Icons.flash_on,
-            value: _isLoading ? '...' : '${(effort as num).toInt()}W',
+            value: _isLoading ? '...' : '${_getNumericValue(effort).toStringAsFixed(2)}W',
             label: 'Effort',
           ),
           _MetricItem(
             icon: Icons.check_box,
-            value: _isLoading ? '...' : '${(generated as num).toStringAsFixed(1)}kWh',
+            value: _isLoading ? '...' : '${_getNumericValue(generated).toStringAsFixed(2)}kWh',
             label: 'Generated',
           ),
         ],
@@ -229,7 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 20) / 2; // Screen width - padding - spacing
 
     final totalGenerated = _dashboardData?['totalGenerated'] ?? 0.0;
-    final totalRedeems = _dashboardData?['totalRedeems'] ?? 0;
+    final totalRedeems = _dashboardData?['totalRedeems'] ?? 0.0;
     final batteriesExchanged = _dashboardData?['batteriesExchanged'] ?? 0;
 
     return Column(
@@ -242,7 +260,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _ActionButton(
               icon: Icons.flash_on,
               title: 'Total Generated',
-              value: _isLoading ? '...' : '${(totalGenerated as num).toStringAsFixed(2)}kWh',
+              value: _isLoading ? '...' : '${_getNumericValue(totalGenerated).toStringAsFixed(2)}kWh',
               color: AppColors.dashboardPrimary, // Dark Green
               width: buttonWidth,
             ),
@@ -250,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _ActionButton(
               icon: Icons.account_balance_wallet,
               title: 'Total Redeems',
-              value: _isLoading ? '...' : '₱ ${(totalRedeems as num).toInt()}',
+              value: _isLoading ? '...' : '₱ ${_getNumericValue(totalRedeems).toStringAsFixed(2)}',
               color: AppColors.dashboardPrimary, // Dark Green
               width: buttonWidth,
               isCurrency: true,
@@ -264,12 +282,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: Icons.battery_charging_full,
           title: _isLoading 
               ? 'Loading...' 
-              : '${(batteriesExchanged as num).toInt()} Batteries Exchanged',
+              : '${_getNumericValue(batteriesExchanged).toInt()} Batteries Exchanged',
           value: '', // No value displayed below the title
           color: AppColors.dashboardAccent, // Light Green/Teal
           width: double.infinity,
           isFullWidth: true,
         ),
+      
       ],
     );
   }
