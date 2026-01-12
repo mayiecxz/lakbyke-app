@@ -157,7 +157,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Widget for the Battery Status
   Widget _buildBatteryStatus() {
-    final batteryLevel = _dashboardData?['batteryLevel'] ?? 85;
+    // Battery = mountBatteryPercentage from deviceEnergyData
+    final batteryLevel = _dashboardData?['mountBatteryPercentage'] ?? 85;
     final batteryPercent = batteryLevel is int ? batteryLevel : (batteryLevel as num).toInt();
     
     return Row(
@@ -189,10 +190,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Widget for the Today's Metrics (Distance, Effort, Generated)
   Widget _buildTodayMetrics() {
-    final today = _dashboardData?['today'] as Map<String, dynamic>?;
-    final distance = today?['distance'] ?? 0.0;
-    final effort = today?['effort'] ?? 0;
-    final generated = today?['generated'] ?? 0.0;
+    // Fields from deviceEnergyData:
+    // Distance = totalDistanceKm
+    // Effort = powerGeneratedInWatts
+    // Generated = totalKwh
+    final distance = _dashboardData?['totalDistanceKm'] ?? 0.00;
+    final effort = _dashboardData?['powerGeneratedInWatts'] ?? 0.00;
+    final generated = _dashboardData?['totalKwh'] ?? 0.00;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),
