@@ -92,7 +92,7 @@ class _SignupScreenState extends State<SignupScreen> {
       });
 
       // 5. SEND EMAIL VERIFICATION
-      if (user != null && !user.emailVerified) {
+      if (!user.emailVerified) {
         await user.sendEmailVerification();
       }
 

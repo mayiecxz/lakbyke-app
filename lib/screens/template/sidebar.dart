@@ -48,7 +48,7 @@ class Sidebar extends StatelessWidget {
 }
 
 class _SidebarPanel extends StatelessWidget {
-  const _SidebarPanel({Key? key}) : super(key: key);
+  const _SidebarPanel({super.key});
 
   Widget _menuItem(BuildContext context, IconData icon, String label, {VoidCallback? onTap}) {
     return InkWell(

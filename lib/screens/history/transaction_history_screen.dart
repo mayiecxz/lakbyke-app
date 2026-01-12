@@ -250,7 +250,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             child: items.isEmpty
                 ? Center(
                     child: Text(
-                      'No transactions for ${_selectedFilter}',
+                      'No transactions for $_selectedFilter',
                       style: const TextStyle(color: Colors.grey),
                     ),
                   )

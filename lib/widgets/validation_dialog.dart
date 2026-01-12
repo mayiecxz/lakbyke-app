@@ -8,13 +8,13 @@ class ValidationDialog extends StatelessWidget {
   final VoidCallback? onConfirm;
 
   const ValidationDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.content,
     this.confirmLabel = 'Confirm',
     this.cancelLabel = 'Cancel',
     this.onConfirm,
-  }) : super(key: key);
+  });
 
   static Future<bool?> show(BuildContext context,
       {required String title,

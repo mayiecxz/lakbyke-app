@@ -228,7 +228,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
             child: items.isEmpty
                 ? Center(
                     child: Text(
-                      'No data for ${_selectedFilter}',
+                      'No data for $_selectedFilter',
                       style: const TextStyle(color: Colors.grey),
                     ),
                   )
