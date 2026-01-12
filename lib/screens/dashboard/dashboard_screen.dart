@@ -3,9 +3,57 @@ import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
+import 'package:lakbyke_mobile/services/dashboard.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final DashboardService _dashboardService = DashboardService();
+  Map<String, dynamic>? _dashboardData;
+  String? _serviceTag;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+    _loadServiceTag();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final data = await _dashboardService.getDashboardData();
+      setState(() {
+        _dashboardData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadServiceTag() async {
+    try {
+      final tag = await _dashboardService.getServiceTag();
+      setState(() {
+        _serviceTag = tag;
+      });
+    } catch (e) {
+      print('Error loading service tag: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,59 +79,66 @@ class DashboardScreen extends StatelessWidget {
                       topRight: Radius.circular(40),
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        // --- DASHBOARD Header Area ---
-                        const ScreenTitle(title: AppStrings.dashboard),
-                        
-                        // --- Battery Status and Today's Metrics ---
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-                          child: Column(
-                            children: [
-                              _buildBatteryStatus(),
-                              const SizedBox(height: 15),
-                              const Divider(color: Colors.grey, thickness: 0.5),
-                              _buildTodayMetrics(),
-                              const Divider(color: Colors.grey, thickness: 0.5),
-                            ],
-                          ),
-                        ),
-
-                        // --- MNT-A001 Section ---
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                          child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit,
-                              color: AppColors.dashboardPrimary,
-                              size: 18.0,
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      await _loadDashboardData();
+                      await _loadServiceTag();
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          // --- DASHBOARD Header Area ---
+                          const ScreenTitle(title: AppStrings.dashboard),
+                          
+                          // --- Battery Status and Today's Metrics ---
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+                            child: Column(
+                              children: [
+                                _buildBatteryStatus(),
+                                const SizedBox(height: 15),
+                                const Divider(color: Colors.grey, thickness: 0.5),
+                                _buildTodayMetrics(),
+                                const Divider(color: Colors.grey, thickness: 0.5),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                              Text(
-                                'MNT-A001',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkText,
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
 
-                        // --- Action Buttons Section (Total Generated, Redeems, Exchanged) ---
-                        Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: _buildActionButtons(context),
-                        ),
-                        
-                        // Add some bottom padding
-                        const SizedBox(height: 40),
-                      ],
+                          // --- Service Tag Section ---
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit,
+                                  color: AppColors.dashboardPrimary,
+                                  size: 18.0,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _serviceTag ?? 'Loading...',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // --- Action Buttons Section (Total Generated, Redeems, Exchanged) ---
+                          Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: _buildActionButtons(context),
+                          ),
+                          
+                          // Add some bottom padding
+                          const SizedBox(height: 40),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -100,8 +155,11 @@ class DashboardScreen extends StatelessWidget {
 
   // Widget for the main "DASHBOARD" title and green background curve is now in ScreenTitle component.
 
-  // Widget for the Battery Status (85%)
+  // Widget for the Battery Status
   Widget _buildBatteryStatus() {
+    final batteryLevel = _dashboardData?['batteryLevel'] ?? 85;
+    final batteryPercent = batteryLevel is int ? batteryLevel : (batteryLevel as num).toInt();
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -118,7 +176,7 @@ class DashboardScreen extends StatelessWidget {
         ),
         const SizedBox(width: 15),
         Text(
-          '85%',
+          _isLoading ? '...' : '$batteryPercent%',
           style: TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.bold,
@@ -131,6 +189,11 @@ class DashboardScreen extends StatelessWidget {
 
   // Widget for the Today's Metrics (Distance, Effort, Generated)
   Widget _buildTodayMetrics() {
+    final today = _dashboardData?['today'] as Map<String, dynamic>?;
+    final distance = today?['distance'] ?? 0.0;
+    final effort = today?['effort'] ?? 0;
+    final generated = today?['generated'] ?? 0.0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Row(
@@ -138,17 +201,17 @@ class DashboardScreen extends StatelessWidget {
         children: [
           _MetricItem(
             icon: Icons.directions_bike,
-            value: '10.0km',
+            value: _isLoading ? '...' : '${(distance as num).toStringAsFixed(1)}km',
             label: 'Distance',
           ),
           _MetricItem(
             icon: Icons.flash_on,
-            value: '110W',
+            value: _isLoading ? '...' : '${(effort as num).toInt()}W',
             label: 'Effort',
           ),
           _MetricItem(
             icon: Icons.check_box,
-            value: '1.2kWh',
+            value: _isLoading ? '...' : '${(generated as num).toStringAsFixed(1)}kWh',
             label: 'Generated',
           ),
         ],
@@ -161,6 +224,10 @@ class DashboardScreen extends StatelessWidget {
     // Determine the width for the two side-by-side buttons
     final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 20) / 2; // Screen width - padding - spacing
 
+    final totalGenerated = _dashboardData?['totalGenerated'] ?? 0.0;
+    final totalRedeems = _dashboardData?['totalRedeems'] ?? 0;
+    final batteriesExchanged = _dashboardData?['batteriesExchanged'] ?? 0;
+
     return Column(
       children: [
         // Total Generated & Total Redeems Row
@@ -171,7 +238,7 @@ class DashboardScreen extends StatelessWidget {
             _ActionButton(
               icon: Icons.flash_on,
               title: 'Total Generated',
-              value: '12.23kWh',
+              value: _isLoading ? '...' : '${(totalGenerated as num).toStringAsFixed(2)}kWh',
               color: AppColors.dashboardPrimary, // Dark Green
               width: buttonWidth,
             ),
@@ -179,7 +246,7 @@ class DashboardScreen extends StatelessWidget {
             _ActionButton(
               icon: Icons.account_balance_wallet,
               title: 'Total Redeems',
-              value: '₱ 155',
+              value: _isLoading ? '...' : '₱ ${(totalRedeems as num).toInt()}',
               color: AppColors.dashboardPrimary, // Dark Green
               width: buttonWidth,
               isCurrency: true,
@@ -188,10 +255,12 @@ class DashboardScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // 12 Batteries Exchanged Button (Full Width)
+        // Batteries Exchanged Button (Full Width)
         _ActionButton(
           icon: Icons.battery_charging_full,
-          title: '12 Batteries Exchanged',
+          title: _isLoading 
+              ? 'Loading...' 
+              : '${(batteriesExchanged as num).toInt()} Batteries Exchanged',
           value: '', // No value displayed below the title
           color: AppColors.dashboardAccent, // Light Green/Teal
           width: double.infinity,
