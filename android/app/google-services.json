@@ -1,0 +1,91 @@
+{
+  "project_info": {
+    "project_number": "837322519755",
+    "firebase_url": "https://lakbyke-39f1f-default-rtdb.firebaseio.com",
+    "project_id": "lakbyke-39f1f",
+    "storage_bucket": "lakbyke-39f1f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:837322519755:android:bd38f0f8bfbc511befd74e",
+        "android_client_info": {
+          "package_name": "com.activity.lakbyke"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "837322519755-g798gc3hu4rd15p5dglbavsj9lg77alr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.activity.lakbyke",
+            "certificate_hash": "3e0a6cbab4c30558c33132b83b3967872fe2dd4a"
+          }
+        },
+        {
+          "client_id": "837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6y21J4v2uuCVvcVksIG4v6LAl_w3mMJU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "837322519755-is4v2srtssi2ufhbddr33m7h2o5su625.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lakbykeMobile"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:837322519755:android:b59de0e9683052ddefd74e",
+        "android_client_info": {
+          "package_name": "com.example.lakbyke_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6y21J4v2uuCVvcVksIG4v6LAl_w3mMJU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "837322519755-is4v2srtssi2ufhbddr33m7h2o5su625.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lakbykeMobile"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

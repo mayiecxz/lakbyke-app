@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/dashboard/dashboard_screen.dart';
 import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
-import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart'; 
@@ -56,64 +55,7 @@ class _LoginModalState extends State<LoginModal> {
         // ---------------------------------------------------------
         // 3. Continue to Database Check (Role & Existence)
         // ---------------------------------------------------------
-        try {
-          final DatabaseReference userRef = 
-              FirebaseDatabase.instance.ref("userTable/${user.uid}");
-          
-          final DataSnapshot snapshot = await userRef.get();
-
-          if (snapshot.exists) {
-            // Convert the data to a Map to access fields easily
-            final Map<dynamic, dynamic> userData = 
-                snapshot.value as Map<dynamic, dynamic>;
-            
-            // 4. CHECK ROLE: Only allow "cyclist"
-            String? role = userData['role'];
-
-            if (role == 'cyclist') {
-              // --- SUCCESS: Verified Email + Valid Credentials + Role is Cyclist ---
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text(AppStrings.loginSuccess)),
-                );
-
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DashboardScreen()),
-                );
-              }
-            } else {
-              // --- FAILURE: Correct password, but WRONG role ---
-              await FirebaseAuth.instance.signOut(); 
-              
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Access Denied: Only cyclists can login here."),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          } else {
-            // --- FAILURE: User authenticated, but NO record in database ---
-            await FirebaseAuth.instance.signOut();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Account not found in our records."),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("System error: $e"), backgroundColor: Colors.red),
-            );
-          }
-        }
+        await _checkUserAndNavigate(user);
       } else {
         // --- FAILURE: Auth failed (Wrong email/pass) ---
         if (mounted) {
@@ -124,6 +66,165 @@ class _LoginModalState extends State<LoginModal> {
             ),
           );
         }
+      }
+    }
+  }
+
+  // Google Login Function - uses Firebase UID to check userTable
+  Future<void> _loginWithGoogle() async {
+    try {
+      // 1. Sign In with Google using Firebase Auth
+      User? user = await _authService.signInWithGoogle();
+
+      if (user != null) {
+        // Google accounts are automatically verified
+        // 2. Use Firebase UID to check user in userTable database
+        await _checkUserByUIDAndNavigate(user);
+      } else {
+        // User canceled or sign-in failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Google login was canceled or failed."),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Google login error: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Function to check user by UID in userTable and navigate (for Google login)
+  Future<void> _checkUserByUIDAndNavigate(User user) async {
+    try {
+      // Use Firebase UID directly to access userTable (UID is the key in userTable)
+      final DatabaseReference userRef = 
+          FirebaseDatabase.instance.ref("userTable/${user.uid}");
+      
+      final DataSnapshot snapshot = await userRef.get();
+
+      if (snapshot.exists) {
+        // Convert the data to a Map to access fields easily
+        final Map<dynamic, dynamic> userData = 
+            snapshot.value as Map<dynamic, dynamic>;
+        
+        // CHECK ROLE: Only allow "cyclist" (using userRole field from userTable structure)
+        String? role = userData['userRole'] as String?;
+
+        if (role == 'cyclist') {
+          // --- SUCCESS: UID found + Role is Cyclist ---
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(AppStrings.loginSuccess)),
+            );
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            );
+          }
+        } else {
+          // --- FAILURE: UID found, but WRONG role ---
+          await FirebaseAuth.instance.signOut(); 
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Access Denied: Only cyclists can login here."),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } else {
+        // --- FAILURE: User authenticated, but NO record in database ---
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Account not found in our records."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("System error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // Common function to check user in database and navigate (for email/password login)
+  Future<void> _checkUserAndNavigate(User user) async {
+    try {
+      final DatabaseReference userRef = 
+          FirebaseDatabase.instance.ref("userTable/${user.uid}");
+      
+      final DataSnapshot snapshot = await userRef.get();
+
+      if (snapshot.exists) {
+        // Convert the data to a Map to access fields easily
+        final Map<dynamic, dynamic> userData = 
+            snapshot.value as Map<dynamic, dynamic>;
+        
+        // CHECK ROLE: Only allow "cyclist" (using userRole field from userTable structure)
+        String? role = userData['userRole'] as String?;
+
+        if (role == 'cyclist') {
+          // --- SUCCESS: Valid Credentials + Role is Cyclist ---
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(AppStrings.loginSuccess)),
+            );
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            );
+          }
+        } else {
+          // --- FAILURE: Correct credentials, but WRONG role ---
+          await FirebaseAuth.instance.signOut(); 
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Access Denied: Only cyclists can login here."),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } else {
+        // --- FAILURE: User authenticated, but NO record in database ---
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Account not found in our records."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("System error: $e"), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -317,9 +418,7 @@ class _LoginModalState extends State<LoginModal> {
                     // Google Login Button
                     Center(
                       child: GestureDetector(
-                        onTap: () {
-                          print('Google Login Pressed');
-                        },
+                        onTap: _loginWithGoogle,
                         child: Container(
                           width: 50,
                           height: 50,
@@ -328,10 +427,11 @@ class _LoginModalState extends State<LoginModal> {
                             border: Border.all(color: Colors.grey.shade300, width: 1),
                           ),
                           child: Center(
-                            child: ResponsiveImage(
-                              assetPath: AppAssets.googleIcon,
-                              maxWidthPercent: 0.15,
-                              minWidth: 24.0,
+                            child: Image.asset(
+                              'assets/images/google.png',
+                              width: 24,
+                              height: 24,
+                              fit: BoxFit.contain,
                             ),
                           ),
                         ),
