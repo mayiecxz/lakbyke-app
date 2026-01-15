@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:lakbyke_mobile/models/chatbot_model.dart';
+import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -24,6 +25,7 @@ class _LakBykeChatScreenState extends State<LakBykeChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
+  final ChatbotService _chatbotService = ChatbotService();
 
   // TODO: Replace with valid API Key
   static const apiKey = 'AIzaSyAGH10LVPyyz7SLzthWzkpmLBqLA1nn910'; 
@@ -52,18 +54,38 @@ class _LakBykeChatScreenState extends State<LakBykeChatScreen> {
     // Initialize the Gemini Model
     _model = GenerativeModel(model: 'gemini-pro', apiKey: apiKey);
     
-    // Add a welcome message
-    _addMessage("Hello! I'm your LakByke assistant, si Kleta 🥰. Start pedaling and ask me anything about your energy stats!", false);
+    // Load chat history from Firebase
+    _loadChatHistory();
+  }
+
+  // Load chat history from Firebase
+  Future<void> _loadChatHistory() async {
+    final history = await _chatbotService.loadChatHistory();
+    
+    if (history.isEmpty) {
+      // If no history, add welcome message
+      _addMessage("Hello! I'm your LakByke assistant, si Kleta 🥰. Start pedaling and ask me anything about your energy stats!", false);
+    } else {
+      // Restore chat history
+      setState(() {
+        _messages.addAll(history);
+      });
+    }
   }
 
   void _addMessage(String text, bool isUser) {
+    final message = ChatMessage(
+      text: text, 
+      isUser: isUser, 
+      time: DateTime.now()
+    );
+    
     setState(() {
-      _messages.add(ChatMessage(
-        text: text, 
-        isUser: isUser, 
-        time: DateTime.now()
-      ));
+      _messages.add(message);
     });
+    
+    // Save message to Firebase
+    _chatbotService.saveMessage(text, isUser, message.time);
   }
 
   Future<void> _sendMessage() async {
