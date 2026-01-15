@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
+import 'package:lakbyke_mobile/services/kwh_service.dart';
 
 class KwhHistoryScreen extends StatefulWidget {
   const KwhHistoryScreen({super.key});
@@ -11,109 +12,46 @@ class KwhHistoryScreen extends StatefulWidget {
 }
 
 class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
+  final KwhService _kwhService = KwhService();
   String _selectedFilter = 'daily';
   int _currentPage = 1;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _aggregatedData = [];
+  double _totalGenerated = 0.0;
+  String? _errorMessage;
 
-  // Realistic sample data spanning multiple weeks
-  final List<Map<String, dynamic>> _allData = const [
-    {'date': '12/06/25', 'value': 1.23},
-    {'date': '12/05/25', 'value': 0.95},
-    {'date': '12/04/25', 'value': 1.15},
-    {'date': '12/03/25', 'value': 0.55},
-    {'date': '12/02/25', 'value': 1.25},
-    {'date': '12/01/25', 'value': 1.21},
-    {'date': '11/30/25', 'value': 1.06},
-    {'date': '11/29/25', 'value': 0.88},
-    {'date': '11/28/25', 'value': 1.45},
-    {'date': '11/27/25', 'value': 0.72},
-    {'date': '11/26/25', 'value': 1.33},
-    {'date': '11/25/25', 'value': 0.91},
-    {'date': '11/24/25', 'value': 1.18},
-    {'date': '11/23/25', 'value': 0.67},
-  ];
-
-  DateTime? _parseDate(String s) {
-    try {
-      final parts = s.split('/');
-      if (parts.length != 3) return null;
-      var year = int.parse(parts[2]);
-      if (year < 100) year += 2000; // treat '25' as 2025
-      final month = int.parse(parts[0]);
-      final day = int.parse(parts[1]);
-      return DateTime(year, month, day);
-    } catch (_) {
-      return null;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
   }
 
-  // Aggregate raw data into buckets depending on selected filter
-  List<Map<String, dynamic>> get _aggregatedData {
-    final parsed = <DateTime, double>{};
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    for (final item in _allData) {
-      final d = _parseDate(item['date'] as String);
-      if (d == null) continue;
-      final val = (item['value'] as double?) ?? 0.0;
+    try {
+      // Load aggregated data and total in parallel
+      final results = await Future.wait([
+        _kwhService.getAggregatedData(_selectedFilter),
+        _kwhService.getTotalKwhGenerated(),
+      ]);
 
-      switch (_selectedFilter) {
-        case 'daily':
-          final key = DateTime(d.year, d.month, d.day);
-          parsed[key] = (parsed[key] ?? 0.0) + val;
-          break;
-        case 'weekly':
-          // week starting Monday
-          final weekStart = d.subtract(Duration(days: d.weekday - 1));
-          final key = DateTime(weekStart.year, weekStart.month, weekStart.day);
-          parsed[key] = (parsed[key] ?? 0.0) + val;
-          break;
-        case 'monthly':
-          final key = DateTime(d.year, d.month);
-          parsed[key] = (parsed[key] ?? 0.0) + val;
-          break;
-        case 'yearly':
-          final key = DateTime(d.year);
-          parsed[key] = (parsed[key] ?? 0.0) + val;
-          break;
-        default:
-          final key = DateTime(d.year, d.month, d.day);
-          parsed[key] = (parsed[key] ?? 0.0) + val;
-      }
+      setState(() {
+        _aggregatedData = results[0] as List<Map<String, dynamic>>;
+        _totalGenerated = results[1] as double;
+        _isLoading = false;
+        _currentPage = 1; // Reset to first page when filter changes
+      });
+    } catch (e) {
+      print('Error loading kWh history: $e');
+      setState(() {
+        _errorMessage = 'Failed to load data. Please try again.';
+        _isLoading = false;
+      });
     }
-
-    // Convert map to list and sort descending by key (most recent first)
-    final entries = parsed.entries.map((e) => {'date': e.key, 'value': e.value}).toList();
-    entries.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
-
-    // Format label for each aggregated row
-    String monthName(int m) {
-      const names = [
-        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      return names[m];
-    }
-
-    return entries.map((e) {
-      final DateTime dt = e['date'] as DateTime;
-      String label;
-      switch (_selectedFilter) {
-        case 'daily':
-          label = '${monthName(dt.month)} ${dt.day}, ${dt.year}';
-          break;
-        case 'weekly':
-          final end = dt.add(const Duration(days: 6));
-          label = '${monthName(dt.month)} ${dt.day}-${end.day} ${end.year}';
-          break;
-        case 'monthly':
-          label = '${monthName(dt.month)} ${dt.year}';
-          break;
-        case 'yearly':
-          label = '${dt.year}';
-          break;
-        default:
-          label = '${monthName(dt.month)} ${dt.day}, ${dt.year}';
-      }
-      return {'label': label, 'value': e['value']};
-    }).toList();
   }
 
   int _getItemsPerPage(BuildContext context) {
@@ -142,16 +80,12 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     return all.sublist(start, end > all.length ? all.length : end);
   }
 
-  double get _totalGenerated {
-    // Total across all raw data
-    return _allData.fold(0.0, (double acc, item) {
-      final parsed = item['value'] as double? ?? 0.0;
-      return acc + parsed;
-    });
-  }
 
   void _setFilter(String key) {
-    setState(() => _selectedFilter = key);
+    if (_selectedFilter != key) {
+      setState(() => _selectedFilter = key);
+      _loadData(); // Reload data when filter changes
+    }
   }
 
   Widget _buildTopCard() {
@@ -218,6 +152,40 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
   }
 
   Widget _buildHistoryList() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final items = _paginatedData;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
