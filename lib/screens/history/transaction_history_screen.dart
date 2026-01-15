@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
+import 'package:lakbyke_mobile/services/transaction_service.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -13,119 +14,7 @@ class TransactionHistoryScreen extends StatefulWidget {
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _selectedFilter = 'daily';
   int _currentPage = 1;
-
-  // Realistic sample data spanning multiple weeks
-  final List<Map<String, dynamic>> _allData = const [
-    {'date': '12/06/25', 'type': 'Redemption', 'amount': 155},
-    {'date': '12/05/25', 'type': 'Battery Exchange', 'amount': 50},
-    {'date': '12/04/25', 'type': 'Redemption', 'amount': 200},
-    {'date': '12/03/25', 'type': 'Battery Exchange', 'amount': 50},
-    {'date': '12/02/25', 'type': 'Redemption', 'amount': 120},
-    {'date': '12/01/25', 'type': 'Battery Exchange', 'amount': 50},
-    {'date': '11/30/25', 'type': 'Redemption', 'amount': 180},
-    {'date': '11/29/25', 'type': 'Battery Exchange', 'amount': 50},
-    {'date': '11/28/25', 'type': 'Redemption', 'amount': 175},
-    {'date': '11/27/25', 'type': 'Battery Exchange', 'amount': 50},
-    {'date': '11/26/25', 'type': 'Redemption', 'amount': 165},
-    {'date': '11/25/25', 'type': 'Battery Exchange', 'amount': 50},
-    {'date': '11/24/25', 'type': 'Redemption', 'amount': 190},
-    {'date': '11/23/25', 'type': 'Battery Exchange', 'amount': 50},
-  ];
-
-  DateTime? _parseDate(String s) {
-    try {
-      final parts = s.split('/');
-      if (parts.length != 3) return null;
-      var year = int.parse(parts[2]);
-      if (year < 100) year += 2000;
-      final month = int.parse(parts[0]);
-      final day = int.parse(parts[1]);
-      return DateTime(year, month, day);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Aggregate transactions by selected granularity (daily/weekly/monthly/yearly)
-  List<Map<String, dynamic>> get _aggregatedData {
-    final parsed = <DateTime, double>{};
-
-    for (final item in _allData) {
-      final d = _parseDate(item['date'] as String);
-      if (d == null) continue;
-      final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
-
-      switch (_selectedFilter) {
-        case 'daily':
-          final key = DateTime(d.year, d.month, d.day);
-          parsed[key] = (parsed[key] ?? 0.0) + amount;
-          break;
-        case 'weekly':
-          final weekStart = d.subtract(Duration(days: d.weekday - 1));
-          final key = DateTime(weekStart.year, weekStart.month, weekStart.day);
-          parsed[key] = (parsed[key] ?? 0.0) + amount;
-          break;
-        case 'monthly':
-          final key = DateTime(d.year, d.month);
-          parsed[key] = (parsed[key] ?? 0.0) + amount;
-          break;
-        case 'yearly':
-          final key = DateTime(d.year);
-          parsed[key] = (parsed[key] ?? 0.0) + amount;
-          break;
-        default:
-          final key = DateTime(d.year, d.month, d.day);
-          parsed[key] = (parsed[key] ?? 0.0) + amount;
-      }
-    }
-
-    final entries = parsed.entries.map((e) => {'date': e.key, 'amount': e.value}).toList();
-    entries.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
-
-    String monthName(int m) {
-      const names = [
-        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      return names[m];
-    }
-
-    return entries.map((e) {
-      final DateTime dt = e['date'] as DateTime;
-      String label;
-      switch (_selectedFilter) {
-        case 'daily':
-          label = '${monthName(dt.month)} ${dt.day}, ${dt.year}';
-          break;
-        case 'weekly':
-          final end = dt.add(const Duration(days: 6));
-          label = '${monthName(dt.month)} ${dt.day}-${end.day} ${end.year}';
-          break;
-        case 'monthly':
-          label = '${monthName(dt.month)} ${dt.year}';
-          break;
-        case 'yearly':
-          label = '${dt.year}';
-          break;
-        default:
-          label = '${monthName(dt.month)} ${dt.day}, ${dt.year}';
-      }
-      return {'label': label, 'amount': e['amount']};
-    }).toList();
-  }
-
-  double get _totalRedeemed {
-    // Total redeemed across all raw data
-    return _allData
-        .where((item) => item['type'] == 'Redemption')
-        .fold(0.0, (double acc, item) {
-      final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
-      return acc + amount;
-    });
-  }
-
-  int get _batteryExchangeCount {
-    return _allData.where((item) => item['type'] == 'Battery Exchange').length;
-  }
+  final TransactionService _transactionService = TransactionService();
 
   int _getItemsPerPage(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -136,14 +25,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     return count > 0 ? count : 1;
   }
 
-  int get _totalPages {
+  int _totalPages(List<Map<String, dynamic>> aggregatedData, BuildContext context) {
     final itemsPerPage = _getItemsPerPage(context);
-    final total = _aggregatedData.length;
+    final total = aggregatedData.length;
     return (total / itemsPerPage).ceil();
   }
 
-  List<Map<String, dynamic>> get _paginatedData {
-    final all = _aggregatedData;
+  List<Map<String, dynamic>> _paginatedData(List<Map<String, dynamic>> aggregatedData, BuildContext context) {
+    final all = aggregatedData;
     final itemsPerPage = _getItemsPerPage(context);
     if (all.length <= itemsPerPage) return all;
     final start = (_currentPage - 1) * itemsPerPage;
@@ -152,63 +41,80 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   void _setFilter(String key) {
-    setState(() => _selectedFilter = key);
+    setState(() {
+      _selectedFilter = key;
+      _currentPage = 1; // Reset to first page when filter changes
+    });
   }
 
   Widget _buildTopCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
-      child: Container(
-        padding: const EdgeInsets.all(18.0),
-        decoration: BoxDecoration(
-          color: AppColors.dashboardAccent,
-          borderRadius: BorderRadius.circular(16.0),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
-                SizedBox(width: 12),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: Future.wait([
+        _transactionService.getTotalRedeemed(),
+        _transactionService.getBatteryExchangeCount(),
+      ]).then((results) => {
+        'totalRedeemed': results[0] as double,
+        'batteryExchangeCount': results[1] as int,
+      }),
+      builder: (context, snapshot) {
+        final totalRedeemed = snapshot.data?['totalRedeemed'] ?? 0.0;
+        final batteryExchangeCount = snapshot.data?['batteryExchangeCount'] ?? 0;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+          child: Container(
+            padding: const EdgeInsets.all(18.0),
+            decoration: BoxDecoration(
+              color: AppColors.dashboardAccent,
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'TOTAL Redeemed',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  'TOTAL Redeemed',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  '₱ ${totalRedeemed.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: const [
+                    Icon(Icons.battery_charging_full, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
+                    Text(
+                      'Batteries Exchanged',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$batteryExchangeCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              '₱ ${_totalRedeemed.toStringAsFixed(0)}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: const [
-                Icon(Icons.battery_charging_full, color: Colors.white, size: 24),
-                SizedBox(width: 12),
-                Text(
-                  'Batteries Exchanged',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$_batteryExchangeCount',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -240,114 +146,143 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   Widget _buildHistoryList() {
-    final items = _paginatedData;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-      child: Column(
-        children: [
-          // Paginated list
-          Expanded(
-            child: items.isEmpty
-                ? Center(
-                    child: Text(
-                      'No transactions for $_selectedFilter',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _transactionService.getAggregatedData(_selectedFilter),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                'Error loading transactions: ${snapshot.error}',
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final aggregatedData = snapshot.data ?? [];
+        final items = _paginatedData(aggregatedData, context);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+          child: Column(
+            children: [
+              // Paginated list
+              Expanded(
+                child: items.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No transactions for $_selectedFilter',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceDim,
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                ),
+                                const SizedBox(width: 12),
+                                Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              // Modern pagination controls (only when rows exceed visible area)
+              if (aggregatedData.length > _getItemsPerPage(context))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Previous button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _currentPage > 1 ? AppColors.primary : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, size: 20),
+                          color: _currentPage > 1 ? Colors.white : Colors.grey,
+                          onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Page info with dots
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceDim,
-                          borderRadius: BorderRadius.circular(12.0),
+                          borderRadius: BorderRadius.circular(8.0),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                            const SizedBox(width: 12),
-                            Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          // Modern pagination controls (only when rows exceed visible area)
-          if (_aggregatedData.length > _getItemsPerPage(context))
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Previous button
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _currentPage > 1 ? AppColors.primary : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, size: 20),
-                      color: _currentPage > 1 ? Colors.white : Colors.grey,
-                      onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Page info with dots
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceDim,
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Row(
-                      children: List.generate(
-                        _totalPages,
-                        (i) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: GestureDetector(
-                            onTap: () => setState(() => _currentPage = i + 1),
-                            child: Container(
-                              width: 8.0,
-                              height: 8.0,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _currentPage == i + 1 ? AppColors.primary : Colors.grey.shade400,
+                          children: List.generate(
+                            _totalPages(aggregatedData, context),
+                            (i) => Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: GestureDetector(
+                                onTap: () => setState(() => _currentPage = i + 1),
+                                child: Container(
+                                  width: 8.0,
+                                  height: 8.0,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _currentPage == i + 1 ? AppColors.primary : Colors.grey.shade400,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      // Next button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _currentPage < _totalPages(aggregatedData, context) ? AppColors.primary : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_forward, size: 20),
+                          color: _currentPage < _totalPages(aggregatedData, context) ? Colors.white : Colors.grey,
+                          onPressed: _currentPage < _totalPages(aggregatedData, context) ? () => setState(() => _currentPage++) : null,
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  // Next button
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _currentPage < _totalPages ? AppColors.primary : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_forward, size: 20),
-                      color: _currentPage < _totalPages ? Colors.white : Colors.grey,
-                      onPressed: _currentPage < _totalPages ? () => setState(() => _currentPage++) : null,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
