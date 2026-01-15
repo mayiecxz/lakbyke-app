@@ -1,25 +1,91 @@
 import 'package:flutter/material.dart';
+import 'package:lakbyke_mobile/services/dashboard.dart';
+import 'dart:async';
 
 // ---------------------------------------------------------
 // 1. DATA MODEL & STATE MANAGEMENT (The "Bike's Brain")
 // ---------------------------------------------------------
 
 class BikeData extends ChangeNotifier {
-  // In a real app, these values would come from your ESP32 via Firebase/MQTT
-  double voltage = 12.5; // Volts
-  double current = 1.2;  // Amps
-  int batteryLevel = 45; // Percentage
+  final DashboardService _dashboardService = DashboardService();
+  StreamSubscription<Map<String, dynamic>?>? _dataSubscription;
+
+  // Real-time sensor data from Firebase
+  double voltage = 12.5; // Volts (default, will be updated from Firebase)
+  double current = 1.2;  // Amps (default, will be updated from Firebase)
+  int batteryLevel = 45; // Percentage (default, will be updated from Firebase)
   bool isPedaling = true;
 
   // Calculates power (P = V * I)
   double get power => voltage * current;
 
-  // Simulate data changes for this demo
+  BikeData() {
+    _initializeDataStream();
+  }
+
+  // Initialize real-time data stream from Firebase
+  void _initializeDataStream() {
+    _dataSubscription = _dashboardService.getDashboardDataStream().listen(
+      (data) {
+        if (data != null) {
+          _updateFromFirebaseData(data);
+        }
+      },
+      onError: (error) {
+        print('Error in BikeData stream: $error');
+      },
+    );
+  }
+
+  // Update values from Firebase deviceEnergyData
+  void _updateFromFirebaseData(Map<String, dynamic> data) {
+    // Battery level from mountBatteryPercentage
+    final batteryValue = data['mountBatteryPercentage'];
+    if (batteryValue != null) {
+      batteryLevel = batteryValue is int 
+          ? batteryValue 
+          : (batteryValue as num).toInt().clamp(0, 100);
+    }
+
+    // Power from powerGeneratedInWatts
+    final powerValue = data['powerGeneratedInWatts'];
+    if (powerValue != null) {
+      final powerWatts = powerValue is num 
+          ? powerValue.toDouble() 
+          : (powerValue is String ? double.tryParse(powerValue) ?? 0.0 : 0.0);
+      
+      // Calculate voltage and current from power
+      // Assuming typical LiFePO4 battery: ~12.8V nominal, 13.2V when charging
+      // If power > 0, assume pedaling is happening
+      if (powerWatts > 0) {
+        isPedaling = true;
+        // Estimate voltage based on battery level (12.0V at 0%, 13.2V at 100%)
+        voltage = 12.0 + (batteryLevel / 100.0) * 1.2;
+        // Calculate current from power and voltage (I = P / V)
+        current = powerWatts / voltage;
+      } else {
+        isPedaling = false;
+        // When not pedaling, use nominal voltage
+        voltage = 12.0 + (batteryLevel / 100.0) * 1.2;
+        current = 0.0;
+      }
+    }
+
+    notifyListeners();
+  }
+
+  // Simulate data changes for testing (kept for backward compatibility)
   void simulateDataChange() {
     voltage = 12.0 + (DateTime.now().second % 3);
     current = 0.5 + (DateTime.now().second % 2);
     batteryLevel = (batteryLevel + 1).clamp(0, 100);
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _dataSubscription?.cancel();
+    super.dispose();
   }
 }
 
