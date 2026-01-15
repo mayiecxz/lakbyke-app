@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
+import 'package:lakbyke_mobile/services/chatbot_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -101,6 +102,10 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
+      // Delete chat history before signing out
+      final chatbotService = ChatbotService();
+      await chatbotService.deleteChatHistory();
+      
       await _auth.signOut();
       // Only sign out from google_sign_in on mobile platforms
       if (!kIsWeb) {

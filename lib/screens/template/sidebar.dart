@@ -8,6 +8,7 @@ import 'package:lakbyke_mobile/screens/dashboard/dashboard_screen.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/screens/template/menu_button.dart';
+import 'package:lakbyke_mobile/services/chatbot_service.dart';
 
 class Sidebar extends StatelessWidget {
   const Sidebar({super.key});
@@ -164,7 +165,11 @@ class _SidebarPanel extends StatelessWidget {
                           content: const Text('Are you sure you want to logout?'),
                           confirmLabel: 'Logout',
                           cancelLabel: 'Cancel',
-                          onConfirm: () {
+                          onConfirm: () async {
+                            // Delete chat history before logout
+                            final chatbotService = ChatbotService();
+                            await chatbotService.deleteChatHistory();
+                            
                             // After confirmation navigate to Onboarding and remove previous routes
                             navigator.pushAndRemoveUntil(
                               MaterialPageRoute(builder: (_) => const OnboardingScreen()),
