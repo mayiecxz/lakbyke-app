@@ -50,7 +50,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     super.initState();
     // Initialize the Gemini Model
     // Updated: gemini-pro is deprecated, using gemini-2.5-flash (current stable model)
-    _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+    _model = GenerativeModel(model: 'gemma-3-27b-it', apiKey: apiKey);
     
     // Load chat history from Firebase
     _loadChatHistory();

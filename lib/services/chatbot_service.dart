@@ -89,21 +89,23 @@ class ChatbotService {
     }
   }
 
-  // Delete all chat history for the current user
-  Future<void> deleteChatHistory() async {
+  // Delete chat history for a specific user ID
+  Future<void> deleteChatHistoryForUser(String userId) async {
     try {
-      final userId = getCurrentUserId();
-      if (userId == null) {
-        print('No user logged in, cannot delete chat history');
-        return;
-      }
-
-      // Delete the entire messages node for this user
       await _database.child('chatHistory/$userId/messages').remove();
-      
       print('Chat history deleted for user: $userId');
     } catch (e) {
       print('Error deleting chat history: $e');
     }
+  }
+
+  // Delete all chat history for the current user
+  Future<void> deleteChatHistory() async {
+    final userId = getCurrentUserId();
+    if (userId == null) {
+      print('No user logged in, cannot delete chat history');
+      return;
+    }
+    await deleteChatHistoryForUser(userId);
   }
 }
