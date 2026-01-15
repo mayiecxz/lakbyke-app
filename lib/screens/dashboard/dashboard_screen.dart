@@ -21,8 +21,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
-    _loadServiceTag();
+    _initializeDashboard();
+  }
+
+  Future<void> _initializeDashboard() async {
+    // Load initial data first
+    await _loadDashboardData();
+    await _loadServiceTag();
+    // Then set up real-time updates
+    _setupRealtimeUpdates();
+  }
+
+  // Set up real-time stream for deviceEnergyData updates
+  void _setupRealtimeUpdates() {
+    _dashboardService.getDashboardDataStream().listen(
+      (deviceEnergyData) {
+        print('Stream received deviceEnergyData: ${deviceEnergyData != null}');
+        if (deviceEnergyData != null) {
+          print('Stream data keys: ${deviceEnergyData.keys.toList()}');
+          print('Stream totalDistanceKm: ${deviceEnergyData['totalDistanceKm']}');
+          print('Stream powerGeneratedInWatts: ${deviceEnergyData['powerGeneratedInWatts']}');
+          print('Stream totalKwh: ${deviceEnergyData['totalKwh']}');
+          
+          setState(() {
+            // Merge real-time deviceEnergyData with existing transaction data
+            if (_dashboardData != null) {
+              // Preserve transaction data (totalRedeems, totalGenerated, batteriesExchanged)
+              final totalRedeems = _dashboardData!['totalRedeems'];
+              final totalGenerated = _dashboardData!['totalGenerated'];
+              final batteriesExchanged = _dashboardData!['batteriesExchanged'];
+              
+              // Update with new deviceEnergyData
+              _dashboardData = Map<String, dynamic>.from(deviceEnergyData);
+              
+              // Restore transaction data
+              if (totalRedeems != null) _dashboardData!['totalRedeems'] = totalRedeems;
+              if (totalGenerated != null) _dashboardData!['totalGenerated'] = totalGenerated;
+              if (batteriesExchanged != null) _dashboardData!['batteriesExchanged'] = batteriesExchanged;
+            } else {
+              // First update, just set the data
+              _dashboardData = deviceEnergyData;
+            }
+            _isLoading = false;
+          });
+        }
+      },
+      onError: (error) {
+        print('Error in real-time stream: $error');
+        setState(() {
+          _isLoading = false;
+        });
+      },
+    );
   }
 
   Future<void> _loadDashboardData() async {
@@ -32,6 +82,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final data = await _dashboardService.getDashboardData();
+      print('Dashboard screen received data: ${data != null}');
+      if (data != null) {
+        print('Data keys: ${data.keys.toList()}');
+        print('totalDistanceKm: ${data['totalDistanceKm']}');
+        print('powerGeneratedInWatts: ${data['powerGeneratedInWatts']}');
+        print('totalKwh: ${data['totalKwh']}');
+      }
       setState(() {
         _dashboardData = data;
         _isLoading = false;
@@ -194,9 +251,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Distance = totalDistanceKm
     // Effort = powerGeneratedInWatts
     // Generated = totalKwh
-    final distance = _dashboardData?['totalDistanceKm'] ?? 0.00;
-    final effort = _dashboardData?['powerGeneratedInWatts'] ?? 0.00;
-    final generated = _dashboardData?['totalKwh'] ?? 0.00;
+    
+    // Safely extract and convert values from deviceEnergyData
+    final distanceValue = _dashboardData?['totalDistanceKm'];
+    final effortValue = _dashboardData?['powerGeneratedInWatts'];
+    final generatedValue = _dashboardData?['totalKwh'];
+    
+    // Convert to numbers with safe fallback
+    final distance = _convertToDouble(distanceValue) ?? 0.00;
+    final effort = _convertToDouble(effortValue) ?? 0.00;
+    final generated = _convertToDouble(generatedValue) ?? 0.00;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),
@@ -205,22 +269,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           _MetricItem(
             icon: Icons.directions_bike,
-            value: _isLoading ? '...' : '${(distance as num).toStringAsFixed(1)}km',
+            value: _isLoading ? '...' : '${distance.toStringAsFixed(1)}km',
             label: 'Distance',
           ),
           _MetricItem(
             icon: Icons.flash_on,
-            value: _isLoading ? '...' : '${(effort as num).toInt()}W',
+            value: _isLoading ? '...' : '${effort.toInt()}W',
             label: 'Effort',
           ),
           _MetricItem(
             icon: Icons.check_box,
-            value: _isLoading ? '...' : '${(generated as num).toStringAsFixed(1)}kWh',
+            value: _isLoading ? '...' : '${generated.toStringAsFixed(4)}kWh',
             label: 'Generated',
           ),
         ],
       ),
     );
+  }
+
+  // Helper method to safely convert values to double
+  double? _convertToDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   // Widget for the bottom action buttons

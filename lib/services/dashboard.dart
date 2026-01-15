@@ -33,30 +33,41 @@ class DashboardService {
         return null;
       }
 
-      // Try both formats: with spaces and without spaces
-      final cleanServiceTag = serviceTag.replaceAll(' ', '');
+      // Clean service tag: remove spaces and dashes, convert to uppercase for consistency
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
       
       print('Fetching dashboard data for service tag: "$serviceTag" (cleaned: "$cleanServiceTag")');
 
-      // First try without spaces
+      // Fetch using cleaned service tag (no spaces, no dashes, uppercase)
       var snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
-      
-      // If not found, try with spaces
-      if (!snapshot.exists && serviceTag.contains(' ')) {
-        print('Trying with spaces: "$serviceTag"');
-        snapshot = await _database.child('deviceEnergyData/$serviceTag').get();
-      }
       
       Map<String, dynamic> dashboardData = {};
       
       if (snapshot.exists) {
         final data = snapshot.value as Map<Object?, Object?>;
-        print('Successfully fetched dashboard data');
+        print('Successfully fetched dashboard data from deviceEnergyData/$cleanServiceTag');
         dashboardData = Map<String, dynamic>.from(
           data.map((key, value) => MapEntry(key.toString(), value)),
         );
+        
+        // Debug: Print the fetched data
+        print('Fetched deviceEnergyData keys: ${dashboardData.keys.toList()}');
+        print('totalDistanceKm: ${dashboardData['totalDistanceKm']}');
+        print('powerGeneratedInWatts: ${dashboardData['powerGeneratedInWatts']}');
+        print('totalKwh: ${dashboardData['totalKwh']}');
       } else {
-        print('No deviceEnergyData found for service tag: "$serviceTag" or "$cleanServiceTag"');
+        print('No deviceEnergyData found for service tag: "$cleanServiceTag" (cleaned from "$serviceTag")');
+        print('Trying to fetch from: deviceEnergyData/$cleanServiceTag');
+        
+        // Try with original service tag as fallback
+        var fallbackSnapshot = await _database.child('deviceEnergyData/$serviceTag').get();
+        if (fallbackSnapshot.exists) {
+          print('Found data using original service tag: "$serviceTag"');
+          final data = fallbackSnapshot.value as Map<Object?, Object?>;
+          dashboardData = Map<String, dynamic>.from(
+            data.map((key, value) => MapEntry(key.toString(), value)),
+          );
+        }
       }
 
       // Fetch total redeems from transactions table
@@ -71,7 +82,10 @@ class DashboardService {
       final batteriesExchanged = await getBatteriesExchanged();
       dashboardData['batteriesExchanged'] = batteriesExchanged;
 
-      return dashboardData.isEmpty ? null : dashboardData;
+      print('Final dashboardData keys: ${dashboardData.keys.toList()}');
+      print('Returning dashboardData: ${dashboardData.isNotEmpty}');
+      
+      return dashboardData;
     } catch (e) {
       print('Error fetching dashboard data: $e');
       return null;
@@ -99,8 +113,8 @@ class DashboardService {
         return Stream.value(null);
       }
 
-      // Remove spaces from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '');
+      // Remove spaces and dashes from service tag for database lookup, convert to uppercase
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
 
       // Stream data using the service tag
       return _database.child('deviceEnergyData/$cleanServiceTag').onValue.map((event) {
@@ -129,8 +143,8 @@ class DashboardService {
       final serviceTag = serviceTagSnapshot.value as String?;
       if (serviceTag == null || serviceTag.isEmpty) return null;
 
-      // Remove spaces from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '');
+      // Remove spaces and dashes from service tag for database lookup
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
 
       final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
       
@@ -181,8 +195,8 @@ class DashboardService {
       final serviceTag = serviceTagSnapshot.value as String?;
       if (serviceTag == null || serviceTag.isEmpty) return 0.0;
 
-      // Remove spaces from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '');
+      // Remove spaces and dashes from service tag for database lookup
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
 
       // Fetch all transactions
       final transactionsSnapshot = await _database.child('transactions').get();
@@ -244,8 +258,8 @@ class DashboardService {
       final serviceTag = serviceTagSnapshot.value as String?;
       if (serviceTag == null || serviceTag.isEmpty) return 0.0;
 
-      // Remove spaces from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '');
+      // Remove spaces and dashes from service tag for database lookup
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
 
       // Fetch all transactions
       final transactionsSnapshot = await _database.child('transactions').get();
@@ -311,8 +325,8 @@ class DashboardService {
       final serviceTag = serviceTagSnapshot.value as String?;
       if (serviceTag == null || serviceTag.isEmpty) return 0;
 
-      // Remove spaces from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '');
+      // Remove spaces and dashes from service tag for database lookup
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
 
       // Fetch all transactions
       final transactionsSnapshot = await _database.child('transactions').get();
