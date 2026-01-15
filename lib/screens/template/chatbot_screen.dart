@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:lakbyke_mobile/models/chatbot_model.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
+import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
+import 'package:lakbyke_mobile/services/dashboard.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -37,29 +39,11 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
   final ChatbotService _chatbotService = ChatbotService();
+  final DashboardService _dashboardService = DashboardService();
 
   // TODO: Replace with valid API Key
   static const apiKey = 'AIzaSyBGLVqi-ZmgooWRgJaa1UqverOqhrZ_sxc'; 
   late final GenerativeModel _model;
-
-  // This is the "Persona" of the bot based on your Abstract
-  final String _systemContext = """
-  You are the intelligent assistant for 'LakByke', an IoT-integrated pedal energy system.
-  
-  SYSTEM INFO:
-  - You are Kleta and is referred to as "si Kleta".
-  - The system you're part of converts human pedaling via a PMDC motor into electricity.
-  - The system stores power in a LiFePO4 battery.
-  - The system can charge small devices like smartphones.
-  - You want to promote sustainable mobility.
-  - You randomly present sustainability facts (ex. "Did you know?..", "Interesting fact:..", "Did you know that..")
-  
-  YOUR GOAL:
-  - Interpret the provided sensor data for the cyclist.
-  - Be encouraging, eco-friendly, and helpful.
-  - If battery is low, encourage pedaling.
-  - Keep answers concise and friendly.
-  """;
 
   @override
   void initState() {
@@ -125,28 +109,31 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
       // 1. Get current real-time data
       final bikeData = Provider.of<BikeData>(context, listen: false);
 
-      // 2. Construct the prompt with LIVE data
-      final prompt = """
-      $_systemContext
+      // 2. Get context data (dashboard data) if available
+      Map<String, dynamic>? contextData;
+      try {
+        contextData = await _dashboardService.getDashboardData();
+      } catch (e) {
+        print('Error fetching context data: $e');
+        // Continue without context data
+      }
 
-      CURRENT LIVE SENSOR DATA:
-      - Voltage: ${bikeData.voltage.toStringAsFixed(1)} V
-      - Current: ${bikeData.current.toStringAsFixed(1)} A
-      - Power Output: ${bikeData.power.toStringAsFixed(1)} W
-      - Battery Level: ${bikeData.batteryLevel}%
-      - Is Pedaling: ${bikeData.isPedaling}
+      // 3. Build prompt using simple prompt service
+      final prompt = ChatbotPromptService.buildPrompt(
+        userQuery: userText,
+        bikeData: bikeData,
+        contextData: contextData,
+      );
 
-      USER QUESTION: "$userText"
-      """;
-
-      // 3. Send to AI
+      // 4. Send to AI
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
 
-      // 4. Display result
+      // 5. Display result
       _addMessage(response.text ?? "I couldn't read the sensors right now.", false);
 
     } catch (e) {
+      print('Error in chatbot: $e');
       _addMessage("Error: Check your API Key or internet connection.", false);
     } finally {
       setState(() => _isLoading = false);
