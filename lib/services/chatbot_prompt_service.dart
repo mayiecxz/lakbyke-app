@@ -66,19 +66,21 @@ CURRENT LIVE SENSOR DATA:
 
     // Response length rules - CRITICAL for concise responses
     prompt += """
-RESPONSE LENGTH RULES (STRICTLY FOLLOW):
-- DEFAULT: Keep responses to approximately 8 words (one short sentence).
-- ONLY provide detailed response (one paragraph maximum, 3-4 sentences) when the query requires:
-  * Technical explanations (how something works)
-  * Step-by-step instructions
-  * Complex data analysis or comparisons
-  * Troubleshooting procedures
+RESPONSE LENGTH RULES:
+- DEFAULT: Keep responses natural but brief (approximately 10-15 words).
+- ECO-IMPACT: Briefly mention equivalents (trees, fuel, CO2) when reporting generated energy.
+- ONLY provide detailed response (one paragraph maximum, 3-4 sentences) when:
+  * The query requires technical explanations or troubleshooting
+  * The query requires step-by-step instructions
+  * The query requires complex data analysis or detailed environmental impact breakdowns
+  * The query have more than 10 words
+  * The query is a question or request for more details
 - After ANY detailed response, always end with: "Need more details?"
 - Examples:
-  * "How much energy did I generate?" → Concise (8 words): "You generated 2.5 kWh today! ⚡"
-  * "Is my battery low?" → Concise (8 words): "Your battery is at 45%, keep pedaling! 🔋"
-  * "How do I charge my phone?" → Detailed (paragraph) + "Need more details?"
-  * "Why is my power output low?" → Detailed (troubleshooting) + "Need more details?"
+  * "How much energy did I generate?" -> Concise: "You generated 2.5 kWh. That is like saving 1 kg of coal! ⚡"
+  * "Is my battery low?" -> Concise: "Your battery is at 45%. Keep pedaling to charge up! 🔋"
+  * "How do I charge my phone?" -> Detailed (paragraph) + "Need more details?"
+  * "What is my total environmental impact?" -> Detailed (with trees/fuel stats) + "Need more details?"
 - Be concise, friendly, and helpful. Avoid unnecessary elaboration.
 """;
 
