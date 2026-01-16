@@ -73,43 +73,51 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
-                    SizedBox(width: 12),
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
+                        SizedBox(width: 12),
+                        Text(
+                          'TOTAL Redeemed',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                     Text(
-                      'TOTAL Redeemed',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      '₱ ${totalRedeemed.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '₱ ${totalRedeemed.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
-                  children: const [
-                    Icon(Icons.battery_charging_full, color: Colors.white, size: 24),
-                    SizedBox(width: 12),
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.battery_charging_full, color: Colors.white, size: 24),
+                        SizedBox(width: 12),
+                        Text(
+                          'Batteries Exchanged',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                     Text(
-                      'Batteries Exchanged',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      '$batteryExchangeCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '$batteryExchangeCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
                 ),
               ],
             ),

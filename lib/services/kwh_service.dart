@@ -99,9 +99,10 @@ class KwhService {
               documentData.map((key, value) => MapEntry(key.toString(), value)),
             );
             
-            // Extract timestamp and totalWh
+            // Extract timestamp, totalWh, and totalDistanceKm
             final timestampStr = record['timestamp'] as String?;
             final totalWh = record['totalWh'];
+            final totalDistanceKm = record['totalDistanceKm'];
             
             if (timestampStr != null && totalWh != null) {
               final timestamp = _parseTimestamp(timestampStr);
@@ -109,9 +110,16 @@ class KwhService {
                 double whValue = (totalWh is num) ? totalWh.toDouble() : 
                                (totalWh is String) ? double.tryParse(totalWh) ?? 0.0 : 0.0;
                 
+                double distanceValue = 0.0;
+                if (totalDistanceKm != null) {
+                  distanceValue = (totalDistanceKm is num) ? totalDistanceKm.toDouble() : 
+                                 (totalDistanceKm is String) ? double.tryParse(totalDistanceKm) ?? 0.0 : 0.0;
+                }
+                
                 historyRecords.add({
                   'timestamp': timestamp,
                   'totalWh': whValue,
+                  'totalDistanceKm': distanceValue,
                   'recordId': documentId.toString(),
                 });
               }
@@ -139,11 +147,13 @@ class KwhService {
       final historyRecords = await getHistoryData();
       if (historyRecords.isEmpty) return [];
 
-      final aggregated = <DateTime, double>{};
+      final aggregatedWh = <DateTime, double>{};
+      final aggregatedDistance = <DateTime, double>{};
 
       for (final record in historyRecords) {
         final timestamp = record['timestamp'] as DateTime;
         final whValue = record['totalWh'] as double? ?? record['totalKwh'] as double? ?? 0.0;
+        final distanceValue = record['totalDistanceKm'] as double? ?? 0.0;
 
         DateTime key;
         switch (filterType) {
@@ -165,11 +175,12 @@ class KwhService {
             key = DateTime(timestamp.year, timestamp.month, timestamp.day);
         }
 
-        aggregated[key] = (aggregated[key] ?? 0.0) + whValue;
+        aggregatedWh[key] = (aggregatedWh[key] ?? 0.0) + whValue;
+        aggregatedDistance[key] = (aggregatedDistance[key] ?? 0.0) + distanceValue;
       }
 
       // Convert to list and format
-      final entries = aggregated.entries.map((e) {
+      final entries = aggregatedWh.entries.map((e) {
         final DateTime dt = e.key;
         String label;
         
@@ -202,6 +213,7 @@ class KwhService {
         return {
           'label': label,
           'value': e.value,
+          'distance': aggregatedDistance[dt] ?? 0.0,
           'date': dt,
         };
       }).toList();
@@ -232,6 +244,24 @@ class KwhService {
       return total; // Returns Wh
     } catch (e) {
       print('Error calculating total Wh: $e');
+      return 0.0;
+    }
+  }
+
+  // Get total distance traveled across all records
+  Future<double> getTotalDistanceKm() async {
+    try {
+      final historyRecords = await getHistoryData();
+      if (historyRecords.isEmpty) return 0.0;
+
+      double total = 0.0;
+      for (final record in historyRecords) {
+        total += record['totalDistanceKm'] as double? ?? 0.0;
+      }
+
+      return total; // Returns km
+    } catch (e) {
+      print('Error calculating total distance: $e');
       return 0.0;
     }
   }

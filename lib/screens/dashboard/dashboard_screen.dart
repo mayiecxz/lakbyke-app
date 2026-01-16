@@ -262,7 +262,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               children: [
                                 _buildBatteryStatus(),
                                 const SizedBox(height: 15),
-                                const Divider(color: Colors.grey, thickness: 0.5),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Divider(color: Colors.grey, thickness: 0.5),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                      child: Text(
+                                        'metrics',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF317263),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Divider(color: Colors.grey, thickness: 0.5),
+                                    ),
+                                  ],
+                                ),
                                 _buildTodayMetrics(),
                                 const Divider(color: Colors.grey, thickness: 0.5),
                               ],
@@ -294,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                           // --- Action Buttons Section (Total Generated, Redeems, Exchanged) ---
                           Padding(
-                            padding: const EdgeInsets.all(20.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                             child: _buildActionButtons(context),
                           ),
                           
@@ -334,18 +354,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           minSize: 40.0,
         ),
         const SizedBox(width: 15),
-        const Text(
-          'Battery',
-          style: TextStyle(fontSize: 20, color: AppColors.darkText),
-        ),
-        const SizedBox(width: 15),
-        Text(
-          _isLoading ? '...' : '$batteryPercent%',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText.withOpacity(0.8),
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Battery',
+              style: TextStyle(fontSize: 20, color: AppColors.darkText),
+            ),
+            Text(
+              _isLoading ? '...' : '$batteryPercent%',
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkText.withOpacity(0.8),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -427,51 +451,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Widget for the bottom action buttons
   Widget _buildActionButtons(BuildContext context) {
     // Determine the width for the two side-by-side buttons
-    final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 20) / 2; // Screen width - padding - spacing
+    // Screen width - outer padding (40) - container padding (40) - spacing (20)
+    final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 40 - 20) / 2;
 
     final totalGenerated = (_dashboardData?['totalGenerated'] as num?)?.toDouble() ?? 0.0;
     final totalRedeems = _dashboardData?['totalRedeems'] ?? 0;
     final batteriesExchanged = _dashboardData?['batteriesExchanged'] ?? 0;
 
-    return Column(
-      children: [
-        // Total Generated & Total Redeems Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Total Generated Button
-            _ActionButton(
-              icon: Icons.flash_on,
-              title: 'Total Generated',
-              value: _isLoading ? '...' : formatEnergy((totalGenerated as num).toDouble()),
-              color: AppColors.dashboardPrimary, // Dark Green
-              width: buttonWidth,
-            ),
-            // Total Redeems Button
-            _ActionButton(
-              icon: Icons.account_balance_wallet,
-              title: 'Total Redeems',
-              value: _isLoading ? '...' : '₱ ${(totalRedeems as num).toInt()}',
-              color: AppColors.dashboardPrimary, // Dark Green
-              width: buttonWidth,
-              isCurrency: true,
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: Color(0xFF317263), // Dark green background
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          // Total Generated & Total Redeems Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Total Generated Button
+              _ActionButton(
+                icon: Icons.flash_on,
+                title: 'Total Generated',
+                value: _isLoading ? '...' : formatEnergy((totalGenerated as num).toDouble()),
+                color: AppColors.dashboardPrimary, // Dark Green
+                width: buttonWidth,
+              ),
+              // Total Redeems Button
+              _ActionButton(
+                icon: Icons.account_balance_wallet,
+                title: 'Total Redeems',
+                value: _isLoading ? '...' : '₱ ${(totalRedeems as num).toInt()}',
+                color: AppColors.dashboardPrimary, // Dark Green
+                width: buttonWidth,
+                isCurrency: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
 
-        // Batteries Exchanged Button (Full Width)
-        _ActionButton(
-          icon: Icons.battery_charging_full,
-          title: _isLoading 
-              ? 'Loading...' 
-              : '${(batteriesExchanged as num).toInt()} Batteries Exchanged',
-          value: '', // No value displayed below the title
-          color: AppColors.dashboardAccent, // Light Green/Teal
-          width: double.infinity,
-          isFullWidth: true,
-        ),
-      ],
+          // Batteries Exchanged Button (Full Width)
+          _ActionButton(
+            icon: Icons.battery_charging_full,
+            title: _isLoading 
+                ? 'Loading...' 
+                : '${(batteriesExchanged as num).toInt()} Batteries Exchanged',
+            value: '', // No value displayed below the title
+            color: AppColors.dashboardPrimary, // Dark Green
+            width: double.infinity,
+            isFullWidth: true,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -500,9 +532,9 @@ class _MetricItem extends StatelessWidget {
       children: [
         ResponsiveIcon(
           icon: icon,
-          maxSizePercent: 0.10,
+          maxSizePercent: 0.08,
           color: AppColors.dashboardAccent,
-          minSize: 30.0,
+          minSize: 24.0,
         ),
         const SizedBox(height: 5),
         Text(
@@ -514,7 +546,7 @@ class _MetricItem extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Row(
+        Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
@@ -525,7 +557,7 @@ class _MetricItem extends StatelessWidget {
               ),
             ),
             if (subtitle != null) ...[
-              const SizedBox(width: 4),
+              const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -594,9 +626,12 @@ class _ActionButton extends StatelessWidget {
       width: width,
       padding: const EdgeInsets.all(AppDimensions.dashboardActionButtonPadding),
       decoration: BoxDecoration(
-        color: isFullWidth ? Colors.white : color,
+        color: Color(0xFF317263), // Dark green background
         borderRadius: BorderRadius.circular(AppDimensions.dashboardActionButtonRadius),
-        border: isFullWidth ? Border.all(color: color, width: 2) : null,
+        border: Border.all(
+          color: Colors.white,
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -607,61 +642,72 @@ class _ActionButton extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: isFullWidth ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                color: isFullWidth ? color : AppColors.lightText,
-                size: 28.0,
-              ),
-              const SizedBox(width: 8),
-              if (!isFullWidth) // Title is separate for the full-width button
+          if (!isFullWidth)
+            Column(
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 40.0,
+                ),
+                const SizedBox(height: 8),
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isFullWidth ? color : AppColors.lightText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-            ],
-          ),
-          if (isFullWidth) 
-             Padding(
-                padding: const EdgeInsets.only(top: 8.0, left: 0),
-                child: Center(
+              ],
+            ),
+          if (isFullWidth)
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 32.0,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: color,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              ),
+              ],
+            ),
 
           if (value.isNotEmpty) // Only show value if it's not empty
             Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 10),
                 Text(
                   value,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: isFullWidth ? AppColors.darkText : AppColors.lightText,
+                    color: Colors.white,
                   ),
+                  textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 4),
                 Text(
                   'View History',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isFullWidth ? AppColors.darkText.withOpacity(0.7) : AppColors.lightText.withOpacity(0.7),
+                    color: Colors.white.withOpacity(0.7),
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

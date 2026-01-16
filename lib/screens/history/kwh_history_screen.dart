@@ -20,6 +20,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _aggregatedData = [];
   double _totalGenerated = 0.0;
+  double _totalDistance = 0.0;
   String? _errorMessage;
 
   @override
@@ -35,15 +36,17 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     });
 
     try {
-      // Load aggregated data and total in parallel
+      // Load aggregated data and totals in parallel
       final results = await Future.wait([
         _kwhService.getAggregatedData(_selectedFilter),
         _kwhService.getTotalKwhGenerated(),
+        _kwhService.getTotalDistanceKm(),
       ]);
 
       setState(() {
         _aggregatedData = results[0] as List<Map<String, dynamic>>;
         _totalGenerated = results[1] as double;
+        _totalDistance = results[2] as double;
         _isLoading = false;
         _currentPage = 1; // Reset to first page when filter changes
       });
@@ -99,26 +102,55 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
           color: AppColors.dashboardAccent,
           borderRadius: BorderRadius.circular(16.0),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.battery_full, color: Colors.white, size: 28),
-                SizedBox(width: 12),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.battery_full, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'TOTAL Wh Generated',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
                 Text(
-                  'TOTAL Wh Generated',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  _totalGenerated.toStringAsFixed(2),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-            Text(
-              _totalGenerated.toStringAsFixed(2),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.directions_bike, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
+                    Text(
+                      'TOTAL km Travelled',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                Text(
+                  _totalDistance.toStringAsFixed(2),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -127,7 +159,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
   }
 
   Widget _buildFilterChips() {
-    const choices = ['yearly', 'monthly', 'weekly', 'daily'];
+    const choices = ['daily', 'weekly', 'monthly', 'yearly'];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
@@ -218,7 +250,16 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                           children: [
                             Flexible(child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600))),
                             const SizedBox(width: 12),
-                            Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 16),
+                                Text(
+                                  '${(item['distance'] as double? ?? 0.0).toStringAsFixed(2)} km',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       );
