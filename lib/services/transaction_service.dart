@@ -10,29 +10,43 @@ class TransactionService {
     return _auth.currentUser?.uid;
   }
 
-  // Parse timestamp (int) to DateTime
+  // Parse timestamp (ISO 8601 string or int) to DateTime
   DateTime? _parseTimestamp(dynamic timestamp) {
     try {
       if (timestamp == null) return null;
       
+      // If timestamp is a String, try to parse as ISO 8601 format
+      if (timestamp is String) {
+        try {
+          return DateTime.parse(timestamp);
+        } catch (e) {
+          // If ISO 8601 parsing fails, try as Unix timestamp string
+          final timestampInt = int.tryParse(timestamp);
+          if (timestampInt != null) {
+            // Check if it's in milliseconds (13 digits) or seconds (10 digits)
+            if (timestampInt > 9999999999) {
+              return DateTime.fromMillisecondsSinceEpoch(timestampInt);
+            } else {
+              return DateTime.fromMillisecondsSinceEpoch(timestampInt * 1000);
+            }
+          }
+          return null;
+        }
+      }
+      
       // If timestamp is an int (Unix timestamp in seconds or milliseconds)
-      int timestampInt;
       if (timestamp is int) {
-        timestampInt = timestamp;
-      } else if (timestamp is String) {
-        timestampInt = int.tryParse(timestamp) ?? 0;
-      } else {
-        return null;
+        // Check if it's in milliseconds (13 digits) or seconds (10 digits)
+        if (timestamp > 9999999999) {
+          // Milliseconds
+          return DateTime.fromMillisecondsSinceEpoch(timestamp);
+        } else {
+          // Seconds
+          return DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+        }
       }
-
-      // Check if it's in milliseconds (13 digits) or seconds (10 digits)
-      if (timestampInt > 9999999999) {
-        // Milliseconds
-        return DateTime.fromMillisecondsSinceEpoch(timestampInt);
-      } else {
-        // Seconds
-        return DateTime.fromMillisecondsSinceEpoch(timestampInt * 1000);
-      }
+      
+      return null;
     } catch (e) {
       print('Error parsing timestamp: $timestamp - $e');
       return null;
@@ -40,6 +54,7 @@ class TransactionService {
   }
 
   // Get all transactions from Firebase
+  // New structure: transactions/STN0001/{transaction_id}/[fields]
   Future<List<Map<String, dynamic>>> getAllTransactions() async {
     try {
       print('Fetching transactions from Firebase...');
@@ -57,39 +72,44 @@ class TransactionService {
 
       List<Map<String, dynamic>> transactions = [];
 
-      // Handle Map structure (each document is a key-value pair)
+      // Handle nested structure: iterate through station IDs first
       if (data is Map<Object?, Object?>) {
-        data.forEach((transactionId, transactionData) {
-          if (transactionData is Map<Object?, Object?>) {
-            final transaction = Map<String, dynamic>.from(
-              transactionData.map((key, value) => MapEntry(key.toString(), value)),
-            );
-            
-            // Extract all fields from the transaction
-            final amount = transaction['amount'];
-            final mntBattPercentage = transaction['mntBattPercentage'];
-            final mntTag = transaction['mntTag'];
-            final powerSubmitted = transaction['powerSubmitted'];
-            final stnBattPercentage = transaction['stnBattPercentage'];
-            final stnTag = transaction['stnTag'];
-            final timeStamp = transaction['timeStamp'];
-            final transactionID = transaction['transactionID'];
-            final voltage = transaction['voltage'];
-            
-            // Parse timestamp to DateTime
-            final dateTime = _parseTimestamp(timeStamp);
-            
-            transactions.add({
-              'transactionId': transactionId.toString(),
-              'amount': amount is num ? amount.toDouble() : (amount is String ? double.tryParse(amount) ?? 0.0 : 0.0),
-              'mntBattPercentage': mntBattPercentage is num ? mntBattPercentage.toInt() : (mntBattPercentage is String ? int.tryParse(mntBattPercentage) ?? 0 : 0),
-              'mntTag': mntTag?.toString() ?? '',
-              'powerSubmitted': powerSubmitted is num ? powerSubmitted.toDouble() : (powerSubmitted is String ? double.tryParse(powerSubmitted) ?? 0.0 : 0.0),
-              'stnBattPercentage': stnBattPercentage is num ? stnBattPercentage.toInt() : (stnBattPercentage is String ? int.tryParse(stnBattPercentage) ?? 0 : 0),
-              'stnTag': stnTag?.toString() ?? '',
-              'timeStamp': dateTime,
-              'transactionID': transactionID is num ? transactionID.toInt() : (transactionID is String ? int.tryParse(transactionID) ?? 0 : 0),
-              'voltage': voltage is num ? voltage.toDouble() : (voltage is String ? double.tryParse(voltage) ?? 0.0 : 0.0),
+        data.forEach((stationId, stationData) {
+          if (stationData is Map<Object?, Object?>) {
+            // Iterate through transaction IDs under each station
+            stationData.forEach((transactionId, transactionData) {
+              if (transactionData is Map<Object?, Object?>) {
+                final transaction = Map<String, dynamic>.from(
+                  transactionData.map((key, value) => MapEntry(key.toString(), value)),
+                );
+                
+                // Extract all fields from the transaction (updated field names)
+                final payout = transaction['payout']; // Changed from 'amount'
+                final mntBattPercentage = transaction['mntBattPercentage'];
+                final mntTag = transaction['mntTag'];
+                final powerSubmittedAh = transaction['powerSubmitted_Ah']; // Changed from 'powerSubmitted'
+                final stnBattPercentage = transaction['stnBattPercentage'];
+                final timestamp = transaction['timestamp']; // Changed from 'timeStamp'
+                final voltage = transaction['voltage'];
+                
+                // Parse timestamp to DateTime (now ISO 8601 string)
+                final dateTime = _parseTimestamp(timestamp);
+                
+                transactions.add({
+                  'transactionId': transactionId.toString(),
+                  'stationId': stationId.toString(),
+                  'payout': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0),
+                  'amount': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0), // Keep 'amount' for backward compatibility
+                  'mntBattPercentage': mntBattPercentage is num ? mntBattPercentage.toInt() : (mntBattPercentage is String ? int.tryParse(mntBattPercentage) ?? 0 : 0),
+                  'mntTag': mntTag?.toString() ?? '',
+                  'powerSubmitted_Ah': powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0),
+                  'powerSubmitted': powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0), // Keep for backward compatibility
+                  'stnBattPercentage': stnBattPercentage is num ? stnBattPercentage.toInt() : (stnBattPercentage is String ? int.tryParse(stnBattPercentage) ?? 0 : 0),
+                  'timestamp': dateTime,
+                  'timeStamp': dateTime, // Keep for backward compatibility
+                  'voltage': voltage is num ? voltage.toDouble() : (voltage is String ? double.tryParse(voltage) ?? 0.0 : 0.0),
+                });
+              }
             });
           }
         });
@@ -97,8 +117,8 @@ class TransactionService {
 
       // Sort by timestamp descending (most recent first)
       transactions.sort((a, b) {
-        final aTime = a['timeStamp'] as DateTime?;
-        final bTime = b['timeStamp'] as DateTime?;
+        final aTime = a['timestamp'] as DateTime? ?? a['timeStamp'] as DateTime?;
+        final bTime = b['timestamp'] as DateTime? ?? b['timeStamp'] as DateTime?;
         if (aTime == null && bTime == null) return 0;
         if (aTime == null) return 1;
         if (bTime == null) return -1;
@@ -122,10 +142,10 @@ class TransactionService {
       final aggregated = <DateTime, double>{};
 
       for (final transaction in transactions) {
-        final timestamp = transaction['timeStamp'] as DateTime?;
+        final timestamp = transaction['timestamp'] as DateTime? ?? transaction['timeStamp'] as DateTime?;
         if (timestamp == null) continue;
         
-        final amount = transaction['amount'] as double? ?? 0.0;
+        final amount = transaction['payout'] as double? ?? transaction['amount'] as double? ?? 0.0;
 
         DateTime key;
         switch (filterType) {
@@ -208,8 +228,8 @@ class TransactionService {
 
       double total = 0.0;
       for (final transaction in transactions) {
-        final amount = transaction['amount'] as double? ?? 0.0;
-        total += amount;
+        final payout = transaction['payout'] as double? ?? transaction['amount'] as double? ?? 0.0;
+        total += payout;
       }
 
       return total;
@@ -219,9 +239,10 @@ class TransactionService {
     }
   }
 
-  // Get total generated power (kWh) from all transactions
-  // Sums all powerSubmitted values from transactions
+  // Get total generated power (Wh) from all transactions
+  // Sums all powerSubmitted_Ah values from transactions and converts to Wh
   // Optionally filters by service tag if provided
+  // Note: powerSubmitted_Ah is in Ampere-hours, convert to Wh using voltage
   Future<double> getTotalGenerated({String? serviceTag}) async {
     try {
       final transactions = await getAllTransactions();
@@ -241,12 +262,19 @@ class TransactionService {
           }
         }
         
-        // Sum the powerSubmitted value (assuming it's already in kWh)
-        final powerSubmitted = transaction['powerSubmitted'] as double? ?? 0.0;
-        totalGenerated += powerSubmitted;
+        // Get powerSubmitted_Ah (changed from 'powerSubmitted')
+        // Convert Ah to Wh: Wh = Ah * V
+        final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ?? 
+                                 transaction['powerSubmitted'] as double? ?? 0.0;
+        final voltage = transaction['voltage'] as double? ?? 0.0;
+        
+        if (voltage > 0 && powerSubmittedAh > 0) {
+          final whValue = powerSubmittedAh * voltage;
+          totalGenerated += whValue;
+        }
       }
 
-      print('Total generated calculated: ${totalGenerated.toStringAsFixed(2)} kWh${serviceTag != null ? ' for service tag: $serviceTag' : ''}');
+      print('Total generated calculated: ${totalGenerated.toStringAsFixed(2)} Wh${serviceTag != null ? ' for service tag: $serviceTag' : ''}');
       return totalGenerated;
     } catch (e) {
       print('Error calculating total generated: $e');

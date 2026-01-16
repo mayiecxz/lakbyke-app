@@ -10,8 +10,175 @@ class DashboardService {
     return _auth.currentUser?.uid;
   }
 
+  // Parse ISO 8601 timestamp string to DateTime
+  DateTime? _parseIsoTimestamp(String? timestampStr) {
+    if (timestampStr == null || timestampStr.isEmpty) return null;
+    try {
+      return DateTime.parse(timestampStr);
+    } catch (e) {
+      print('Error parsing ISO timestamp: $timestampStr - $e');
+      return null;
+    }
+  }
+
+  // Check if timestamp is today
+  bool _isToday(DateTime timestamp) {
+    final now = DateTime.now();
+    return timestamp.year == now.year &&
+           timestamp.month == now.month &&
+           timestamp.day == now.day;
+  }
+
+  // Get today's aggregated data (sum of all records from today)
+  // Returns: {todayDistance: double, todayWh: double}
+  Future<Map<String, dynamic>> getTodayData() async {
+    try {
+      final userId = getCurrentuserTable();
+      if (userId == null) {
+        return {'todayDistance': 0.0, 'todayWh': 0.0};
+      }
+
+      // First, get the user's service tag
+      final serviceTagSnapshot = await _database.child('userTable/$userId/serviceTag').get();
+      if (!serviceTagSnapshot.exists) {
+        return {'todayDistance': 0.0, 'todayWh': 0.0};
+      }
+
+      final serviceTag = serviceTagSnapshot.value as String?;
+      if (serviceTag == null || serviceTag.isEmpty) {
+        return {'todayDistance': 0.0, 'todayWh': 0.0};
+      }
+
+      // Clean service tag
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+
+      // Fetch all documents
+      final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
+      
+      if (!snapshot.exists) {
+        return {'todayDistance': 0.0, 'todayWh': 0.0};
+      }
+
+      final data = snapshot.value;
+      if (data == null || data is! Map<Object?, Object?>) {
+        return {'todayDistance': 0.0, 'todayWh': 0.0};
+      }
+
+      double todayDistance = 0.0;
+      double todayWh = 0.0;
+
+      // Iterate through all documents and sum today's data
+      data.forEach((documentId, documentData) {
+        if (documentData is Map<Object?, Object?>) {
+          final document = Map<String, dynamic>.from(
+            documentData.map((key, value) => MapEntry(key.toString(), value)),
+          );
+
+          final timestampStr = document['timestamp'] as String?;
+          final timestamp = _parseIsoTimestamp(timestampStr);
+
+          // Only include records from today
+          if (timestamp != null && _isToday(timestamp)) {
+            // Sum distance
+            final distance = document['totalDistanceKm'];
+            if (distance != null) {
+              final distanceValue = (distance is num) ? distance.toDouble() : 
+                                   (distance is String) ? double.tryParse(distance) ?? 0.0 : 0.0;
+              todayDistance += distanceValue;
+            }
+
+            // Sum energy (Wh)
+            final totalWh = document['totalWh'];
+            if (totalWh != null) {
+              final whValue = (totalWh is num) ? totalWh.toDouble() : 
+                            (totalWh is String) ? double.tryParse(totalWh) ?? 0.0 : 0.0;
+              todayWh += whValue;
+            }
+          }
+        }
+      });
+
+      return {
+        'todayDistance': todayDistance,
+        'todayWh': todayWh,
+      };
+    } catch (e) {
+      print('Error fetching today data: $e');
+      return {'todayDistance': 0.0, 'todayWh': 0.0};
+    }
+  }
+
+  // Get latest effort (powerGeneratedInWatts) with timestamp for live indicator
+  // Returns: {effort: double, timestamp: DateTime}
+  Future<Map<String, dynamic>?> getLatestEffort() async {
+    try {
+      final userId = getCurrentuserTable();
+      if (userId == null) return null;
+
+      // First, get the user's service tag
+      final serviceTagSnapshot = await _database.child('userTable/$userId/serviceTag').get();
+      if (!serviceTagSnapshot.exists) return null;
+
+      final serviceTag = serviceTagSnapshot.value as String?;
+      if (serviceTag == null || serviceTag.isEmpty) return null;
+
+      // Clean service tag
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+
+      // Fetch all documents
+      final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
+      
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.value;
+      if (data == null || data is! Map<Object?, Object?>) return null;
+
+      Map<String, dynamic>? latestDocument;
+      DateTime? latestTimestamp;
+
+      // Find the latest document by timestamp
+      data.forEach((documentId, documentData) {
+        if (documentData is Map<Object?, Object?>) {
+          final document = Map<String, dynamic>.from(
+            documentData.map((key, value) => MapEntry(key.toString(), value)),
+          );
+
+          final timestampStr = document['timestamp'] as String?;
+          final timestamp = _parseIsoTimestamp(timestampStr);
+
+          if (timestamp != null) {
+            if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
+              latestTimestamp = timestamp;
+              latestDocument = document;
+            }
+          } else if (latestDocument == null) {
+            latestDocument = document;
+          }
+        }
+      });
+
+      if (latestDocument != null && latestTimestamp != null) {
+        final doc = latestDocument!;
+        final effort = doc['powerGeneratedInWatts'];
+        final effortValue = (effort is num) ? effort.toDouble() : 
+                          (effort is String) ? double.tryParse(effort) ?? 0.0 : 0.0;
+
+        return {
+          'effort': effortValue,
+          'timestamp': latestTimestamp!,
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching latest effort: $e');
+      return null;
+    }
+  }
+
   // Get dashboard data for the current user from deviceEnergyData
   // Data is stored by service tag (e.g., "MNT 0001"), not by userId
+  // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
   Future<Map<String, dynamic>?> getDashboardData() async {
     try {
       final userId = getCurrentuserTable();
@@ -38,49 +205,88 @@ class DashboardService {
       
       print('Fetching dashboard data for service tag: "$serviceTag" (cleaned: "$cleanServiceTag")');
 
-      // Fetch using cleaned service tag (no spaces, no dashes, uppercase)
+      // Fetch nested structure: deviceEnergyData/{serviceTag}/* to get all documents
       var snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
       
       Map<String, dynamic> dashboardData = {};
       
       if (snapshot.exists) {
-        final data = snapshot.value as Map<Object?, Object?>;
-        print('Successfully fetched dashboard data from deviceEnergyData/$cleanServiceTag');
-        dashboardData = Map<String, dynamic>.from(
-          data.map((key, value) => MapEntry(key.toString(), value)),
-        );
+        final data = snapshot.value;
         
-        // Debug: Print the fetched data
-        print('Fetched deviceEnergyData keys: ${dashboardData.keys.toList()}');
-        print('totalDistanceKm: ${dashboardData['totalDistanceKm']}');
-        print('powerGeneratedInWatts: ${dashboardData['powerGeneratedInWatts']}');
-        print('totalKwh: ${dashboardData['totalKwh']}');
+        // Handle nested structure: iterate through document IDs to find the latest one
+        if (data is Map<Object?, Object?>) {
+          Map<String, dynamic>? latestDocument;
+          DateTime? latestTimestamp;
+          
+          data.forEach((documentId, documentData) {
+            if (documentData is Map<Object?, Object?>) {
+              final document = Map<String, dynamic>.from(
+                documentData.map((key, value) => MapEntry(key.toString(), value)),
+              );
+              
+              // Get timestamp to find the latest document
+              final timestampStr = document['timestamp'] as String?;
+              final timestamp = _parseIsoTimestamp(timestampStr);
+              
+              if (timestamp != null) {
+                if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
+                  latestTimestamp = timestamp;
+                  latestDocument = document;
+                }
+              } else if (latestDocument == null) {
+                // If no timestamp, use first document as fallback
+                latestDocument = document;
+              }
+            }
+          });
+          
+          if (latestDocument != null) {
+            dashboardData = Map<String, dynamic>.from(latestDocument!);
+            
+            // Keep totalWh as-is (no conversion to kWh)
+            print('Successfully fetched dashboard data from deviceEnergyData/$cleanServiceTag');
+            print('Fetched deviceEnergyData keys: ${dashboardData.keys.toList()}');
+            print('totalDistanceKm: ${dashboardData['totalDistanceKm']}');
+            print('powerGeneratedInWatts: ${dashboardData['powerGeneratedInWatts']}');
+            print('totalWh: ${dashboardData['totalWh']}');
+          } else {
+            print('No valid documents found in deviceEnergyData/$cleanServiceTag');
+          }
+        } else {
+          // Fallback: handle flat structure if data is not nested
+          dashboardData = Map<String, dynamic>.from(
+            (data as Map<Object?, Object?>).map((key, value) => MapEntry(key.toString(), value)),
+          );
+          
+          // Keep totalWh as-is (no conversion)
+        }
       } else {
         print('No deviceEnergyData found for service tag: "$cleanServiceTag" (cleaned from "$serviceTag")');
-        print('Trying to fetch from: deviceEnergyData/$cleanServiceTag');
-        
-        // Try with original service tag as fallback
-        var fallbackSnapshot = await _database.child('deviceEnergyData/$serviceTag').get();
-        if (fallbackSnapshot.exists) {
-          print('Found data using original service tag: "$serviceTag"');
-          final data = fallbackSnapshot.value as Map<Object?, Object?>;
-          dashboardData = Map<String, dynamic>.from(
-            data.map((key, value) => MapEntry(key.toString(), value)),
-          );
-        }
       }
+
+      // Fetch today's aggregated data
+      final todayData = await getTodayData();
+      dashboardData['todayDistance'] = todayData['todayDistance'];
+      dashboardData['todayWh'] = todayData['todayWh'];
 
       // Fetch total redeems from transactions table
       final totalRedeems = await getTotalRedeems();
       dashboardData['totalRedeems'] = totalRedeems;
 
-      // Fetch total generated from transactions table
+      // Fetch total generated from transactions table (in Wh)
       final totalGenerated = await getTotalGenerated();
       dashboardData['totalGenerated'] = totalGenerated;
 
       // Fetch batteries exchanged count from transactions table
       final batteriesExchanged = await getBatteriesExchanged();
       dashboardData['batteriesExchanged'] = batteriesExchanged;
+
+      // Fetch latest effort for live indicator
+      final latestEffort = await getLatestEffort();
+      if (latestEffort != null) {
+        dashboardData['liveEffort'] = latestEffort['effort'];
+        dashboardData['liveEffortTimestamp'] = latestEffort['timestamp'];
+      }
 
       print('Final dashboardData keys: ${dashboardData.keys.toList()}');
       print('Returning dashboardData: ${dashboardData.isNotEmpty}');
@@ -94,6 +300,8 @@ class DashboardService {
 
   // Stream dashboard data for real-time updates from deviceEnergyData
   // Data is stored by service tag (e.g., "MNT 0001"), not by userId
+  // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
+  // Includes live effort with timestamp and today's aggregated data
   Stream<Map<String, dynamic>?> getDashboardDataStream() {
     final userId = getCurrentuserTable();
     if (userId == null) {
@@ -116,13 +324,93 @@ class DashboardService {
       // Remove spaces and dashes from service tag for database lookup, convert to uppercase
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
 
-      // Stream data using the service tag
-      return _database.child('deviceEnergyData/$cleanServiceTag').onValue.map((event) {
+      // Stream data using the service tag - handle nested structure
+      return _database.child('deviceEnergyData/$cleanServiceTag').onValue.asyncMap((event) async {
         if (event.snapshot.exists) {
-          final data = event.snapshot.value as Map<Object?, Object?>;
-          return Map<String, dynamic>.from(
-            data.map((key, value) => MapEntry(key.toString(), value)),
-          );
+          final data = event.snapshot.value;
+          
+          // Handle nested structure: find latest document for live effort
+          Map<String, dynamic>? latestDocument;
+          DateTime? latestTimestamp;
+          List<Map<String, dynamic>> allDocuments = [];
+          
+          if (data is Map<Object?, Object?>) {
+            data.forEach((documentId, documentData) {
+              if (documentData is Map<Object?, Object?>) {
+                final document = Map<String, dynamic>.from(
+                  documentData.map((key, value) => MapEntry(key.toString(), value)),
+                );
+                
+                allDocuments.add(document);
+                
+                // Get timestamp to find the latest document
+                final timestampStr = document['timestamp'] as String?;
+                final timestamp = _parseIsoTimestamp(timestampStr);
+                
+                if (timestamp != null) {
+                  if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
+                    latestTimestamp = timestamp;
+                    latestDocument = document;
+                  }
+                } else if (latestDocument == null) {
+                  latestDocument = document;
+                }
+              }
+            });
+          } else if (data is Map<Object?, Object?>) {
+            // Fallback: handle flat structure
+            final flatData = data;
+            latestDocument = Map<String, dynamic>.from(
+              flatData.map((key, value) => MapEntry(key.toString(), value)),
+            );
+            allDocuments.add(latestDocument);
+          }
+          
+          if (latestDocument != null) {
+            final result = Map<String, dynamic>.from(latestDocument!);
+            
+            // Add live effort with timestamp
+            if (latestTimestamp != null) {
+              result['liveEffortTimestamp'] = latestTimestamp;
+              // Also include liveEffort field for easy access
+              final effort = result['powerGeneratedInWatts'];
+              if (effort != null) {
+                result['liveEffort'] = effort;
+              }
+            }
+            
+            // Calculate today's aggregated data
+            double todayDistance = 0.0;
+            double todayWh = 0.0;
+            
+            for (final doc in allDocuments) {
+              final timestampStr = doc['timestamp'] as String?;
+              final timestamp = _parseIsoTimestamp(timestampStr);
+              
+              if (timestamp != null && _isToday(timestamp)) {
+                // Sum distance
+                final distance = doc['totalDistanceKm'];
+                if (distance != null) {
+                  final distanceValue = (distance is num) ? distance.toDouble() : 
+                                     (distance is String) ? double.tryParse(distance) ?? 0.0 : 0.0;
+                  todayDistance += distanceValue;
+                }
+                
+                // Sum energy (Wh)
+                final totalWh = doc['totalWh'];
+                if (totalWh != null) {
+                  final whValue = (totalWh is num) ? totalWh.toDouble() : 
+                                (totalWh is String) ? double.tryParse(totalWh) ?? 0.0 : 0.0;
+                  todayWh += whValue;
+                }
+              }
+            }
+            
+            result['todayDistance'] = todayDistance;
+            result['todayWh'] = todayWh;
+            
+            return result;
+          }
         }
         return null;
       });
@@ -131,6 +419,7 @@ class DashboardService {
 
   // Get today's metrics from deviceEnergyData
   // Data is stored by service tag (e.g., "MNT 0001"), not by userId
+  // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
   Future<Map<String, dynamic>?> getTodayMetrics() async {
     try {
       final userId = getCurrentuserTable();
@@ -144,15 +433,53 @@ class DashboardService {
       if (serviceTag == null || serviceTag.isEmpty) return null;
 
       // Remove spaces and dashes from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
 
       final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
       
       if (snapshot.exists) {
-        final data = snapshot.value as Map<Object?, Object?>;
-        return Map<String, dynamic>.from(
-          data.map((key, value) => MapEntry(key.toString(), value)),
-        );
+        final data = snapshot.value;
+        
+        // Handle nested structure: find latest document
+        if (data is Map<Object?, Object?>) {
+          Map<String, dynamic>? latestDocument;
+          DateTime? latestTimestamp;
+          
+          data.forEach((documentId, documentData) {
+            if (documentData is Map<Object?, Object?>) {
+              final document = Map<String, dynamic>.from(
+                documentData.map((key, value) => MapEntry(key.toString(), value)),
+              );
+              
+              final timestampStr = document['timestamp'] as String?;
+              final timestamp = _parseIsoTimestamp(timestampStr);
+              
+              if (timestamp != null) {
+                if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
+                  latestTimestamp = timestamp;
+                  latestDocument = document;
+                }
+              } else if (latestDocument == null) {
+                latestDocument = document;
+              }
+            }
+          });
+          
+          if (latestDocument != null) {
+            final result = Map<String, dynamic>.from(latestDocument!);
+            // Keep totalWh as-is (no conversion)
+            return result;
+          }
+        } else {
+          // Fallback: handle flat structure
+          final flatData = data as Map<Object?, Object?>;
+          final result = Map<String, dynamic>.from(
+            flatData.map((key, value) => MapEntry(key.toString(), value)),
+          );
+          
+          // Keep totalWh as-is (no conversion)
+          return result;
+        }
       }
       
       return null;
@@ -182,7 +509,8 @@ class DashboardService {
   }
 
   // Get total redeems from transactions table
-  // Sums all 'amount' fields from transactions where mntTag matches user's service tag
+  // Sums all 'payout' fields from transactions where mntTag matches user's service tag
+  // New structure: transactions/STN0001/{transaction_id}/[fields]
   Future<double> getTotalRedeems() async {
     try {
       final userId = getCurrentuserTable();
@@ -196,9 +524,9 @@ class DashboardService {
       if (serviceTag == null || serviceTag.isEmpty) return 0.0;
 
       // Remove spaces and dashes from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
 
-      // Fetch all transactions
+      // Fetch all transactions - iterate through nested structure
       final transactionsSnapshot = await _database.child('transactions').get();
       
       if (!transactionsSnapshot.exists) {
@@ -211,27 +539,32 @@ class DashboardService {
 
       double totalRedeems = 0.0;
 
-      // Iterate through all transactions and sum amounts where mntTag matches
-      transactions.forEach((transactionId, transactionData) {
-        if (transactionData is Map<Object?, Object?>) {
-          final transaction = Map<String, dynamic>.from(
-            transactionData.map((key, value) => MapEntry(key.toString(), value)),
-          );
+      // Iterate through station IDs (STN0001, STN0002, etc.)
+      transactions.forEach((stationId, stationData) {
+        if (stationData is Map<Object?, Object?>) {
+          // Iterate through transaction IDs under each station
+          stationData.forEach((transactionId, transactionData) {
+            if (transactionData is Map<Object?, Object?>) {
+              final transaction = Map<String, dynamic>.from(
+                transactionData.map((key, value) => MapEntry(key.toString(), value)),
+              );
 
-          // Check if this transaction belongs to the user's service tag
-          final mntTag = transaction['mntTag'] as String?;
-          if (mntTag != null) {
-            final cleanMntTag = mntTag.replaceAll(' ', '');
-            if (cleanMntTag == cleanServiceTag) {
-              // Sum the amount
-              final amount = transaction['amount'];
-              if (amount != null) {
-                final amountValue = (amount is num) ? amount.toDouble() : 
-                                   (amount is String) ? double.tryParse(amount) ?? 0.0 : 0.0;
-                totalRedeems += amountValue;
+              // Check if this transaction belongs to the user's service tag
+              final mntTag = transaction['mntTag'] as String?;
+              if (mntTag != null) {
+                final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+                if (cleanMntTag == cleanServiceTag) {
+                  // Sum the payout (changed from 'amount')
+                  final payout = transaction['payout'];
+                  if (payout != null) {
+                    final payoutValue = (payout is num) ? payout.toDouble() : 
+                                      (payout is String) ? double.tryParse(payout) ?? 0.0 : 0.0;
+                    totalRedeems += payoutValue;
+                  }
+                }
               }
             }
-          }
+          });
         }
       });
 
@@ -243,9 +576,10 @@ class DashboardService {
     }
   }
 
-  // Get total generated (kWh) from transactions table
-  // Sums all powerSubmitted values from transactions where mntTag matches user's service tag
-  // Converts power from watts to kWh if needed
+  // Get total generated (Wh) from transactions table
+  // Sums all powerSubmitted_Ah values from transactions where mntTag matches user's service tag
+  // New structure: transactions/STN0001/{transaction_id}/[fields]
+  // Note: powerSubmitted_Ah is in Ampere-hours, convert to Wh using voltage
   Future<double> getTotalGenerated() async {
     try {
       final userId = getCurrentuserTable();
@@ -259,9 +593,9 @@ class DashboardService {
       if (serviceTag == null || serviceTag.isEmpty) return 0.0;
 
       // Remove spaces and dashes from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
 
-      // Fetch all transactions
+      // Fetch all transactions - iterate through nested structure
       final transactionsSnapshot = await _database.child('transactions').get();
       
       if (!transactionsSnapshot.exists) {
@@ -274,35 +608,46 @@ class DashboardService {
 
       double totalGenerated = 0.0;
 
-      // Sum powerSubmitted from all transactions where mntTag matches
-      transactions.forEach((transactionId, transactionData) {
-        if (transactionData is Map<Object?, Object?>) {
-          final transaction = Map<String, dynamic>.from(
-            transactionData.map((key, value) => MapEntry(key.toString(), value)),
-          );
+      // Iterate through station IDs (STN0001, STN0002, etc.)
+      transactions.forEach((stationId, stationData) {
+        if (stationData is Map<Object?, Object?>) {
+          // Iterate through transaction IDs under each station
+          stationData.forEach((transactionId, transactionData) {
+            if (transactionData is Map<Object?, Object?>) {
+              final transaction = Map<String, dynamic>.from(
+                transactionData.map((key, value) => MapEntry(key.toString(), value)),
+              );
 
-          // Check if this transaction belongs to the user's service tag
-          final mntTag = transaction['mntTag'] as String?;
-          if (mntTag != null) {
-            final cleanMntTag = mntTag.replaceAll(' ', '');
-            if (cleanMntTag == cleanServiceTag) {
-              // Get powerSubmitted value and sum it
-              // Assuming powerSubmitted is already in kWh, or adjust conversion as needed
-              final powerSubmitted = transaction['powerSubmitted'];
-              if (powerSubmitted != null) {
-                final powerValue = (powerSubmitted is num) ? powerSubmitted.toDouble() : 
-                                 (powerSubmitted is String) ? double.tryParse(powerSubmitted) ?? 0.0 : 0.0;
-                // Sum the power values (assuming already in kWh)
-                // If your powerSubmitted is in watts, uncomment the line below and comment the direct sum
-                // totalGenerated += powerValue / 1000.0; // Convert watts to kWh
-                totalGenerated += powerValue; // Sum directly (assuming kWh)
+              // Check if this transaction belongs to the user's service tag
+              final mntTag = transaction['mntTag'] as String?;
+              if (mntTag != null) {
+                final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+                if (cleanMntTag == cleanServiceTag) {
+                  // Get powerSubmitted_Ah (changed from 'powerSubmitted')
+                  // powerSubmitted_Ah is in Ampere-hours, convert to kWh using voltage
+                  final powerSubmittedAh = transaction['powerSubmitted_Ah'];
+                  final voltage = transaction['voltage'];
+                  
+                  if (powerSubmittedAh != null && voltage != null) {
+                    final ahValue = (powerSubmittedAh is num) ? powerSubmittedAh.toDouble() : 
+                                   (powerSubmittedAh is String) ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0;
+                    final voltageValue = (voltage is num) ? voltage.toDouble() : 
+                                        (voltage is String) ? double.tryParse(voltage) ?? 0.0 : 0.0;
+                    
+                    // Convert Ah to Wh: Wh = Ah * V
+                    if (voltageValue > 0) {
+                      final whValue = ahValue * voltageValue;
+                      totalGenerated += whValue;
+                    }
+                  }
+                }
               }
             }
-          }
+          });
         }
       });
 
-      print('Total generated calculated: ${totalGenerated.toStringAsFixed(2)} kWh for service tag: $cleanServiceTag');
+      print('Total generated calculated: ${totalGenerated.toStringAsFixed(2)} Wh for service tag: $cleanServiceTag');
       return totalGenerated;
     } catch (e) {
       print('Error calculating total generated: $e');
@@ -313,6 +658,7 @@ class DashboardService {
   // Get total batteries exchanged from transactions table
   // Counts all transactions where mntTag matches user's service tag
   // All transactions with matching mntTag are considered battery exchanges
+  // New structure: transactions/STN0001/{transaction_id}/[fields]
   Future<int> getBatteriesExchanged() async {
     try {
       final userId = getCurrentuserTable();
@@ -326,9 +672,9 @@ class DashboardService {
       if (serviceTag == null || serviceTag.isEmpty) return 0;
 
       // Remove spaces and dashes from service tag for database lookup
-      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '');
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
 
-      // Fetch all transactions
+      // Fetch all transactions - iterate through nested structure
       final transactionsSnapshot = await _database.child('transactions').get();
       
       if (!transactionsSnapshot.exists) return 0;
@@ -338,21 +684,26 @@ class DashboardService {
 
       int batteryCount = 0;
 
-      // Count all transactions where mntTag matches user's service tag
-      transactions.forEach((transactionId, transactionData) {
-        if (transactionData is Map<Object?, Object?>) {
-          final transaction = Map<String, dynamic>.from(
-            transactionData.map((key, value) => MapEntry(key.toString(), value)),
-          );
+      // Iterate through station IDs (STN0001, STN0002, etc.)
+      transactions.forEach((stationId, stationData) {
+        if (stationData is Map<Object?, Object?>) {
+          // Iterate through transaction IDs under each station
+          stationData.forEach((transactionId, transactionData) {
+            if (transactionData is Map<Object?, Object?>) {
+              final transaction = Map<String, dynamic>.from(
+                transactionData.map((key, value) => MapEntry(key.toString(), value)),
+              );
 
-          final mntTag = transaction['mntTag'] as String?;
-          if (mntTag != null) {
-            final cleanMntTag = mntTag.replaceAll(' ', '');
-            if (cleanMntTag == cleanServiceTag) {
-              // Count all transactions with matching mntTag as battery exchanges
-              batteryCount++;
+              final mntTag = transaction['mntTag'] as String?;
+              if (mntTag != null) {
+                final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+                if (cleanMntTag == cleanServiceTag) {
+                  // Count all transactions with matching mntTag as battery exchanges
+                  batteryCount++;
+                }
+              }
             }
-          }
+          });
         }
       });
 

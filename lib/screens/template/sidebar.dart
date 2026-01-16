@@ -130,7 +130,7 @@ class _SidebarPanel extends StatelessWidget {
                                       navigator.push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
                     }),
                     const Divider(color: Colors.white12, height: 1),
-                    _menuItem(context, Icons.battery_std, 'kWh History', onTap: () {
+                    _menuItem(context, Icons.battery_std, 'Energy History', onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
                       navigator.push(MaterialPageRoute(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
+import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
@@ -31,6 +32,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await _loadServiceTag();
     // Then set up real-time updates
     _setupRealtimeUpdates();
+    // Set up periodic refresh for effort (every 30 seconds) to check for staleness
+    _setupPeriodicEffortCheck();
+  }
+
+  // Set up periodic check to refresh effort data and detect staleness
+  void _setupPeriodicEffortCheck() {
+    // Check every 5 seconds to update stale indicator
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          // Trigger rebuild to update stale indicator
+        });
+        _setupPeriodicEffortCheck(); // Schedule next check
+      }
+    });
   }
 
   // Set up real-time stream for deviceEnergyData updates
@@ -42,7 +58,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           print('Stream data keys: ${deviceEnergyData.keys.toList()}');
           print('Stream totalDistanceKm: ${deviceEnergyData['totalDistanceKm']}');
           print('Stream powerGeneratedInWatts: ${deviceEnergyData['powerGeneratedInWatts']}');
-          print('Stream totalKwh: ${deviceEnergyData['totalKwh']}');
+          print('Stream todayWh: ${deviceEnergyData['todayWh']}');
+          print('Stream liveEffort: ${deviceEnergyData['liveEffort']}');
+          print('Stream liveEffortTimestamp: ${deviceEnergyData['liveEffortTimestamp']}');
           
           setState(() {
             // Merge real-time deviceEnergyData with existing transaction data
@@ -52,8 +70,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               final totalGenerated = _dashboardData!['totalGenerated'];
               final batteriesExchanged = _dashboardData!['batteriesExchanged'];
               
-              // Update with new deviceEnergyData
+              // Preserve today's data if not in stream update
+              final todayDistance = deviceEnergyData['todayDistance'] ?? _dashboardData!['todayDistance'];
+              final todayWh = deviceEnergyData['todayWh'] ?? _dashboardData!['todayWh'];
+              
+              // Update with new deviceEnergyData (includes live effort and today's data)
               _dashboardData = Map<String, dynamic>.from(deviceEnergyData);
+              
+              // Ensure today's data is set
+              if (todayDistance != null) _dashboardData!['todayDistance'] = todayDistance;
+              if (todayWh != null) _dashboardData!['todayWh'] = todayWh;
               
               // Restore transaction data
               if (totalRedeems != null) _dashboardData!['totalRedeems'] = totalRedeems;
@@ -88,7 +114,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Data keys: ${data.keys.toList()}');
         print('totalDistanceKm: ${data['totalDistanceKm']}');
         print('powerGeneratedInWatts: ${data['powerGeneratedInWatts']}');
-        print('totalKwh: ${data['totalKwh']}');
+        print('todayWh: ${data['todayWh']}');
+        print('liveEffort: ${data['liveEffort']}');
       }
       setState(() {
         _dashboardData = data;
@@ -247,22 +274,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // Check if effort data is stale (>30 seconds)
+  bool _isEffortStale(DateTime? timestamp) {
+    if (timestamp == null) return true;
+    return DateTime.now().difference(timestamp).inSeconds > 30;
+  }
+
   // Widget for the Today's Metrics (Distance, Effort, Generated)
   Widget _buildTodayMetrics() {
     // Fields from deviceEnergyData:
-    // Distance = totalDistanceKm
-    // Effort = powerGeneratedInWatts
-    // Generated = totalKwh
+    // Distance = todayDistance (sum of today's records)
+    // Effort = liveEffort (latest powerGeneratedInWatts with timestamp)
+    // Generated = todayWh (sum of today's records)
     
-    // Safely extract and convert values from deviceEnergyData
-    final distanceValue = _dashboardData?['totalDistanceKm'];
-    final effortValue = _dashboardData?['powerGeneratedInWatts'];
-    final generatedValue = _dashboardData?['totalKwh'];
+    // Safely extract and convert values
+    final distanceValue = _dashboardData?['todayDistance'];
+    final effortValue = _dashboardData?['liveEffort'] ?? _dashboardData?['powerGeneratedInWatts'];
+    final effortTimestamp = _dashboardData?['liveEffortTimestamp'];
+    final generatedValue = _dashboardData?['todayWh'];
     
     // Convert to numbers with safe fallback
     final distance = _convertToDouble(distanceValue) ?? 0.00;
     final effort = _convertToDouble(effortValue) ?? 0.00;
     final generated = _convertToDouble(generatedValue) ?? 0.00;
+    
+    // Check if effort is stale
+    DateTime? effortTime;
+    if (effortTimestamp != null) {
+      if (effortTimestamp is DateTime) {
+        effortTime = effortTimestamp;
+      } else if (effortTimestamp is String) {
+        effortTime = DateTime.tryParse(effortTimestamp);
+      }
+    }
+    final isStale = _isEffortStale(effortTime);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),
@@ -273,16 +318,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icons.directions_bike,
             value: _isLoading ? '...' : '${distance.toStringAsFixed(1)}km',
             label: 'Distance',
+            subtitle: 'Today',
           ),
           _MetricItem(
             icon: Icons.flash_on,
             value: _isLoading ? '...' : '${effort.toInt()}W',
             label: 'Effort',
+            subtitle: isStale ? 'Stale' : 'Live',
+            isLive: !isStale,
           ),
           _MetricItem(
             icon: Icons.check_box,
-            value: _isLoading ? '...' : '${generated.toStringAsFixed(4)}kWh',
+            value: _isLoading ? '...' : formatEnergy(generated),
             label: 'Generated',
+            subtitle: 'Today',
           ),
         ],
       ),
@@ -302,7 +351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Determine the width for the two side-by-side buttons
     final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 20) / 2; // Screen width - padding - spacing
 
-    final totalGenerated = _dashboardData?['totalGenerated'] ?? 0.0;
+    final totalGenerated = (_dashboardData?['totalGenerated'] as num?)?.toDouble() ?? 0.0;
     final totalRedeems = _dashboardData?['totalRedeems'] ?? 0;
     final batteriesExchanged = _dashboardData?['batteriesExchanged'] ?? 0;
 
@@ -316,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _ActionButton(
               icon: Icons.flash_on,
               title: 'Total Generated',
-              value: _isLoading ? '...' : '${(totalGenerated as num).toStringAsFixed(2)}kWh',
+              value: _isLoading ? '...' : formatEnergy((totalGenerated as num).toDouble()),
               color: AppColors.dashboardPrimary, // Dark Green
               width: buttonWidth,
             ),
@@ -356,8 +405,16 @@ class _MetricItem extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
+  final String? subtitle;
+  final bool isLive;
 
-  const _MetricItem({required this.icon, required this.value, required this.label});
+  const _MetricItem({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.subtitle,
+    this.isLive = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -379,12 +436,54 @@ class _MetricItem extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isLive ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isLive ? Colors.green : Colors.grey,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isLive)
+                      Container(
+                        width: 6,
+                        height: 6,
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: isLive ? Colors.green.shade700 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );

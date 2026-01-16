@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
+import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
@@ -106,7 +107,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                 Icon(Icons.battery_full, color: Colors.white, size: 28),
                 SizedBox(width: 12),
                 Text(
-                  'TOTAL kWh Generated',
+                  'TOTAL Wh Generated',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 ),
               ],
@@ -217,7 +218,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                           children: [
                             Flexible(child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600))),
                             const SizedBox(width: 12),
-                            Text('${(item['value'] as double).toStringAsFixed(2)} kWh', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
                       );
@@ -303,7 +304,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
       floatingActionButton: const ChatFAB(),
       body: Column(
         children: [
-          const ScreenTitle(title: 'kWh History'),
+          const ScreenTitle(title: 'Wh History'),
           _buildTopCard(),
           const SizedBox(height: 8),
           _buildFilterChips(),

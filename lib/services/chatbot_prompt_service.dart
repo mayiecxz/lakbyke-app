@@ -47,17 +47,17 @@ CURRENT LIVE SENSOR DATA:
     if (contextData != null && contextData.isNotEmpty) {
       prompt += "\nADDITIONAL CONTEXT DATA:\n";
       
-      if (contextData.containsKey('totalKwh')) {
-        prompt += "- Total kWh Generated: ${contextData['totalKwh']}\n";
+      if (contextData.containsKey('todayWh')) {
+        prompt += "- Today's Energy Generated: ${contextData['todayWh']} Wh\n";
       }
-      if (contextData.containsKey('totalDistanceKm')) {
-        prompt += "- Total Distance: ${contextData['totalDistanceKm']} km\n";
+      if (contextData.containsKey('todayDistance')) {
+        prompt += "- Today's Distance: ${contextData['todayDistance']} km\n";
       }
       if (contextData.containsKey('totalRedeems')) {
         prompt += "- Total Redeems: ₱${contextData['totalRedeems']}\n";
       }
       if (contextData.containsKey('totalGenerated')) {
-        prompt += "- Total Generated: ${contextData['totalGenerated']} kWh\n";
+        prompt += "- Total Generated: ${contextData['totalGenerated']} Wh\n";
       }
       if (contextData.containsKey('batteriesExchanged')) {
         prompt += "- Batteries Exchanged: ${contextData['batteriesExchanged']}\n";
@@ -77,7 +77,7 @@ RESPONSE LENGTH RULES:
   * The query is a question or request for more details
 - After ANY detailed response, always end with: "Need more details?"
 - Examples:
-  * "How much energy did I generate?" -> Concise: "You generated 2.5 kWh. That is like saving 1 kg of coal! ⚡"
+  * "How much energy did I generate?" -> Concise: "You generated 2500 Wh today. That is like saving 1 kg of coal! ⚡"
   * "Is my battery low?" -> Concise: "Your battery is at 45%. Keep pedaling to charge up! 🔋"
   * "How do I charge my phone?" -> Detailed (paragraph) + "Need more details?"
   * "What is my total environmental impact?" -> Detailed (with trees/fuel stats) + "Need more details?"

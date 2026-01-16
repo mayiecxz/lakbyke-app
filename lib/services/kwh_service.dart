@@ -30,9 +30,17 @@ class KwhService {
   }
 
   // Parse timestamp string to DateTime
+  // Supports both ISO 8601 format ("2025-10-22T20:04:07.346Z") and legacy format ("1970-01-01 08:00:05")
   DateTime? _parseTimestamp(String timestampStr) {
+    if (timestampStr.isEmpty) return null;
+    
     try {
-      // Format: "1970-01-01 08:00:05"
+      // Try ISO 8601 format first (e.g., "2025-10-22T20:04:07.346Z")
+      if (timestampStr.contains('T') || timestampStr.contains('Z')) {
+        return DateTime.parse(timestampStr);
+      }
+      
+      // Fallback to legacy format: "1970-01-01 08:00:05"
       final parts = timestampStr.split(' ');
       if (parts.length != 2) return null;
       
@@ -56,6 +64,7 @@ class KwhService {
   }
 
   // Get all history data for the current user's device
+  // Data is stored in deviceEnergyData/{serviceTag}/{document_id}/[fields]
   Future<List<Map<String, dynamic>>> getHistoryData() async {
     try {
       final serviceTag = await getServiceTag();
@@ -67,10 +76,10 @@ class KwhService {
       // Clean service tag: remove spaces and dashes, convert to uppercase
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
       
-      print('Fetching kWh history for service tag: "$serviceTag" (cleaned: "$cleanServiceTag")');
+      print('Fetching Wh history for service tag: "$serviceTag" (cleaned: "$cleanServiceTag")');
 
-      // Fetch all records from deviceHistoryData/{serviceTag}
-      final snapshot = await _database.child('deviceHistoryData/$cleanServiceTag').get();
+      // Fetch all records from deviceEnergyData/{serviceTag} (nested structure)
+      final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
       
       if (!snapshot.exists) {
         print('No history data found for service tag: "$cleanServiceTag"');
@@ -82,28 +91,28 @@ class KwhService {
 
       List<Map<String, dynamic>> historyRecords = [];
 
-      // Handle both Map and List structures
+      // Handle nested structure: deviceEnergyData/{serviceTag}/{document_id}/[fields]
       if (data is Map<Object?, Object?>) {
-        data.forEach((recordId, recordData) {
-          if (recordData is Map<Object?, Object?>) {
+        data.forEach((documentId, documentData) {
+          if (documentData is Map<Object?, Object?>) {
             final record = Map<String, dynamic>.from(
-              recordData.map((key, value) => MapEntry(key.toString(), value)),
+              documentData.map((key, value) => MapEntry(key.toString(), value)),
             );
             
-            // Extract timestamp and totalKwh
+            // Extract timestamp and totalWh
             final timestampStr = record['timestamp'] as String?;
-            final totalKwh = record['totalKwh'];
+            final totalWh = record['totalWh'];
             
-            if (timestampStr != null && totalKwh != null) {
+            if (timestampStr != null && totalWh != null) {
               final timestamp = _parseTimestamp(timestampStr);
               if (timestamp != null) {
-                final kwhValue = (totalKwh is num) ? totalKwh.toDouble() : 
-                               (totalKwh is String) ? double.tryParse(totalKwh) ?? 0.0 : 0.0;
+                double whValue = (totalWh is num) ? totalWh.toDouble() : 
+                               (totalWh is String) ? double.tryParse(totalWh) ?? 0.0 : 0.0;
                 
                 historyRecords.add({
                   'timestamp': timestamp,
-                  'totalKwh': kwhValue,
-                  'recordId': recordId.toString(),
+                  'totalWh': whValue,
+                  'recordId': documentId.toString(),
                 });
               }
             }
@@ -116,7 +125,7 @@ class KwhService {
         (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime)
       );
 
-      print('Fetched ${historyRecords.length} history records');
+      print('Fetched ${historyRecords.length} history records from deviceEnergyData');
       return historyRecords;
     } catch (e) {
       print('Error fetching history data: $e');
@@ -134,7 +143,7 @@ class KwhService {
 
       for (final record in historyRecords) {
         final timestamp = record['timestamp'] as DateTime;
-        final kwhValue = record['totalKwh'] as double;
+        final whValue = record['totalWh'] as double? ?? record['totalKwh'] as double? ?? 0.0;
 
         DateTime key;
         switch (filterType) {
@@ -156,7 +165,7 @@ class KwhService {
             key = DateTime(timestamp.year, timestamp.month, timestamp.day);
         }
 
-        aggregated[key] = (aggregated[key] ?? 0.0) + kwhValue;
+        aggregated[key] = (aggregated[key] ?? 0.0) + whValue;
       }
 
       // Convert to list and format
@@ -209,7 +218,7 @@ class KwhService {
     }
   }
 
-  // Get total kWh generated across all records
+  // Get total Wh generated across all records
   Future<double> getTotalKwhGenerated() async {
     try {
       final historyRecords = await getHistoryData();
@@ -217,13 +226,18 @@ class KwhService {
 
       double total = 0.0;
       for (final record in historyRecords) {
-        total += record['totalKwh'] as double;
+        total += record['totalWh'] as double? ?? record['totalKwh'] as double? ?? 0.0;
       }
 
-      return total;
+      return total; // Returns Wh
     } catch (e) {
-      print('Error calculating total kWh: $e');
+      print('Error calculating total Wh: $e');
       return 0.0;
     }
+  }
+  
+  // Alias for backward compatibility - returns Wh
+  Future<double> getTotalWhGenerated() async {
+    return getTotalKwhGenerated();
   }
 }
