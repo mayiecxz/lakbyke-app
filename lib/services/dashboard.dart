@@ -29,6 +29,93 @@ class DashboardService {
            timestamp.day == now.day;
   }
 
+  // Check if timestamp is yesterday
+  bool _isYesterday(DateTime timestamp) {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    return timestamp.year == yesterday.year &&
+           timestamp.month == yesterday.month &&
+           timestamp.day == yesterday.day;
+  }
+
+  // Get yesterday's aggregated data (sum of all records from yesterday)
+  // Returns: {yesterdayDistance: double, yesterdayWh: double}
+  Future<Map<String, dynamic>> getYesterdayData() async {
+    try {
+      final userId = getCurrentuserTable();
+      if (userId == null) {
+        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+      }
+
+      // First, get the user's service tag
+      final serviceTagSnapshot = await _database.child('userTable/$userId/serviceTag').get();
+      if (!serviceTagSnapshot.exists) {
+        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+      }
+
+      final serviceTag = serviceTagSnapshot.value as String?;
+      if (serviceTag == null || serviceTag.isEmpty) {
+        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+      }
+
+      // Clean service tag
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+
+      // Fetch all documents
+      final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
+      
+      if (!snapshot.exists) {
+        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+      }
+
+      final data = snapshot.value;
+      if (data == null || data is! Map<Object?, Object?>) {
+        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+      }
+
+      double yesterdayDistance = 0.0;
+      double yesterdayWh = 0.0;
+
+      // Iterate through all documents and sum yesterday's data
+      data.forEach((documentId, documentData) {
+        if (documentData is Map<Object?, Object?>) {
+          final document = Map<String, dynamic>.from(
+            documentData.map((key, value) => MapEntry(key.toString(), value)),
+          );
+
+          final timestampStr = document['timestamp'] as String?;
+          final timestamp = _parseIsoTimestamp(timestampStr);
+
+          // Only include records from yesterday
+          if (timestamp != null && _isYesterday(timestamp)) {
+            // Sum distance
+            final distance = document['totalDistanceKm'];
+            if (distance != null) {
+              final distanceValue = (distance is num) ? distance.toDouble() : 
+                                   (distance is String) ? double.tryParse(distance) ?? 0.0 : 0.0;
+              yesterdayDistance += distanceValue;
+            }
+
+            // Sum energy (Wh)
+            final totalWh = document['totalWh'];
+            if (totalWh != null) {
+              final whValue = (totalWh is num) ? totalWh.toDouble() : 
+                            (totalWh is String) ? double.tryParse(totalWh) ?? 0.0 : 0.0;
+              yesterdayWh += whValue;
+            }
+          }
+        }
+      });
+
+      return {
+        'yesterdayDistance': yesterdayDistance,
+        'yesterdayWh': yesterdayWh,
+      };
+    } catch (e) {
+      print('Error fetching yesterday data: $e');
+      return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+    }
+  }
+
   // Get today's aggregated data (sum of all records from today)
   // Returns: {todayDistance: double, todayWh: double}
   Future<Map<String, dynamic>> getTodayData() async {

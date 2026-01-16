@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
+import 'package:lakbyke_mobile/screens/dashboard/welcome_modal.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
@@ -19,6 +20,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _dashboardData;
   String? _serviceTag;
   bool _isLoading = true;
+  static bool _welcomeModalShown = false; // Track if modal was shown in this session
+  DateTime? _lastEffortTimestamp; // Track the last effort timestamp received
 
   @override
   void initState() {
@@ -34,15 +37,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _setupRealtimeUpdates();
     // Set up periodic refresh for effort (every 30 seconds) to check for staleness
     _setupPeriodicEffortCheck();
+    // Show welcome modal with yesterday's achievements
+    _showWelcomeModal();
+  }
+
+  // Show welcome modal with yesterday's achievements (only once per session)
+  Future<void> _showWelcomeModal() async {
+    // Only show once per app session
+    if (_welcomeModalShown) return;
+    
+    // Wait a bit for the dashboard to load
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (!mounted) return;
+    
+    try {
+      final yesterdayData = await _dashboardService.getYesterdayData();
+      final yesterdayDistance = yesterdayData['yesterdayDistance'] as double? ?? 0.0;
+      final yesterdayWh = yesterdayData['yesterdayWh'] as double? ?? 0.0;
+      
+      if (mounted) {
+        _welcomeModalShown = true; // Mark as shown
+        WelcomeModal.show(
+          context,
+          yesterdayDistance: yesterdayDistance,
+          yesterdayWh: yesterdayWh,
+        );
+      }
+    } catch (e) {
+      print('Error showing welcome modal: $e');
+    }
   }
 
   // Set up periodic check to refresh effort data and detect staleness
   void _setupPeriodicEffortCheck() {
-    // Check every 5 seconds to update stale indicator
+    // Check every 5 seconds to update stale indicator and reset effort to zero if stale
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
-          // Trigger rebuild to update stale indicator
+          // Check if effort is stale and reset to zero if no new timestamp after 30 seconds
+          if (_lastEffortTimestamp != null) {
+            final secondsSinceLastUpdate = DateTime.now().difference(_lastEffortTimestamp!).inSeconds;
+            if (secondsSinceLastUpdate > 30) {
+              // No new data with different timestamp after 30 seconds, set effort to zero
+              if (_dashboardData != null) {
+                _dashboardData!['liveEffort'] = 0.0;
+              }
+            }
+          } else {
+            // No timestamp ever received, set effort to zero
+            if (_dashboardData != null) {
+              _dashboardData!['liveEffort'] = 0.0;
+            }
+          }
         });
         _setupPeriodicEffortCheck(); // Schedule next check
       }
@@ -61,6 +108,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           print('Stream todayWh: ${deviceEnergyData['todayWh']}');
           print('Stream liveEffort: ${deviceEnergyData['liveEffort']}');
           print('Stream liveEffortTimestamp: ${deviceEnergyData['liveEffortTimestamp']}');
+          
+          // Check if we have a new effort timestamp
+          final newEffortTimestamp = deviceEnergyData['liveEffortTimestamp'];
+          DateTime? parsedTimestamp;
+          if (newEffortTimestamp != null) {
+            if (newEffortTimestamp is DateTime) {
+              parsedTimestamp = newEffortTimestamp;
+            } else if (newEffortTimestamp is String) {
+              parsedTimestamp = DateTime.tryParse(newEffortTimestamp);
+            }
+          }
+          
+          // Update last effort timestamp if we have a new one that's different
+          if (parsedTimestamp != null) {
+            if (_lastEffortTimestamp == null || 
+                parsedTimestamp.isAfter(_lastEffortTimestamp!)) {
+              _lastEffortTimestamp = parsedTimestamp;
+            }
+          }
           
           setState(() {
             // Merge real-time deviceEnergyData with existing transaction data
@@ -116,6 +182,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('powerGeneratedInWatts: ${data['powerGeneratedInWatts']}');
         print('todayWh: ${data['todayWh']}');
         print('liveEffort: ${data['liveEffort']}');
+        print('liveEffortTimestamp: ${data['liveEffortTimestamp']}');
+        
+        // Initialize last effort timestamp from initial data
+        final initialEffortTimestamp = data['liveEffortTimestamp'];
+        if (initialEffortTimestamp != null) {
+          if (initialEffortTimestamp is DateTime) {
+            _lastEffortTimestamp = initialEffortTimestamp;
+          } else if (initialEffortTimestamp is String) {
+            _lastEffortTimestamp = DateTime.tryParse(initialEffortTimestamp);
+          }
+        }
       }
       setState(() {
         _dashboardData = data;
@@ -295,10 +372,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     // Convert to numbers with safe fallback
     final distance = _convertToDouble(distanceValue) ?? 0.00;
-    final effort = _convertToDouble(effortValue) ?? 0.00;
     final generated = _convertToDouble(generatedValue) ?? 0.00;
     
-    // Check if effort is stale
+    // Check if effort is stale and set to zero if stale
     DateTime? effortTime;
     if (effortTimestamp != null) {
       if (effortTimestamp is DateTime) {
@@ -308,6 +384,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
     final isStale = _isEffortStale(effortTime);
+    // If stale (>30 seconds), set effort to zero
+    final effort = isStale ? 0.00 : (_convertToDouble(effortValue) ?? 0.00);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),

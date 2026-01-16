@@ -49,7 +49,7 @@ class Sidebar extends StatelessWidget {
 }
 
 class _SidebarPanel extends StatelessWidget {
-  const _SidebarPanel({super.key});
+  const _SidebarPanel();
 
   Widget _menuItem(BuildContext context, IconData icon, String label, {VoidCallback? onTap}) {
     return InkWell(

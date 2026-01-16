@@ -4,6 +4,7 @@ import 'package:lakbyke_mobile/models/chatbot_model.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
 import 'package:lakbyke_mobile/services/dashboard.dart';
+import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -40,6 +41,11 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   bool _isLoading = false;
   final ChatbotService _chatbotService = ChatbotService();
   final DashboardService _dashboardService = DashboardService();
+  
+  // Total generated and redeemed values
+  double _totalGenerated = 0.0;
+  double _totalRedeemed = 0.0;
+  bool _isLoadingStats = true;
 
   // TODO: Replace with valid API Key
   static const apiKey = 'AIzaSyBGLVqi-ZmgooWRgJaa1UqverOqhrZ_sxc'; 
@@ -54,6 +60,32 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     
     // Load chat history from Firebase
     _loadChatHistory();
+    
+    // Load total generated and redeemed stats
+    _loadStats();
+  }
+  
+  // Load total generated and redeemed from dashboard service
+  Future<void> _loadStats() async {
+    try {
+      final dashboardData = await _dashboardService.getDashboardData();
+      if (dashboardData != null) {
+        setState(() {
+          _totalGenerated = (dashboardData['totalGenerated'] as num?)?.toDouble() ?? 0.0;
+          _totalRedeemed = (dashboardData['totalRedeems'] as num?)?.toDouble() ?? 0.0;
+          _isLoadingStats = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading stats: $e');
+      setState(() {
+        _isLoadingStats = false;
+      });
+    }
   }
 
   // Load chat history from Firebase
@@ -201,8 +233,16 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildStat("Battery", "${bikeData.batteryLevel}%", Icons.battery_charging_full),
-                _buildStat("Power", "${bikeData.power.toStringAsFixed(1)} W", Icons.bolt),
-                _buildStat("Voltage", "${bikeData.voltage.toStringAsFixed(1)} V", Icons.electrical_services),
+                _buildStat(
+                  "Total Generated", 
+                  _isLoadingStats ? "..." : formatEnergy(_totalGenerated), 
+                  Icons.bolt
+                ),
+                _buildStat(
+                  "Total Redeemed", 
+                  _isLoadingStats ? "..." : "₱${_totalRedeemed.toStringAsFixed(2)}", 
+                  Icons.account_balance_wallet
+                ),
               ],
             ),
           ),
