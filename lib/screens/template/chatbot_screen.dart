@@ -88,13 +88,34 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     }
   }
 
+  // Clean text by removing emojis and extra whitespace
+  String _cleanText(String text) {
+    // Remove emojis (Unicode ranges for emojis)
+    String cleaned = text.replaceAll(
+      RegExp(r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]', unicode: true),
+      '',
+    );
+    
+    // Replace multiple newlines with single space
+    cleaned = cleaned.replaceAll(RegExp(r'\n\s*\n+'), ' ');
+    
+    // Replace single newlines with space
+    cleaned = cleaned.replaceAll(RegExp(r'\n+'), ' ');
+    
+    // Collapse multiple spaces
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
+    
+    // Trim
+    return cleaned.trim();
+  }
+
   // Load chat history from Firebase
   Future<void> _loadChatHistory() async {
     final history = await _chatbotService.loadChatHistory();
     
     if (history.isEmpty) {
       // If no history, add welcome message
-      _addMessage("Hello! I'm your LakByke assistant, si Kleta 🥰. Start pedaling and ask me anything about your energy stats!", false);
+      _addMessage("Hello! I'm your LakByke assistant, si Kleta. Start pedaling and ask me anything about your energy stats!", false);
     } else {
       // Restore chat history
       setState(() {
@@ -104,8 +125,11 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   }
 
   void _addMessage(String text, bool isUser) {
+    // Clean text for bot messages only (preserve user input as-is)
+    final cleanedText = isUser ? text : _cleanText(text);
+    
     final message = ChatMessage(
-      text: text, 
+      text: cleanedText, 
       isUser: isUser, 
       time: DateTime.now()
     );
@@ -125,8 +149,8 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
       }
     });
     
-    // Save message to Firebase
-    _chatbotService.saveMessage(text, isUser, message.time);
+    // Save message to Firebase (save cleaned text for bot messages)
+    _chatbotService.saveMessage(cleanedText, isUser, message.time);
   }
 
   Future<void> _sendMessage() async {
@@ -150,18 +174,27 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
         // Continue without context data
       }
 
-      // 3. Build prompt using simple prompt service
+      // 3. Prepare conversation history (last 5 messages)
+      final conversationHistory = _messages
+          .map((msg) => {
+                'role': msg.isUser ? 'User' : 'Si Kleta',
+                'text': msg.text,
+              })
+          .toList();
+
+      // 4. Build prompt using prompt service
       final prompt = ChatbotPromptService.buildPrompt(
         userQuery: userText,
         bikeData: bikeData,
         contextData: contextData,
+        conversationHistory: conversationHistory,
       );
 
-      // 4. Send to AI
+      // 5. Send to AI
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
 
-      // 5. Display result
+      // 6. Display result (text cleaning is handled in _addMessage for bot messages)
       _addMessage(response.text ?? "I couldn't read the sensors right now.", false);
 
     } catch (e) {
@@ -177,7 +210,6 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     final bikeData = Provider.of<BikeData>(context); // Listen to changes
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomSheetHeight = screenHeight * 0.85;
-
     return Container(
       height: bottomSheetHeight,
       decoration: const BoxDecoration(
@@ -199,20 +231,41 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
           
           // Header with title and close button
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.teal,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F8A8A), Color(0xFF12B3B3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.eco, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
                     "LakByke Smart Assistant",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -228,7 +281,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
           // Dashboard Header (Real-time View)
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.teal.shade50,
+            color: const Color(0xFFF2FBFB),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -258,11 +311,23 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                 return Align(
                   alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: msg.isUser ? Colors.teal : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
+                      color: msg.isUser ? const Color(0xFF0F8A8A) : Colors.grey.shade100,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(msg.isUser ? 16 : 4),
+                        bottomRight: Radius.circular(msg.isUser ? 4 : 16),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,7 +353,12 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
           ),
 
           // Input Area (Fixed at bottom)
-          if (_isLoading) const LinearProgressIndicator(),
+          if (_isLoading)
+            const LinearProgressIndicator(
+              minHeight: 2,
+              color: Color(0xFF0F8A8A),
+              backgroundColor: Color(0xFFE0F2F1),
+            ),
           Container(
             padding: EdgeInsets.only(
               left: 16,
@@ -311,17 +381,25 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
+                    decoration: InputDecoration(
                       hintText: "Ask about your energy status...",
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      hintStyle: TextStyle(color: Colors.grey.shade500),
+                      filled: true,
+                      fillColor: const Color(0xFFF6F7F9),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 FloatingActionButton(
                   onPressed: _sendMessage,
-                  backgroundColor: Colors.teal,
+                  backgroundColor: const Color(0xFF0F8A8A),
                   mini: true,
                   child: const Icon(Icons.send, size: 20),
                 ),
@@ -336,8 +414,11 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   Widget _buildStat(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.teal),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Icon(icon, color: const Color(0xFF0F8A8A)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );

@@ -22,6 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   static bool _welcomeModalShown = false; // Track if modal was shown in this session
   DateTime? _lastEffortTimestamp; // Track the last effort timestamp received
+  DateTime? _currentTimestampFirstSeen; // Track when the current timestamp was first seen
 
   @override
   void initState() {
@@ -75,11 +76,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
-          // Check if effort is stale and reset to zero if no new timestamp after 30 seconds
-          if (_lastEffortTimestamp != null) {
-            final secondsSinceLastUpdate = DateTime.now().difference(_lastEffortTimestamp!).inSeconds;
-            if (secondsSinceLastUpdate > 30) {
-              // No new data with different timestamp after 30 seconds, set effort to zero
+          // Check if the same timestamp has been used for 10 seconds
+          if (_lastEffortTimestamp != null && _currentTimestampFirstSeen != null) {
+            final secondsSinceFirstSeen = DateTime.now().difference(_currentTimestampFirstSeen!).inSeconds;
+            if (secondsSinceFirstSeen > 10) {
+              // Same timestamp for more than 10 seconds, set effort to zero
               if (_dashboardData != null) {
                 _dashboardData!['liveEffort'] = 0.0;
               }
@@ -120,12 +121,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }
           }
           
-          // Update last effort timestamp if we have a new one that's different
+          // Update last effort timestamp and track when current timestamp was first seen
           if (parsedTimestamp != null) {
-            if (_lastEffortTimestamp == null || 
-                parsedTimestamp.isAfter(_lastEffortTimestamp!)) {
+            // Check if this is the same timestamp as before
+            final isSameTimestamp = _lastEffortTimestamp != null && 
+                parsedTimestamp.isAtSameMomentAs(_lastEffortTimestamp!);
+            
+            if (!isSameTimestamp) {
+              // New timestamp received, update and reset the first seen time
               _lastEffortTimestamp = parsedTimestamp;
+              _currentTimestampFirstSeen = DateTime.now();
+            } else if (_currentTimestampFirstSeen == null) {
+              // Same timestamp but we haven't tracked when it was first seen
+              _currentTimestampFirstSeen = DateTime.now();
             }
+            // If same timestamp and we already have _currentTimestampFirstSeen, keep it
           }
           
           setState(() {
@@ -187,10 +197,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Initialize last effort timestamp from initial data
         final initialEffortTimestamp = data['liveEffortTimestamp'];
         if (initialEffortTimestamp != null) {
+          DateTime? parsedTimestamp;
           if (initialEffortTimestamp is DateTime) {
-            _lastEffortTimestamp = initialEffortTimestamp;
+            parsedTimestamp = initialEffortTimestamp;
           } else if (initialEffortTimestamp is String) {
-            _lastEffortTimestamp = DateTime.tryParse(initialEffortTimestamp);
+            parsedTimestamp = DateTime.tryParse(initialEffortTimestamp);
+          }
+          if (parsedTimestamp != null) {
+            _lastEffortTimestamp = parsedTimestamp;
+            _currentTimestampFirstSeen = DateTime.now();
           }
         }
       }
@@ -375,10 +390,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Check if effort data is stale (>30 seconds)
+  // Check if effort data is stale (same timestamp for >10 seconds)
   bool _isEffortStale(DateTime? timestamp) {
     if (timestamp == null) return true;
-    return DateTime.now().difference(timestamp).inSeconds > 30;
+    // Check if this timestamp matches the current one and has been the same for 10 seconds
+    if (_lastEffortTimestamp != null && 
+        _currentTimestampFirstSeen != null) {
+      // Check if the timestamp matches the last one we're tracking
+      if (timestamp.isAtSameMomentAs(_lastEffortTimestamp!)) {
+        final secondsSinceFirstSeen = DateTime.now().difference(_currentTimestampFirstSeen!).inSeconds;
+        return secondsSinceFirstSeen > 10;
+      }
+    }
+    // If timestamp doesn't match or we don't have tracking info, consider it not stale (it might be new)
+    return false;
   }
 
   // Widget for the Today's Metrics (Distance, Effort, Generated)

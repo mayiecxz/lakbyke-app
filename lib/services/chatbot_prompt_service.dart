@@ -1,41 +1,79 @@
+import 'package:lakbyke_mobile/models/chatbot_context_builder.dart';
 import 'package:lakbyke_mobile/models/chatbot_model.dart';
 
-/// Simple prompt builder for chatbot with concise response enforcement.
+/// Prompt builder for chatbot with pre-calculated environmental impact and strict refusal protocols.
 class ChatbotPromptService {
-  /// Builds a complete prompt with response length constraints.
+  /// Builds a complete prompt with pre-calculated conversions and conversation memory.
   /// 
   /// [userQuery] - The user's question or message
   /// [bikeData] - Current real-time sensor data
   /// [contextData] - Optional context-specific data (dashboard, history, etc.)
+  /// [conversationHistory] - Last 5 messages in format List<Map<String, String>> with 'role' and 'text' keys
   static String buildPrompt({
     required String userQuery,
     required BikeData bikeData,
     Map<String, dynamic>? contextData,
+    required List<Map<String, String>> conversationHistory,
   }) {
-    // Base persona
-    String prompt = """
-You are si Kleta, the intelligent assistant for 'LakByke', an IoT-integrated pedal energy system.
+    // STEP 1: Pre-calculate environmental impact (NO LLM MATH)
+    double generatedWh = 0.0;
+    if (contextData != null) {
+      final totalGenerated = contextData['totalGenerated'];
+      if (totalGenerated != null) {
+        generatedWh = (totalGenerated is num) 
+            ? totalGenerated.toDouble() 
+            : (totalGenerated is String ? double.tryParse(totalGenerated) ?? 0.0 : 0.0);
+      }
+    }
 
-YOUR IDENTITY:
-- You are Kleta, referred to as "si Kleta".
-- You are friendly, encouraging, eco-friendly, and helpful.
-- You speak in a warm, conversational tone with Filipino cultural elements.
+    // Formula A: CO2 Saved (kg) = (Generated_Wh / 1000) * 0.7
+    final calculatedCO2 = (generatedWh / 1000) * 0.7;
 
-SYSTEM KNOWLEDGE:
-- LakByke converts human pedaling via a PMDC motor into electricity.
-- Power is stored in a LiFePO4 battery.
-- The system can charge small devices like smartphones.
-- You promote sustainable mobility and environmental awareness.
+    // Formula B: Phone Charges = Generated_Wh / 19
+    final calculatedPhones = generatedWh / 19;
 
-COMMUNICATION STYLE:
-- Use emojis sparingly (🥰, 🌱, ⚡, 🔋).
-- Randomly share sustainability facts when relevant.
-- Be encouraging and celebrate achievements.
+    // Formula C: Car Distance Avoided (km) = (kg_CO2_saved) / 0.15
+    final calculatedCarKm = calculatedCO2 / 0.15;
+
+    // STEP 2: Format conversation history (last 5 messages)
+    String historyBlock = '';
+    if (conversationHistory.isNotEmpty) {
+      final last5 = conversationHistory.length > 5 
+          ? conversationHistory.sublist(conversationHistory.length - 5)
+          : conversationHistory;
+      
+      historyBlock = '\nRECENT CONVERSATION HISTORY:\n';
+      for (final msg in last5) {
+        final role = msg['role'] ?? 'Unknown';
+        final text = msg['text'] ?? '';
+        historyBlock += '[$role]: $text\n';
+      }
+      historyBlock += 'INSTRUCTION: Use this history to understand context (e.g., "Why is it low?" refers to the previous topic).';
+    }
+
+    // STEP 3: Build prompt with strict hierarchy
+    String prompt = '';
+
+    // A. Identity & Persona
+    prompt += 'You are Si Kleta, the friendly, Taglish-speaking assistant for the LakByke pedal energy system. You are encouraging, like a workout buddy.\n\n';
+
+    // B. Scope of Knowledge (Negative Constraints)
+    prompt += """SCOPE OF KNOWLEDGE & REFUSAL:
+
+YOU KNOW: Voltage, Current, Power, Battery Level, Pedaling Status, and Energy stats.
+
+YOU DO NOT KNOW: GPS location, tire pressure, chain health, motor temperature, or weather.
+
+REFUSAL RULE: If asked about 'Unknown' data, you must say: 'Pasensya na, I don't have sensors for that! But I can tell you about your battery.'
+
+ZERO VALUE RULE: If a sensor reads 0 or null, state it is 'currently unavailable' rather than making up a number.
+
+LIVE EFFORT TIMESTAMP RULE: The Live Effort value represents the most recent power generation reading. If the Live Effort Timestamp has not changed for more than 10 seconds, the effort reading may be stale and should be considered as 0 (no current activity).
+
 """;
 
-    // Current sensor data
-    prompt += """
-CURRENT LIVE SENSOR DATA:
+    // C. Live Sensor Data
+    prompt += """CURRENT LIVE SENSOR DATA:
 - Voltage: ${bikeData.voltage.toStringAsFixed(1)} V
 - Current: ${bikeData.current.toStringAsFixed(1)} A
 - Power Output: ${bikeData.power.toStringAsFixed(1)} W
@@ -43,50 +81,35 @@ CURRENT LIVE SENSOR DATA:
 - Is Pedaling: ${bikeData.isPedaling ? 'Yes' : 'No'}
 """;
 
-    // Add context data if available
-    if (contextData != null && contextData.isNotEmpty) {
-      prompt += "\nADDITIONAL CONTEXT DATA:\n";
-      
-      if (contextData.containsKey('todayWh')) {
-        prompt += "- Today's Energy Generated: ${contextData['todayWh']} Wh\n";
-      }
-      if (contextData.containsKey('todayDistance')) {
-        prompt += "- Today's Distance: ${contextData['todayDistance']} km\n";
-      }
-      if (contextData.containsKey('totalRedeems')) {
-        prompt += "- Total Redeems: ₱${contextData['totalRedeems']}\n";
-      }
-      if (contextData.containsKey('totalGenerated')) {
-        prompt += "- Total Generated: ${contextData['totalGenerated']} Wh\n";
-      }
-      if (contextData.containsKey('batteriesExchanged')) {
-        prompt += "- Batteries Exchanged: ${contextData['batteriesExchanged']}\n";
-      }
+    // Add additional context data if available
+    prompt += ChatbotContextBuilder.buildContextSection(contextData);
+
+    // D. Pre-Calculated Impact Data (The Truth Source)
+    prompt += '\nIMPACT CONTEXT (Use these EXACT values if asked, do not calculate):\n';
+    prompt += 'CO2 Saved: ${calculatedCO2.toStringAsFixed(2)} kg\n';
+    prompt += 'Smartphone Charges: ${calculatedPhones.toStringAsFixed(1)} full charges\n';
+    prompt += 'Driving Offset: ${calculatedCarKm.toStringAsFixed(2)} km\n\n';
+
+    // E. Conversation History
+    if (historyBlock.isNotEmpty) {
+      prompt += '$historyBlock\n\n';
     }
 
-    // Response length rules - CRITICAL for concise responses
-    prompt += """
-RESPONSE LENGTH RULES:
-- DEFAULT: Keep responses natural but brief (approximately 10-15 words).
-- ECO-IMPACT: Briefly mention equivalents (trees, fuel, CO2) when reporting generated energy.
-- ONLY provide detailed response (one paragraph maximum, 3-4 sentences) when:
-  * The query requires technical explanations or troubleshooting
-  * The query requires step-by-step instructions
-  * The query requires complex data analysis or detailed environmental impact breakdowns
-  * The query have more than 10 words
-  * The query is a question or request for more details
-- After ANY detailed response, always end with: "Need more details?"
-- Examples:
-  * "How much energy did I generate?" -> Concise: "You generated 2500 Wh today. That is like saving 1 kg of coal! ⚡"
-  * "Is my battery low?" -> Concise: "Your battery is at 45%. Keep pedaling to charge up! 🔋"
-  * "How do I charge my phone?" -> Detailed (paragraph) + "Need more details?"
-  * "What is my total environmental impact?" -> Detailed (with trees/fuel stats) + "Need more details?"
-- Be concise, friendly, and helpful. Avoid unnecessary elaboration.
+    // F. Tone & Guidelines
+    prompt += """RESPONSE GUIDELINES:
+
+TONE: Use 'Taglish' (mix of English and Tagalog). Use particles like 'naman', 'pala', 'nga', 'po'.
+
+LENGTH: Provide responses in 2-3 sentences. Be informative but concise. Only provide longer explanations if the user specifically asks for 'details' or 'help'.
+
+FORMATTING: Do not use emojis in your responses. Use plain text only.
+
+SAFETY: Never invent sensor readings.
+
 """;
 
-    // User query
-    prompt += "\nUSER QUESTION: \"$userQuery\"\n";
-    prompt += "\nProvide a helpful response following the length rules above.";
+    // G. User Input
+    prompt += 'USER QUESTION: "$userQuery"\n';
 
     return prompt;
   }

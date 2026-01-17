@@ -31,16 +31,16 @@ class WelcomeModal extends StatelessWidget {
     if (distanceKm >= 1.0) {
       if (treeEquivalent >= 1.0) {
         final trees = treeEquivalent.toStringAsFixed(1);
-        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday—that avoids as much CO₂ as ${trees} tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year! 🌳';
+        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday—that avoids as much CO₂ as ${trees} tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
       } else if (treeEquivalent >= 0.1) {
         // Show as fraction of a tree
         final treePercent = (treeEquivalent * 100).toStringAsFixed(0);
-        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday—avoiding CO₂ equivalent to ${treePercent}% of a tree\'s annual absorption! 🌱';
+        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday—avoiding CO₂ equivalent to ${treePercent}% of a tree\'s annual absorption!';
       } else {
-        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday, saving ${co2Saved.toStringAsFixed(2)} kg of CO₂! 🚴';
+        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday, saving ${co2Saved.toStringAsFixed(2)} kg of CO₂!';
       }
     } else {
-      return 'You pedaled ${distanceKm.toStringAsFixed(2)} km yesterday—every pedal counts! 🌍';
+      return 'You pedaled ${distanceKm.toStringAsFixed(2)} km yesterday—every pedal counts!';
     }
   }
 
@@ -56,14 +56,14 @@ class WelcomeModal extends StatelessWidget {
     if (wh >= 16) {
       if (phoneCharges >= 1.0) {
         final charges = phoneCharges.toStringAsFixed(1);
-        return 'You generated ${formatEnergy(wh)} yesterday—that\'s enough to charge a smartphone ${charges} time${charges == '1.0' ? '' : 's'}! 📱';
+      return 'You generated ${formatEnergy(wh)} yesterday—that\'s enough to charge a smartphone ${charges} time${charges == '1.0' ? '' : 's'}! 📱';
       } else {
         // Less than 1 charge but significant
         final percent = (phoneCharges * 100).toStringAsFixed(0);
-        return 'You generated ${formatEnergy(wh)} yesterday—that\'s ${percent}% of a smartphone charge! ⚡';
+        return 'You generated ${formatEnergy(wh)} yesterday—that\'s ${percent}% of a smartphone charge!';
       }
     } else if (wh > 0) {
-      return 'You generated ${formatEnergy(wh)} yesterday—powering towards a greener future! ⚡';
+      return 'You generated ${formatEnergy(wh)} yesterday—powering towards a greener future!';
     } else {
       return '';
     }
