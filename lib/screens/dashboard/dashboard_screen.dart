@@ -557,9 +557,9 @@ class _MetricItem extends StatelessWidget {
       children: [
         ResponsiveIcon(
           icon: icon,
-          maxSizePercent: 0.08,
+          maxSizePercent: 0.06,
           color: AppColors.dashboardAccent,
-          minSize: 24.0,
+          minSize: 20.0,
         ),
         const SizedBox(height: 5),
         Text(

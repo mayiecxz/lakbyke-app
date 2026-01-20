@@ -19,8 +19,22 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   int _getItemsPerPage(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final reserved = 220.0;
+    final padding = MediaQuery.of(context).padding;
+    
+    // Calculate reserved space for UI elements:
+    // - AppBar/Header: ~60
+    // - ScreenTitle: ~80
+    // - Top card: ~140 (padding + content)
+    // - Filter chips: ~50
+    // - Spacing: ~28 (8 + 12 + 8)
+    // - Pagination controls (if shown): ~60
+    // - Bottom padding: ~20
+    // - SafeArea padding
+    final reserved = 60.0 + 80.0 + 140.0 + 50.0 + 28.0 + 60.0 + 20.0 + padding.top + padding.bottom;
+    
+    // Row height: padding (14*2) + content (~44) = ~72
     final rowHeight = 72.0;
+    
     final available = screenHeight - reserved;
     final count = (available / rowHeight).floor();
     return count > 0 ? count : 1;
@@ -187,7 +201,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
           child: Column(
             children: [
-              // Paginated list
+              // Paginated list (non-scrollable)
               Expanded(
                 child: items.isEmpty
                     ? Center(
@@ -196,29 +210,32 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           style: const TextStyle(color: Colors.grey),
                         ),
                       )
-                    : ListView.separated(
-                        itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceDim,
-                              borderRadius: BorderRadius.circular(12.0),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                ),
-                                const SizedBox(width: 12),
-                                Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              ],
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: items.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: index < items.length - 1 ? 12 : 0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceDim,
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                             ),
                           );
-                        },
+                        }).toList(),
                       ),
               ),
               // Modern pagination controls (only when rows exceed visible area)

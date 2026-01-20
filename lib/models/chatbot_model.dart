@@ -12,7 +12,7 @@ class BikeData extends ChangeNotifier {
 
   // Real-time sensor data from Firebase
   double voltage = 0.0; // Volts (default, will be updated from Firebase)
-  double current = 0.0;  // Amps (default, will be updated from Firebase)
+  double current = 0.0; // Amps (default, will be updated from Firebase)
   int batteryLevel = 0; // Percentage (default, will be updated from Firebase)
   bool isPedaling = true;
 
@@ -37,15 +37,16 @@ class BikeData extends ChangeNotifier {
     );
   }
 
-  // Check if data is stale (same timestamp for more than 10 seconds)
+  // Check if data is stale (same timestamp for more than 60 seconds)
   bool _isDataStale(Map<String, dynamic> data) {
-    final timestampStr = data['timestamp'] as String? ?? data['liveEffortTimestamp'] as String?;
+    final timestampStr =
+        data['timestamp'] as String? ?? data['liveEffortTimestamp'] as String?;
     if (timestampStr == null) return true;
-    
+
     try {
       final timestamp = DateTime.parse(timestampStr);
       final secondsSinceUpdate = DateTime.now().difference(timestamp).inSeconds;
-      return secondsSinceUpdate > 10;
+      return secondsSinceUpdate > 60;
     } catch (e) {
       return true;
     }
@@ -55,22 +56,22 @@ class BikeData extends ChangeNotifier {
   void _updateFromFirebaseData(Map<String, dynamic> data) {
     // Check if data is stale
     final isStale = _isDataStale(data);
-    
+
     // Battery level from mountBatteryPercentage
     final batteryValue = data['mountBatteryPercentage'];
     if (batteryValue != null) {
-      batteryLevel = batteryValue is int 
-          ? batteryValue 
+      batteryLevel = batteryValue is int
+          ? batteryValue
           : (batteryValue as num).toInt().clamp(0, 100);
     }
 
     // Power from powerGeneratedInWatts or liveEffort
     final powerValue = data['powerGeneratedInWatts'] ?? data['liveEffort'];
     if (powerValue != null) {
-      final powerWatts = powerValue is num 
-          ? powerValue.toDouble() 
+      final powerWatts = powerValue is num
+          ? powerValue.toDouble()
           : (powerValue is String ? double.tryParse(powerValue) ?? 0.0 : 0.0);
-      
+
       // Calculate voltage and current from power
       // Assuming typical LiFePO4 battery: ~12.8V nominal, 13.2V when charging
       // If power > 0 and not stale, assume pedaling is happening

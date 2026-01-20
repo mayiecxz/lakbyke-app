@@ -5,13 +5,6 @@ import 'dart:async';
 class DashboardService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  
-  // Staleness monitoring fields
-  Timer? _stalenessTimer;
-  Map<String, dynamic>? _lastReceivedData;
-  String? _monitoringServiceTag;
-  DateTime? _monitoredTimestamp; // The timestamp we're currently monitoring for staleness
-  bool _hasWrittenForZeroPower = false; // Track if we've written for zero power
 
   // Get current user ID
   String? getCurrentuserTable() {
@@ -403,54 +396,6 @@ class DashboardService {
     }
   }
 
-  // Write zero-value record to database after 10 seconds of inactivity
-  Future<void> _writeZeroValueRecord(Map<String, dynamic> lastData, String serviceTag) async {
-    try {
-      // Clean service tag
-      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-      
-      // Extract last known voltage and battery percentage
-      final lastVoltage = lastData['mountVoltage'];
-      final lastBattery = lastData['mountBatteryPercentage'];
-      
-      // Get voltage value
-      double voltageValue = 0.0;
-      if (lastVoltage != null) {
-        voltageValue = (lastVoltage is num) 
-            ? lastVoltage.toDouble() 
-            : (lastVoltage is String ? double.tryParse(lastVoltage) ?? 0.0 : 0.0);
-      }
-      
-      // Get battery percentage value
-      int batteryValue = 0;
-      if (lastBattery != null) {
-        batteryValue = (lastBattery is int) 
-            ? lastBattery 
-            : (lastBattery is num ? lastBattery.toInt() : 0);
-      }
-      
-      // Create zero-value record
-      final zeroRecord = {
-        'mountVoltage': voltageValue,
-        'mountBatteryPercentage': batteryValue,
-        'timestamp': DateTime.now().toIso8601String(),
-        'powerGeneratedInWatts': 0.0,
-        'mAh': 0,
-        'speedKmh': 0,
-        'totalDistanceKm': 0.0,
-        'totalWh': 0,
-        'isMotorRunning': false,
-      };
-      
-      // Write to database using push to create new document
-      await _database.child('deviceEnergyData/$cleanServiceTag').push().set(zeroRecord);
-      
-      print('Zero-value record written for service tag: $cleanServiceTag');
-    } catch (e) {
-      print('Error writing zero-value record: $e');
-    }
-  }
-
   // Check if data is stale (same timestamp for more than 10 seconds)
   bool isDataStale(Map<String, dynamic>? data) {
     if (data == null) return true;
@@ -463,80 +408,6 @@ class DashboardService {
     
     final secondsSinceUpdate = DateTime.now().difference(timestamp).inSeconds;
     return secondsSinceUpdate > 10;
-  }
-
-  // Start staleness monitoring - follows sequence: zero power (write once), stale (write every 10s), else (no write)
-  void _startStalenessMonitoring(Map<String, dynamic> lastData, String serviceTag) {
-    // Extract and store the timestamp we're monitoring
-    final timestampStr = lastData['timestamp'] as String?;
-    DateTime? newTimestamp;
-    if (timestampStr != null) {
-      newTimestamp = _parseIsoTimestamp(timestampStr);
-    }
-    
-    // Reset zero power flag if timestamp changed (new data arrived)
-    if (_monitoredTimestamp != null && newTimestamp != null && 
-        !newTimestamp.isAtSameMomentAs(_monitoredTimestamp!)) {
-      _hasWrittenForZeroPower = false;
-    } else if (_monitoredTimestamp == null && newTimestamp != null) {
-      // First time monitoring, reset flag
-      _hasWrittenForZeroPower = false;
-    }
-    
-    // Stop any existing timer
-    _stopStalenessMonitoring();
-    
-    // Store data for monitoring
-    _lastReceivedData = Map<String, dynamic>.from(lastData);
-    _monitoringServiceTag = serviceTag;
-    _monitoredTimestamp = newTimestamp;
-    
-    // Check power value
-    final powerValue = lastData['powerGeneratedInWatts'] ?? lastData['liveEffort'];
-    final powerWatts = (powerValue is num) 
-        ? powerValue.toDouble() 
-        : (powerValue is String ? double.tryParse(powerValue) ?? 0.0 : 0.0);
-    
-    // Sequence 1: If power is zero, write once and stop
-    if (powerWatts == 0.0 && !_hasWrittenForZeroPower) {
-      _writeZeroValueRecord(_lastReceivedData!, _monitoringServiceTag!);
-      _hasWrittenForZeroPower = true;
-      _stopStalenessMonitoring();
-      return;
-    }
-    
-    // Sequence 2: If power > 0, start monitoring for staleness
-    // Start timer for 10 seconds
-    _stalenessTimer = Timer(const Duration(seconds: 10), () {
-      // Check if we still have the same timestamp (no new data received)
-      if (_lastReceivedData != null && _monitoringServiceTag != null && _monitoredTimestamp != null) {
-        final currentTimestampStr = _lastReceivedData!['timestamp'] as String?;
-        if (currentTimestampStr != null) {
-          final currentTimestamp = _parseIsoTimestamp(currentTimestampStr);
-          // If timestamp hasn't changed from what we're monitoring, it's stale
-          if (currentTimestamp != null && 
-              currentTimestamp.isAtSameMomentAs(_monitoredTimestamp!)) {
-            // Write zero-value record
-            _writeZeroValueRecord(_lastReceivedData!, _monitoringServiceTag!);
-            // Restart timer to write again every 10 seconds (continuous)
-            _startStalenessMonitoring(_lastReceivedData!, _monitoringServiceTag!);
-          } else {
-            // Timestamp changed, stop monitoring (new data arrived)
-            _stopStalenessMonitoring();
-          }
-        }
-      }
-    });
-  }
-
-  // Stop staleness monitoring
-  void _stopStalenessMonitoring() {
-    _stalenessTimer?.cancel();
-    _stalenessTimer = null;
-    _lastReceivedData = null;
-    _monitoringServiceTag = null;
-    _monitoredTimestamp = null;
-    // Don't reset _hasWrittenForZeroPower here - it resets when power > 0
   }
 
   // Stream dashboard data for real-time updates from deviceEnergyData
@@ -626,9 +497,6 @@ class DashboardService {
               result['liveEffortTimestamp'] = latestTimestamp;
             }
             
-            // Start/restart staleness monitoring with latest data
-            _startStalenessMonitoring(result, serviceTag);
-            
             // Calculate today's aggregated data
             double todayDistance = 0.0;
             double todayWh = 0.0;
@@ -664,8 +532,6 @@ class DashboardService {
         }
         return null;
       }).handleError((error) {
-        // Stop monitoring on stream error
-        _stopStalenessMonitoring();
         throw error;
       });
     });
