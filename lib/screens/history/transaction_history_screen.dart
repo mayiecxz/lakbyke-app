@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
-import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -316,7 +315,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const Header(),
-      floatingActionButton: const ChatFAB(),
       body: Column(
         children: [
           const ScreenTitle(title: 'Transaction History'),

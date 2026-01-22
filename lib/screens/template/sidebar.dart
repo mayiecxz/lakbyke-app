@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 // assets are re-exported from `constants.dart`; avoid duplicate import
 import 'package:lakbyke_mobile/widgets/index.dart';
-import 'package:lakbyke_mobile/screens/history/kwh_history_screen.dart';
-import 'package:lakbyke_mobile/screens/history/transaction_history_screen.dart';
-import 'package:lakbyke_mobile/screens/dashboard/dashboard_screen.dart';
+import 'package:lakbyke_mobile/screens/main_navigation.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/screens/template/menu_button.dart';
@@ -125,25 +123,12 @@ class _SidebarPanel extends StatelessWidget {
                     const SizedBox(height: 8),
                     const Divider(color: Colors.white12, thickness: 1, height: 1),
                     _menuItem(context, Icons.directions_bike, AppStrings.dashboard, onTap: () {
-                                      final navigator = Navigator.of(context);
-                                      navigator.pop();
-                                      navigator.push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
-                    }),
-                    const Divider(color: Colors.white12, height: 1),
-                    _menuItem(context, Icons.battery_std, 'Energy History', onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
-                      navigator.push(MaterialPageRoute(
-                        builder: (_) => const KwhHistoryScreen(),
-                      ));
-                    }),
-                    const Divider(color: Colors.white12, height: 1),
-                    _menuItem(context, Icons.list_alt, 'Transaction History', onTap: () {
-                      final navigator = Navigator.of(context);
-                      navigator.pop();
-                      navigator.push(MaterialPageRoute(
-                        builder: (_) => const TransactionHistoryScreen(),
-                      ));
+                      // Navigate to MainNavigation with dashboard index (0)
+                      navigator.pushReplacement(
+                        MaterialPageRoute(builder: (_) => const MainNavigation(initialIndex: 0)),
+                      );
                     }),
                     const Divider(color: Colors.white12, height: 1),
                     _menuItem(context, Icons.info_outline, 'About', onTap: () {

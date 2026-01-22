@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
-import 'package:lakbyke_mobile/screens/dashboard/dashboard_screen.dart';
+import 'package:lakbyke_mobile/screens/main_navigation.dart';
 import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -129,7 +129,7 @@ class _LoginModalState extends State<LoginModal> {
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+              MaterialPageRoute(builder: (context) => const MainNavigation()),
             );
           }
         } else {
@@ -192,7 +192,7 @@ class _LoginModalState extends State<LoginModal> {
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+              MaterialPageRoute(builder: (context) => const MainNavigation()),
             );
           }
         } else {

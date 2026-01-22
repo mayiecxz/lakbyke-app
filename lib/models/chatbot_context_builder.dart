@@ -1,5 +1,5 @@
 class ChatbotContextBuilder {
-  static const Duration _liveEffortStaleAfter = Duration(seconds: 10);
+  // static const Duration _liveEffortStaleAfter = Duration(seconds: 60);
 
   static String buildContextSection(Map<String, dynamic>? contextData) {
     if (contextData == null || contextData.isEmpty) return '';
@@ -31,9 +31,9 @@ class ChatbotContextBuilder {
 
     final rawEffort = contextData['liveEffort'];
     final effortValue = _toDouble(rawEffort);
-    final isStale = _isLiveEffortStale(contextData);
+    // final isStale = _isLiveEffortStale(contextData);
 
-    final displayValue = (isStale && effortValue != null) ? 0.0 : effortValue ?? rawEffort;
+    final displayValue = (/*isStale &&*/ effortValue != null) ? 0.0 : effortValue ?? rawEffort;
     return '- Live Effort (Current Power): $displayValue W';
   }
 
@@ -47,12 +47,12 @@ class ChatbotContextBuilder {
     return '- Live Effort Timestamp: $timestampStr';
   }
 
-  static bool _isLiveEffortStale(Map<String, dynamic> contextData) {
-    final timestamp = contextData['liveEffortTimestamp'];
-    final parsed = _parseTimestamp(timestamp);
-    if (parsed == null) return false;
-    return DateTime.now().difference(parsed) > _liveEffortStaleAfter;
-  }
+  // static bool _isLiveEffortStale(Map<String, dynamic> contextData) {
+  //   final timestamp = contextData['liveEffortTimestamp'];
+  //   final parsed = _parseTimestamp(timestamp);
+  //   if (parsed == null) return false;
+  //   return DateTime.now().difference(parsed) > _liveEffortStaleAfter;
+  // }
 
   static void _addIfPresent(
     List<String> lines,

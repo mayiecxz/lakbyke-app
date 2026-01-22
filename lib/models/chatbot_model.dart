@@ -38,24 +38,24 @@ class BikeData extends ChangeNotifier {
   }
 
   // Check if data is stale (same timestamp for more than 60 seconds)
-  bool _isDataStale(Map<String, dynamic> data) {
-    final timestampStr =
-        data['timestamp'] as String? ?? data['liveEffortTimestamp'] as String?;
-    if (timestampStr == null) return true;
+  // bool _isDataStale(Map<String, dynamic> data) {
+  //   final timestampStr =
+  //       data['timestamp'] as String? ?? data['liveEffortTimestamp'] as String?;
+  //   if (timestampStr == null) return true;
 
-    try {
-      final timestamp = DateTime.parse(timestampStr);
-      final secondsSinceUpdate = DateTime.now().difference(timestamp).inSeconds;
-      return secondsSinceUpdate > 60;
-    } catch (e) {
-      return true;
-    }
-  }
+  //   try {
+  //     final timestamp = DateTime.parse(timestampStr);
+  //     final secondsSinceUpdate = DateTime.now().difference(timestamp).inSeconds;
+  //     return secondsSinceUpdate > 60;
+  //   } catch (e) {
+  //     return true;
+  //   }
+  // }
 
   // Update values from Firebase deviceEnergyData
   void _updateFromFirebaseData(Map<String, dynamic> data) {
     // Check if data is stale
-    final isStale = _isDataStale(data);
+    // final isStale = _isDataStale(data);
 
     // Battery level from mountBatteryPercentage
     final batteryValue = data['mountBatteryPercentage'];
@@ -75,7 +75,7 @@ class BikeData extends ChangeNotifier {
       // Calculate voltage and current from power
       // Assuming typical LiFePO4 battery: ~12.8V nominal, 13.2V when charging
       // If power > 0 and not stale, assume pedaling is happening
-      if (powerWatts > 0 && !isStale) {
+      if (powerWatts > 0 /*&& !isStale*/) {
         isPedaling = true;
         // Estimate voltage based on battery level (12.0V at 0%, 13.2V at 100%)
         voltage = 12.0 + (batteryLevel / 100.0) * 1.2;

@@ -309,10 +309,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.edit,
-                                  color: AppColors.dashboardPrimary,
-                                  size: 18.0,
+                                Image.asset(
+                                  'assets/images/tagicon2.png',
+                                  width: 18.0,
+                                  height: 18.0,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
