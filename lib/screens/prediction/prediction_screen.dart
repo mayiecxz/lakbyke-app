@@ -1,0 +1,897 @@
+import 'package:flutter/material.dart';
+import 'package:lakbyke_mobile/screens/template/header.dart';
+import 'package:lakbyke_mobile/screens/template/screen_title.dart';
+import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+import 'package:lakbyke_mobile/services/dashboard.dart';
+import 'package:lakbyke_mobile/services/transaction_service.dart';
+import 'package:lakbyke_mobile/services/kwh_service.dart';
+import 'package:intl/intl.dart';
+
+class PredictionScreen extends StatefulWidget {
+  const PredictionScreen({super.key});
+
+  @override
+  State<PredictionScreen> createState() => _PredictionScreenState();
+}
+
+class _PredictionScreenState extends State<PredictionScreen> {
+  final DashboardService _dashboardService = DashboardService();
+  final TransactionService _transactionService = TransactionService();
+  final KwhService _kwhService = KwhService();
+  
+  bool _isLoading = true;
+  Map<String, dynamic>? _dashboardData;
+  List<Map<String, dynamic>> _recentTransactions = [];
+  List<Map<String, dynamic>> _kwhHistory = [];
+  
+  // Prediction settings
+  int _sessionsPerWeek = 1;
+  double _averageEarningsPerSession = 0.0;
+  double _averageEnergyPerSession = 0.0; // in Wh
+  double _averageDistancePerSession = 0.0; // in km
+  double _currentMonthlyProjection = 0.0;
+  double _projectedMonthlyEarnings = 0.0;
+  double _projectedMonthlyEnergy = 0.0; // in Wh
+  double _projectedMonthlyDistance = 0.0; // in km
+  
+  // Historical data from Firebase
+  double _weeklyAverageEarnings = 0.0;
+  double _weeklyAverageEnergy = 0.0;
+  double _weeklyAverageDistance = 0.0;
+  int _totalSessions = 0;
+  int _daysWithActivity = 0;
+  
+  // Real data from Firebase
+  double _totalDistance = 0.0;
+  double _totalGenerated = 0.0; // in Wh
+  double _totalRedeemed = 0.0;
+  int _batteriesExchanged = 0;
+  double _currentEffort = 0.0; // powerGeneratedInWatts
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPredictionData();
+  }
+
+  Future<void> _loadPredictionData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Load dashboard data (contains distance, effort, generated, batteries, redeemed)
+      final dashboardData = await _dashboardService.getDashboardData();
+      setState(() {
+        _dashboardData = dashboardData;
+        
+        // Extract real data from Firebase
+        _totalDistance = (dashboardData?['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
+        _totalGenerated = (dashboardData?['totalGenerated'] as num?)?.toDouble() ?? 0.0; // in Wh
+        _totalRedeemed = (dashboardData?['totalRedeems'] as num?)?.toDouble() ?? 0.0;
+        _batteriesExchanged = (dashboardData?['batteriesExchanged'] as num?)?.toInt() ?? 0;
+        _currentEffort = (dashboardData?['powerGeneratedInWatts'] as num?)?.toDouble() ?? 
+                        (dashboardData?['liveEffort'] as num?)?.toDouble() ?? 0.0;
+      });
+
+      // Load transactions from Firebase (transactions/{stationId}/{transaction_id})
+      final transactions = await _transactionService.getAllTransactions();
+      setState(() {
+        _recentTransactions = transactions;
+      });
+
+      // Load KWH history from Firebase (deviceEnergyData/{serviceTag}/{document_id})
+      final kwhHistory = await _kwhService.getHistoryData();
+      setState(() {
+        _kwhHistory = kwhHistory;
+      });
+
+      // Calculate historical averages from real Firebase data
+      _calculateHistoricalAverages(transactions, kwhHistory);
+
+      // Calculate projections
+      _calculateProjections();
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading prediction data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _calculateHistoricalAverages(
+    List<Map<String, dynamic>> transactions,
+    List<Map<String, dynamic>> kwhHistory,
+  ) {
+    if (transactions.isEmpty && kwhHistory.isEmpty) {
+      setState(() {
+        _totalSessions = 0;
+        _daysWithActivity = 0;
+        _weeklyAverageEarnings = 0.0;
+        _weeklyAverageEnergy = 0.0;
+        _weeklyAverageDistance = 0.0;
+        _averageEarningsPerSession = 0.0;
+        _averageEnergyPerSession = 0.0;
+        _averageDistancePerSession = 0.0;
+      });
+      return;
+    }
+
+    // Group transactions by date
+    final Map<String, List<Map<String, dynamic>>> transactionsByDate = {};
+    final Set<String> uniqueDates = {};
+
+    for (var transaction in transactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ?? 
+                        transaction['timeStamp'] as DateTime?;
+      if (timestamp == null) continue;
+
+      final dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
+      uniqueDates.add(dateKey);
+
+      if (!transactionsByDate.containsKey(dateKey)) {
+        transactionsByDate[dateKey] = [];
+      }
+      transactionsByDate[dateKey]!.add(transaction);
+    }
+
+    // Calculate totals from transactions
+    double totalEarnings = 0.0;
+    double totalEnergy = 0.0; // in Wh
+    double totalDistance = 0.0; // in km
+
+    for (var transaction in transactions) {
+      // Earnings from payout
+      final payout = transaction['payout'] as double? ?? 
+                     transaction['amount'] as double? ?? 0.0;
+      totalEarnings += payout;
+
+      // Energy from powerSubmitted_Ah and voltage (convert Ah to Wh)
+      final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ?? 
+                               transaction['powerSubmitted'] as double? ?? 0.0;
+      final voltage = transaction['voltage'] as double? ?? 0.0;
+      if (voltage > 0 && powerSubmittedAh > 0) {
+        totalEnergy += powerSubmittedAh * voltage; // Convert Ah to Wh
+      }
+    }
+
+    // Calculate distance from KWH history (deviceEnergyData)
+    // Sum distance from all history records
+    for (var record in kwhHistory) {
+      final distance = record['totalDistanceKm'] as double? ?? 0.0;
+      totalDistance += distance;
+    }
+
+    // Calculate averages
+    final daysWithActivity = uniqueDates.length;
+    final totalSessions = transactions.length;
+    
+    // Calculate weekly average (last 4 weeks or all time)
+    final now = DateTime.now();
+    final fourWeeksAgo = now.subtract(const Duration(days: 28));
+    
+    final recentTransactions = transactions.where((t) {
+      final timestamp = t['timestamp'] as DateTime? ?? t['timeStamp'] as DateTime?;
+      return timestamp != null && timestamp.isAfter(fourWeeksAgo);
+    }).toList();
+
+    final recentKwhHistory = kwhHistory.where((r) {
+      final timestamp = r['timestamp'] as DateTime?;
+      return timestamp != null && timestamp.isAfter(fourWeeksAgo);
+    }).toList();
+
+    double weeklyEarnings = 0.0;
+    double weeklyEnergy = 0.0;
+    double weeklyDistance = 0.0;
+    int recentWeeks = 1; // Default to 1 week if no recent data
+
+    if (recentTransactions.isNotEmpty || recentKwhHistory.isNotEmpty) {
+      // Calculate average per week over last 4 weeks
+      final weeksData = <int, List<Map<String, dynamic>>>{};
+      for (var transaction in recentTransactions) {
+        final timestamp = transaction['timestamp'] as DateTime? ?? 
+                         transaction['timeStamp'] as DateTime?;
+        if (timestamp == null) continue;
+        
+        final weeksSince = now.difference(timestamp).inDays ~/ 7;
+        if (weeksSince < 4) {
+          if (!weeksData.containsKey(weeksSince)) {
+            weeksData[weeksSince] = [];
+          }
+          weeksData[weeksSince]!.add(transaction);
+        }
+      }
+
+      recentWeeks = weeksData.isEmpty ? 1 : weeksData.length;
+      
+      // Calculate weekly totals
+      for (var transaction in recentTransactions) {
+        final payout = transaction['payout'] as double? ?? 
+                      transaction['amount'] as double? ?? 0.0;
+        weeklyEarnings += payout;
+
+        final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ?? 
+                                transaction['powerSubmitted'] as double? ?? 0.0;
+        final voltage = transaction['voltage'] as double? ?? 0.0;
+        if (voltage > 0 && powerSubmittedAh > 0) {
+          weeklyEnergy += powerSubmittedAh * voltage;
+        }
+      }
+
+      // Calculate weekly distance from recent KWH history
+      for (var record in recentKwhHistory) {
+        final distance = record['totalDistanceKm'] as double? ?? 0.0;
+        weeklyDistance += distance;
+      }
+    }
+
+    // Calculate average per session
+    final avgEarningsPerSession = totalSessions > 0 ? totalEarnings / totalSessions : 0.0;
+    final avgEnergyPerSession = totalSessions > 0 ? totalEnergy / totalSessions : 0.0;
+    final avgDistancePerSession = totalSessions > 0 ? totalDistance / totalSessions : 0.0;
+    
+    // Calculate weekly average (divide by number of weeks)
+    final weeklyAvgEarnings = recentWeeks > 0 ? weeklyEarnings / recentWeeks : 0.0;
+    final weeklyAvgEnergy = recentWeeks > 0 ? weeklyEnergy / recentWeeks : 0.0;
+    final weeklyAvgDistance = recentWeeks > 0 ? weeklyDistance / recentWeeks : 0.0;
+
+    setState(() {
+      _totalSessions = totalSessions;
+      _daysWithActivity = daysWithActivity;
+      _averageEarningsPerSession = avgEarningsPerSession;
+      _averageEnergyPerSession = avgEnergyPerSession;
+      _averageDistancePerSession = avgDistancePerSession;
+      _weeklyAverageEarnings = weeklyAvgEarnings;
+      _weeklyAverageEnergy = weeklyAvgEnergy;
+      _weeklyAverageDistance = weeklyAvgDistance;
+      
+      // Set initial sessions per week based on activity
+      if (daysWithActivity > 0) {
+        _sessionsPerWeek = (daysWithActivity / 7).ceil().clamp(1, 7);
+      }
+    });
+  }
+
+  void _calculateProjections() {
+    // Calculate monthly projection based on sessions per week
+    final weeksPerMonth = 4.33; // Average weeks per month
+    final sessionsPerMonth = _sessionsPerWeek * weeksPerMonth;
+    
+    final projectedEarnings = _averageEarningsPerSession * sessionsPerMonth;
+    final projectedEnergy = _averageEnergyPerSession * sessionsPerMonth;
+    final projectedDistance = _averageDistancePerSession * sessionsPerMonth;
+    
+    // Current monthly projection (based on weekly average)
+    final currentMonthlyEarnings = _weeklyAverageEarnings * weeksPerMonth;
+    final currentMonthlyEnergy = _weeklyAverageEnergy * weeksPerMonth;
+    final currentMonthlyDistance = _weeklyAverageDistance * weeksPerMonth;
+
+    setState(() {
+      _projectedMonthlyEarnings = projectedEarnings;
+      _projectedMonthlyEnergy = projectedEnergy;
+      _projectedMonthlyDistance = projectedDistance;
+      _currentMonthlyProjection = currentMonthlyEarnings;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const Header(),
+      floatingActionButton: const ChatFAB(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadPredictionData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    const ScreenTitle(title: 'Earnings Prediction'),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Current Activity Summary
+                          _buildCurrentActivityCard(),
+                          const SizedBox(height: 16),
+                          
+                          // Frequency Selector
+                          _buildFrequencySelector(),
+                          const SizedBox(height: 16),
+                          
+                          // Monthly Projection Card
+                          _buildProjectionCard(),
+                          const SizedBox(height: 16),
+                          
+                          // Comparison Chart
+                          _buildComparisonChart(),
+                          const SizedBox(height: 16),
+                          
+                          // Tips and Motivation
+                          _buildMotivationCard(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildCurrentActivityCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.analytics, color: const Color(0xFF317263)),
+                const SizedBox(width: 8),
+                const Text(
+                  'Your Activity Summary',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF317263),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem(
+                  'Total Sessions',
+                  '$_totalSessions',
+                  Icons.directions_bike,
+                ),
+                _buildStatItem(
+                  'Active Days',
+                  '$_daysWithActivity',
+                  Icons.calendar_today,
+                ),
+                _buildStatItemWithPeso(
+                  'Avg/Session',
+                  '₱${_averageEarningsPerSession.toStringAsFixed(2)}',
+                ),
+              ],
+            ),
+            if (_weeklyAverageEarnings > 0) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Weekly Average:',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  Text(
+                    '₱${_weeklyAverageEarnings.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF317263),
+                    ),
+                  ),
+                ],
+              ),
+              if (_weeklyAverageDistance > 0) ...[
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Weekly Distance:',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    Text(
+                      '${_weeklyAverageDistance.toStringAsFixed(1)} km',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF317263),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: const Color(0xFF317263), size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItemWithPeso(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          '₱',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF317263),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFrequencySelector() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.tune, color: const Color(0xFF317263)),
+                const SizedBox(width: 8),
+                const Text(
+                  'Adjust Your Frequency',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF317263),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Sessions per week: $_sessionsPerWeek',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              value: _sessionsPerWeek.toDouble(),
+              min: 1,
+              max: 7,
+              divisions: 6,
+              label: '$_sessionsPerWeek sessions/week',
+              activeColor: const Color(0xFF317263),
+              onChanged: (value) {
+                setState(() {
+                  _sessionsPerWeek = value.round();
+                });
+                _calculateProjections();
+              },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '1x/week',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                Text(
+                  'Daily',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProjectionCard() {
+    final increase = _projectedMonthlyEarnings - _currentMonthlyProjection;
+    final increasePercent = _currentMonthlyProjection > 0
+        ? (increase / _currentMonthlyProjection * 100)
+        : 0.0;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF317263),
+              const Color(0xFF317263).withOpacity(0.8),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Monthly Earnings Projection',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Projected',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    Text(
+                      '₱${_projectedMonthlyEarnings.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                if (increase > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.trending_up, color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          '+${increasePercent.toStringAsFixed(1)}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white30),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Based on current activity',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    Text(
+                      '₱${_currentMonthlyProjection.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Energy Generated',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    Text(
+                      '${(_projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (_projectedMonthlyDistance > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Distance',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      Text(
+                        '${_projectedMonthlyDistance.toStringAsFixed(1)} km',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComparisonChart() {
+    final currentWeekly = _currentMonthlyProjection / 4.33;
+    final projectedWeekly = _projectedMonthlyEarnings / 4.33;
+    final maxValue = [currentWeekly, projectedWeekly].reduce((a, b) => a > b ? a : b);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bar_chart, color: const Color(0xFF317263)),
+                const SizedBox(width: 8),
+                const Text(
+                  'Weekly Comparison',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF317263),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '₱${currentWeekly.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 120,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            FractionallySizedBox(
+                              heightFactor: maxValue > 0 ? currentWeekly / maxValue : 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  borderRadius: const BorderRadius.only(
+                                    bottomLeft: Radius.circular(8),
+                                    bottomRight: Radius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Current',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '₱${projectedWeekly.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF317263),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 120,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            FractionallySizedBox(
+                              heightFactor: maxValue > 0 ? projectedWeekly / maxValue : 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF317263),
+                                  borderRadius: const BorderRadius.only(
+                                    bottomLeft: Radius.circular(8),
+                                    bottomRight: Radius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Projected',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMotivationCard() {
+    final increase = _projectedMonthlyEarnings - _currentMonthlyProjection;
+    String motivationText = '';
+    String tipText = '';
+
+    if (increase > 0) {
+      motivationText = 'By increasing to $_sessionsPerWeek sessions per week, you could earn an additional ₱${increase.toStringAsFixed(2)} per month!';
+      tipText = '💡 Tip: Consistency is key! Even small increases in frequency can lead to significant earnings over time.';
+    } else if (_totalSessions == 0) {
+      motivationText = 'Start your first session to begin earning! Every ride counts towards your monthly projection.';
+      tipText = '💡 Tip: Begin with 1-2 sessions per week and gradually increase as you build your routine.';
+    } else {
+      motivationText = 'Keep up the great work! Maintain your current activity level to reach your monthly goal.';
+      tipText = '💡 Tip: Try to maintain a consistent schedule. Regular biking sessions help build momentum!';
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.lightbulb, color: Colors.amber[700]),
+                const SizedBox(width: 8),
+                const Text(
+                  'Motivation & Tips',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              motivationText,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber[200]!),
+              ),
+              child: Text(
+                tipText,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.amber[900],
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
