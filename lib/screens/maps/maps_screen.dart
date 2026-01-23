@@ -6,7 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
-import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+import 'package:lakbyke_mobile/models/maps/direction_step.dart';
+import 'package:lakbyke_mobile/models/maps/route_info.dart';
+import 'package:lakbyke_mobile/models/maps/polyline_decoder.dart';
 
 class MapsScreen extends StatefulWidget {
   const MapsScreen({super.key});
@@ -29,7 +31,7 @@ class _MapsScreenState extends State<MapsScreen> {
   bool _isLoadingDirections = false;
   String? _routeDistance = '';
   String? _routeDuration = '';
-  List<Map<String, dynamic>> _directionsSteps = [];
+  List<DirectionStep> _directionsSteps = [];
   bool _showDirectionsPanel = false;
   
   // Real-time navigation
@@ -37,7 +39,7 @@ class _MapsScreenState extends State<MapsScreen> {
   bool _isNavigating = false;
   int _currentStepIndex = 0;
   double _distanceToNextTurn = 0.0;
-  Map<String, dynamic>? _currentInstruction;
+  DirectionStep? _currentInstruction;
   String _googleMapsApiKey = 'AIzaSyCiuyIvt52hTNwThuyx2HSdCGJtIewKV0Q';
 
   @override
@@ -360,51 +362,12 @@ class _MapsScreenState extends State<MapsScreen> {
         return;
       }
 
-      // Extract route
+      // Extract route using RouteInfo model
       final route = directionsData['routes'][0];
-      final leg = route['legs'][0];
-      
-      // Get distance and duration
-      final distance = leg['distance']['value'] as int; // in meters
-      final duration = leg['duration']['value'] as int; // in seconds
-      
-      final distanceKm = (distance / 1000).toStringAsFixed(1);
-      final durationMins = (duration / 60).round();
-
-      // Decode polyline
       final overviewPolyline = route['overview_polyline']['points'];
-      List<LatLng> points = _decodePolyline(overviewPolyline);
-
-      // Extract turn-by-turn directions
-      List<Map<String, dynamic>> steps = [];
-      if (leg['steps'] != null) {
-        for (var step in leg['steps']) {
-          final htmlInstruction = step['html_instructions'] as String? ?? '';
-          // Remove HTML tags
-          final instruction = htmlInstruction
-              .replaceAll(RegExp(r'<[^>]*>'), '')
-              .replaceAll('&nbsp;', ' ')
-              .trim();
-          
-          final distance = step['distance']['value'] as int;
-          final duration = step['duration']['value'] as int;
-          final distanceText = distance > 1000 
-              ? '${(distance / 1000).toStringAsFixed(1)} km'
-              : '$distance m';
-          
-          // Get maneuver type
-          final maneuver = step['maneuver']?.toString().toLowerCase() ?? '';
-          final icon = _getManeuverIconFromManeuver(maneuver);
-          
-          steps.add({
-            'instruction': instruction,
-            'distance': distanceText,
-            'duration': duration > 60 ? '${(duration / 60).round()} min' : '$duration sec',
-            'maneuver': maneuver,
-            'icon': icon,
-          });
-        }
-      }
+      List<LatLng> points = PolylineDecoder.decode(overviewPolyline);
+      
+      final routeInfo = RouteInfo.fromDirectionsResponse(directionsData, points);
 
       // Update markers
       _markers = {
@@ -424,39 +387,39 @@ class _MapsScreenState extends State<MapsScreen> {
       _polylines = {
         Polyline(
           polylineId: const PolylineId('route'),
-          points: points,
+          points: routeInfo.polylinePoints,
           color: const Color(0xFF317263),
           width: 5,
         ),
       };
 
       setState(() {
-        _routeDistance = '$distanceKm km';
-        _routeDuration = '$durationMins mins';
-        _directionsSteps = steps;
+        _routeDistance = routeInfo.distance;
+        _routeDuration = routeInfo.duration;
+        _directionsSteps = routeInfo.steps;
         _isLoadingDirections = false;
-        _showDirectionsPanel = steps.isNotEmpty;
+        _showDirectionsPanel = routeInfo.steps.isNotEmpty;
         _currentStepIndex = 0;
-        _isNavigating = steps.isNotEmpty;
-        if (steps.isNotEmpty) {
-          _currentInstruction = steps[0];
+        _isNavigating = routeInfo.steps.isNotEmpty;
+        if (routeInfo.steps.isNotEmpty) {
+          _currentInstruction = routeInfo.steps[0];
           _calculateDistanceToNextTurn();
         }
       });
       
       // Start real-time navigation if we have steps
-      if (steps.isNotEmpty) {
+      if (routeInfo.steps.isNotEmpty) {
         _startNavigation();
       }
 
       // Fit bounds to show entire route
-      if (points.isNotEmpty) {
-        double minLat = points[0].latitude;
-        double maxLat = points[0].latitude;
-        double minLng = points[0].longitude;
-        double maxLng = points[0].longitude;
+      if (routeInfo.polylinePoints.isNotEmpty) {
+        double minLat = routeInfo.polylinePoints[0].latitude;
+        double maxLat = routeInfo.polylinePoints[0].latitude;
+        double minLng = routeInfo.polylinePoints[0].longitude;
+        double maxLng = routeInfo.polylinePoints[0].longitude;
 
-        for (var point in points) {
+        for (var point in routeInfo.polylinePoints) {
           minLat = minLat < point.latitude ? minLat : point.latitude;
           maxLat = maxLat > point.latitude ? maxLat : point.latitude;
           minLng = minLng < point.longitude ? minLng : point.longitude;
@@ -483,39 +446,6 @@ class _MapsScreenState extends State<MapsScreen> {
         );
       }
     }
-  }
-
-  List<LatLng> _decodePolyline(String encoded) {
-    List<LatLng> points = [];
-    int index = 0;
-    int lat = 0;
-    int lng = 0;
-
-    while (index < encoded.length) {
-      int shift = 0;
-      int result = 0;
-      int byte;
-      do {
-        byte = encoded.codeUnitAt(index++) - 63;
-        result |= (byte & 0x1F) << shift;
-        shift += 5;
-      } while (byte >= 0x20);
-      int dlat = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1);
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        byte = encoded.codeUnitAt(index++) - 63;
-        result |= (byte & 0x1F) << shift;
-        shift += 5;
-      } while (byte >= 0x20);
-      int dlng = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1);
-      lng += dlng;
-
-      points.add(LatLng(lat / 1e5, lng / 1e5));
-    }
-    return points;
   }
 
   void _clearDirections() {
@@ -613,46 +543,11 @@ class _MapsScreenState extends State<MapsScreen> {
     });
   }
   
-  IconData _getManeuverIconFromManeuver(String maneuver) {
-    switch (maneuver.toLowerCase()) {
-      case 'turn-left':
-        return Icons.turn_left;
-      case 'turn-right':
-        return Icons.turn_right;
-      case 'turn-sharp-left':
-        return Icons.turn_left;
-      case 'turn-sharp-right':
-        return Icons.turn_right;
-      case 'turn-slight-left':
-        return Icons.turn_left;
-      case 'turn-slight-right':
-        return Icons.turn_right;
-      case 'straight':
-        return Icons.straight;
-      case 'uturn-left':
-      case 'uturn-right':
-        return Icons.u_turn_left;
-      case 'ramp-left':
-      case 'ramp-right':
-        return Icons.merge_type;
-      case 'merge':
-        return Icons.merge_type;
-      case 'fork-left':
-      case 'fork-right':
-        return Icons.call_split;
-      case 'roundabout-left':
-      case 'roundabout-right':
-        return Icons.rotate_right;
-      default:
-        return Icons.arrow_forward;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const Header(),
-      floatingActionButton: const ChatFAB(),
+      // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
           const ScreenTitle(title: 'Maps'),
@@ -819,7 +714,7 @@ class _MapsScreenState extends State<MapsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      _currentInstruction!['icon'] ?? Icons.arrow_forward,
+                      _currentInstruction!.icon,
                       color: const Color(0xFF317263),
                       size: 28,
                     ),
@@ -831,7 +726,7 @@ class _MapsScreenState extends State<MapsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _currentInstruction!['instruction'] ?? 'Continue',
+                          _currentInstruction!.instruction.isNotEmpty ? _currentInstruction!.instruction : 'Continue',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -1001,7 +896,7 @@ class _MapsScreenState extends State<MapsScreen> {
                                         itemCount: _directionsSteps.length,
                                         itemBuilder: (context, index) {
                                           final step = _directionsSteps[index];
-                                          final icon = step['icon'] as IconData? ?? Icons.arrow_forward;
+                                          final icon = step.icon;
                                           final isFirst = index == 0;
                                           final isLast = index == _directionsSteps.length - 1;
                                           
@@ -1031,7 +926,7 @@ class _MapsScreenState extends State<MapsScreen> {
                                                 ),
                                               ),
                                               title: Text(
-                                                step['instruction'] ?? 'Continue',
+                                                step.instruction.isNotEmpty ? step.instruction : 'Continue',
                                                 style: TextStyle(
                                                   fontSize: 15,
                                                   fontWeight: isFirst ? FontWeight.w600 : FontWeight.w500,
@@ -1049,7 +944,7 @@ class _MapsScreenState extends State<MapsScreen> {
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      step['distance'] ?? '',
+                                                      step.distance,
                                                       style: TextStyle(
                                                         fontSize: 13,
                                                         color: Colors.grey[600],

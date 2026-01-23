@@ -1,5 +1,5 @@
-import 'package:lakbyke_mobile/models/chatbot_context_builder.dart';
-import 'package:lakbyke_mobile/models/chatbot_model.dart';
+import 'package:lakbyke_mobile/models/chatbot/chatbot_context_builder.dart';
+import 'package:lakbyke_mobile/models/chatbot/chatbot_model.dart';
 
 /// Prompt builder for chatbot with pre-calculated environmental impact and strict refusal protocols.
 class ChatbotPromptService {

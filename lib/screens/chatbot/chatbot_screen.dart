@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:lakbyke_mobile/models/chatbot_model.dart';
+import 'package:lakbyke_mobile/models/chatbot/chatbot_model.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
 import 'package:lakbyke_mobile/services/dashboard.dart';

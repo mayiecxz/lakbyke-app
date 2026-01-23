@@ -1,6 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lakbyke_mobile/models/chatbot_model.dart';
+import 'package:lakbyke_mobile/models/chatbot/chatbot_model.dart';
 
 class ChatbotService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();

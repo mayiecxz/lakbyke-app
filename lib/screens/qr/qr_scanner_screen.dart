@@ -116,7 +116,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const Header(),
-      floatingActionButton: const ChatFAB(),
+      // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
           const ScreenTitle(title: 'QR Scanner'),

@@ -89,7 +89,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const Header(),
-      floatingActionButton: const ChatFAB(),
+      // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
           const ScreenTitle(title: 'History'),

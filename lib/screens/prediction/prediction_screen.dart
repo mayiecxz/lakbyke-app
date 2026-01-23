@@ -366,7 +366,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const Header(),
-      floatingActionButton: const ChatFAB(),
+      // floatingActionButton: const ChatFAB(), // Hidden for now
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

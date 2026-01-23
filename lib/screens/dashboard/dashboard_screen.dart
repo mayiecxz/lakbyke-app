@@ -217,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: const ChatFAB(),
+      // floatingActionButton: const ChatFAB(), // Hidden for now
       // The body will handle the content, including the curved header
       body: SafeArea(
         child: Stack(
