@@ -39,7 +39,7 @@ class _MapsScreenState extends State<MapsScreen> {
   int _currentStepIndex = 0;
   double _distanceToNextTurn = 0.0;
   Map<String, dynamic>? _currentInstruction;
-  String _googleMapsApiKey = 'AIzaSyBDMa0pWgh_96N7Sj-pUQAVF1_niW7OBc0';
+  String _googleMapsApiKey = 'AIzaSyCiuyIvt52hTNwThuyx2HSdCGJtIewKV0Q';
 
   @override
   void initState() {
@@ -120,11 +120,55 @@ class _MapsScreenState extends State<MapsScreen> {
 
     try {
       // Use Google Geocoding API to get destination coordinates
+      // Add region parameter to bias results (PH for Philippines)
       final geocodeUrl = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(destination)}&key=$_googleMapsApiKey',
+        'https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(destination)}&region=ph&key=$_googleMapsApiKey',
       );
       
-      final geocodeResponse = await http.get(geocodeUrl);
+      print('Geocoding URL: $geocodeUrl');
+      
+      http.Response geocodeResponse;
+      try {
+        geocodeResponse = await http.get(
+          geocodeUrl,
+          headers: {
+            'Accept': 'application/json',
+          },
+        ).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            throw TimeoutException('Geocoding request timed out');
+          },
+        );
+      } catch (e) {
+        print('Error fetching geocode: $e');
+        setState(() {
+          _isLoadingDirections = false;
+        });
+        if (mounted) {
+          String errorMessage = 'Failed to search location';
+          final errorString = e.toString().toLowerCase();
+          
+          if (errorString.contains('failed to fetch') || 
+              errorString.contains('cors') || 
+              errorString.contains('network') ||
+              errorString.contains('clientexception')) {
+            errorMessage = 'Network error: Check API key restrictions. Ensure Geocoding API is enabled.';
+          } else if (e is TimeoutException) {
+            errorMessage = 'Request timed out. Please try again.';
+          } else {
+            errorMessage = 'Error: ${e.toString()}';
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
       
       if (geocodeResponse.statusCode != 200) {
         setState(() {
@@ -132,7 +176,10 @@ class _MapsScreenState extends State<MapsScreen> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not find the destination address')),
+            SnackBar(
+              content: Text('HTTP Error ${geocodeResponse.statusCode}: Could not search location'),
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
         return;
@@ -140,13 +187,56 @@ class _MapsScreenState extends State<MapsScreen> {
 
       final geocodeData = json.decode(geocodeResponse.body);
       
-      if (geocodeData['status'] != 'OK' || geocodeData['results'].isEmpty) {
+      // Debug: Print the response
+      print('Geocoding Response Status: ${geocodeData['status']}');
+      print('Geocoding Response: ${geocodeResponse.body}');
+      
+      // Check for API errors
+      if (geocodeData['status'] != null && geocodeData['status'] != 'OK') {
+        final status = geocodeData['status'] as String;
+        final errorMessage = geocodeData['error_message'] as String? ?? 'Unknown error';
+        
+        setState(() {
+          _isLoadingDirections = false;
+        });
+        
+        if (mounted) {
+          String userMessage = 'Could not find the location';
+          
+          if (status == 'REQUEST_DENIED') {
+            userMessage = 'Geocoding API not enabled or API key invalid. Please enable Geocoding API in Google Cloud Console.';
+          } else if (status == 'OVER_QUERY_LIMIT') {
+            userMessage = 'API quota exceeded. Please check your billing.';
+          } else if (status == 'ZERO_RESULTS') {
+            userMessage = 'No results found for "$destination". Please try a different location.';
+          } else if (status == 'INVALID_REQUEST') {
+            userMessage = 'Invalid search query. Please enter a valid address or place name.';
+          } else {
+            userMessage = 'Error: $status - $errorMessage';
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(userMessage),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
+        
+        print('Geocoding API Error: $status - $errorMessage');
+        return;
+      }
+      
+      if (geocodeData['results'] == null || geocodeData['results'].isEmpty) {
         setState(() {
           _isLoadingDirections = false;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not find the destination address')),
+            SnackBar(
+              content: Text('No results found for "$destination". Please try a different location.'),
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
         return;
@@ -170,7 +260,55 @@ class _MapsScreenState extends State<MapsScreen> {
         'key=$_googleMapsApiKey',
       );
 
-      final directionsResponse = await http.get(directionsUrl);
+      http.Response directionsResponse;
+      try {
+        directionsResponse = await http.get(
+          directionsUrl,
+          headers: {
+            'Accept': 'application/json',
+          },
+        ).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            throw TimeoutException('Directions request timed out');
+          },
+        );
+      } catch (e) {
+        print('Error fetching directions: $e');
+        print('Error type: ${e.runtimeType}');
+        setState(() {
+          _isLoadingDirections = false;
+        });
+        if (mounted) {
+          String errorMessage = 'Failed to get directions';
+          final errorString = e.toString().toLowerCase();
+          
+          if (errorString.contains('failed to fetch') || 
+              errorString.contains('cors') || 
+              errorString.contains('network') ||
+              errorString.contains('clientexception')) {
+            errorMessage = 'Network/CORS error: Check API key HTTP referrer restrictions in Google Cloud Console. Add "localhost:*" and "127.0.0.1:*" for local development.';
+          } else if (e is TimeoutException) {
+            errorMessage = 'Request timed out. Please try again.';
+          } else {
+            errorMessage = 'Error: ${e.toString()}';
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              duration: const Duration(seconds: 6),
+              action: SnackBarAction(
+                label: 'Details',
+                onPressed: () {
+                  print('Full error details: $e');
+                },
+              ),
+            ),
+          );
+        }
+        return;
+      }
       
       if (directionsResponse.statusCode != 200) {
         setState(() {
@@ -178,15 +316,52 @@ class _MapsScreenState extends State<MapsScreen> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not get directions')),
+            SnackBar(
+              content: Text('HTTP Error ${directionsResponse.statusCode}: Could not get directions'),
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
         return;
       }
 
       final directionsData = json.decode(directionsResponse.body);
+      
+      // Check for API errors
+      if (directionsData['status'] != null && directionsData['status'] != 'OK') {
+        final status = directionsData['status'] as String;
+        final errorMessage = directionsData['error_message'] as String? ?? 'Unknown error';
+        
+        setState(() {
+          _isLoadingDirections = false;
+        });
+        
+        if (mounted) {
+          String userMessage = 'Could not get directions';
+          
+          if (status == 'REQUEST_DENIED') {
+            userMessage = 'Directions API not enabled or API key invalid. Please enable Directions API in Google Cloud Console.';
+          } else if (status == 'OVER_QUERY_LIMIT') {
+            userMessage = 'API quota exceeded. Please check your billing.';
+          } else if (status == 'INVALID_REQUEST') {
+            userMessage = 'Invalid request. Please check your origin and destination.';
+          } else {
+            userMessage = 'Error: $status - $errorMessage';
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(userMessage),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
+        
+        print('Directions API Error: $status - $errorMessage');
+        return;
+      }
 
-      if (directionsData['status'] != 'OK' || directionsData['routes'].isEmpty) {
+      if (directionsData['routes'] == null || directionsData['routes'].isEmpty) {
         setState(() {
           _isLoadingDirections = false;
         });

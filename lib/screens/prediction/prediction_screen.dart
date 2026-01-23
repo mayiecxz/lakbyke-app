@@ -47,6 +47,9 @@ class _PredictionScreenState extends State<PredictionScreen> {
   double _totalRedeemed = 0.0;
   int _batteriesExchanged = 0;
   double _currentEffort = 0.0; // powerGeneratedInWatts
+  
+  // Analytics chart filter
+  String _analyticsFilter = 'weekly';
 
   @override
   void initState() {
@@ -287,6 +290,118 @@ class _PredictionScreenState extends State<PredictionScreen> {
       _projectedMonthlyDistance = projectedDistance;
       _currentMonthlyProjection = currentMonthlyEarnings;
     });
+  }
+
+  // Calculate analytics data based on selected filter
+  List<Map<String, dynamic>> _getAnalyticsData() {
+    if (_recentTransactions.isEmpty) return [];
+
+    final aggregated = <DateTime, double>{};
+    
+    // Determine limit based on filter (outside the loop)
+    int limit;
+    switch (_analyticsFilter) {
+      case 'weekly':
+        limit = 4; // Last 4 weeks
+        break;
+      case 'monthly':
+        limit = 6; // Last 6 months
+        break;
+      case 'all time':
+        limit = 999; // All available data
+        break;
+      default:
+        limit = 4;
+    }
+
+    for (final transaction in _recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ?? 
+                       transaction['timeStamp'] as DateTime?;
+      if (timestamp == null) continue;
+      
+      final amount = transaction['payout'] as double? ?? 
+                     transaction['amount'] as double? ?? 0.0;
+
+      DateTime key;
+      
+      switch (_analyticsFilter) {
+        case 'weekly':
+          final weekStart = timestamp.subtract(Duration(days: timestamp.weekday - 1));
+          key = DateTime(weekStart.year, weekStart.month, weekStart.day);
+          break;
+        case 'monthly':
+          key = DateTime(timestamp.year, timestamp.month);
+          break;
+        case 'all time':
+          key = DateTime(timestamp.year, timestamp.month);
+          break;
+        default:
+          final weekStart = timestamp.subtract(Duration(days: timestamp.weekday - 1));
+          key = DateTime(weekStart.year, weekStart.month, weekStart.day);
+      }
+
+      aggregated[key] = (aggregated[key] ?? 0.0) + amount;
+    }
+
+    // Helper function for full month names
+    String fullMonthName(int m) {
+      const names = [
+        '', 'January', 'February', 'March', 'April', 'May', 'June', 
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return names[m];
+    }
+
+    // Convert to list and format
+    final entries = aggregated.entries.map((e) {
+      final DateTime dt = e.key;
+      String label;
+
+      switch (_analyticsFilter) {
+        case 'weekly':
+          // Will be updated after sorting to show Week 1, Week 2, etc.
+          label = ''; // Placeholder, will be set after sorting
+          break;
+        case 'monthly':
+          // Show full month name (e.g., "January", "February")
+          label = fullMonthName(dt.month);
+          break;
+        case 'all time':
+          // Show full month name (e.g., "January", "February")
+          label = fullMonthName(dt.month);
+          break;
+        default:
+          label = '';
+      }
+
+      return {
+        'label': label,
+        'amount': e.value,
+        'date': dt,
+      };
+    }).toList();
+
+    // Sort by date ascending (oldest first for chart)
+    entries.sort((a, b) => 
+      (a['date'] as DateTime).compareTo(b['date'] as DateTime)
+    );
+
+    // Limit to recent periods
+    List<Map<String, dynamic>> limitedEntries;
+    if (_analyticsFilter != 'all time' && entries.length > limit) {
+      limitedEntries = entries.sublist(entries.length - limit);
+    } else {
+      limitedEntries = entries;
+    }
+
+    // For weekly filter, update labels to show Week 1, Week 2, etc.
+    if (_analyticsFilter == 'weekly' && limitedEntries.isNotEmpty) {
+      for (int i = 0; i < limitedEntries.length; i++) {
+        limitedEntries[i]['label'] = 'Week ${i + 1}';
+      }
+    }
+
+    return limitedEntries;
   }
 
   @override
@@ -717,9 +832,11 @@ class _PredictionScreenState extends State<PredictionScreen> {
   }
 
   Widget _buildComparisonChart() {
-    final currentWeekly = _currentMonthlyProjection / 4.33;
-    final projectedWeekly = _projectedMonthlyEarnings / 4.33;
-    final maxValue = [currentWeekly, projectedWeekly].reduce((a, b) => a > b ? a : b);
+    final analyticsData = _getAnalyticsData();
+    final maxValue = analyticsData.isEmpty 
+        ? 1.0 
+        : analyticsData.map((e) => e['amount'] as double).reduce((a, b) => a > b ? a : b);
+    final chartHeight = 180.0;
 
     return Card(
       elevation: 2,
@@ -731,10 +848,10 @@ class _PredictionScreenState extends State<PredictionScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.bar_chart, color: const Color(0xFF317263)),
+                Icon(Icons.analytics, color: const Color(0xFF317263)),
                 const SizedBox(width: 8),
                 const Text(
-                  'Weekly Comparison',
+                  'Earnings Analytics',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -743,101 +860,112 @@ class _PredictionScreenState extends State<PredictionScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            // Filter chips
             Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        '₱${currentWeekly.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: ['weekly', 'monthly', 'all time'].map((filter) {
+                final selected = _analyticsFilter == filter;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: ChoiceChip(
+                    label: Text(
+                      filter == 'all time' ? 'All Time' : (filter[0].toUpperCase() + filter.substring(1)),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 120,
-                        width: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            FractionallySizedBox(
-                              heightFactor: maxValue > 0 ? currentWeekly / maxValue : 0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.blue,
-                                  borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(8),
-                                    bottomRight: Radius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Current',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
+                    ),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() {
+                        _analyticsFilter = filter;
+                      });
+                    },
+                    selectedColor: const Color(0xFF317263),
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : Colors.black87,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        '₱${projectedWeekly.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF317263),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 120,
-                        width: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            FractionallySizedBox(
-                              heightFactor: maxValue > 0 ? projectedWeekly / maxValue : 0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF317263),
-                                  borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(8),
-                                    bottomRight: Radius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Projected',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
+            const SizedBox(height: 16),
+            // Line graph
+            if (analyticsData.isEmpty)
+              Container(
+                height: chartHeight,
+                alignment: Alignment.center,
+                child: Text(
+                  'No data available',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              )
+            else
+              SizedBox(
+                height: chartHeight,
+                child: Stack(
+                  children: [
+                    // Line chart background
+                    CustomPaint(
+                      size: Size.infinite,
+                      painter: LineChartPainter(
+                        data: analyticsData.map((e) => e['amount'] as double).toList(),
+                        maxValue: maxValue,
+                        color: const Color(0xFF317263),
+                      ),
+                    ),
+                    // Labels overlay
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20.0, bottom: 30.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: analyticsData.asMap().entries.map((entry) {
+                          final item = entry.value;
+                          final amount = item['amount'] as double;
+                          final label = item['label'] as String;
+                          
+                          return Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                // Value on top
+                                Text(
+                                  '₱${amount.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[700],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                // Label at bottom
+                                Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -910,5 +1038,96 @@ class _PredictionScreenState extends State<PredictionScreen> {
         ),
       ),
     );
+  }
+}
+
+// Custom painter for line chart
+class LineChartPainter extends CustomPainter {
+  final List<double> data;
+  final double maxValue;
+  final Color color;
+
+  LineChartPainter({
+    required this.data,
+    required this.maxValue,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty || maxValue <= 0) return;
+
+    final padding = 20.0;
+    final chartWidth = size.width - (padding * 2);
+    final chartHeight = size.height - (padding * 2);
+    
+    // Draw horizontal grid lines
+    final gridPaint = Paint()
+      ..color = Colors.grey[300]!
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    
+    final numGridLines = 4;
+    for (int i = 0; i <= numGridLines; i++) {
+      final y = padding + (chartHeight / numGridLines) * i;
+      canvas.drawLine(
+        Offset(padding, y),
+        Offset(padding + chartWidth, y),
+        gridPaint,
+      );
+    }
+
+    // Draw vertical grid lines at data points
+    final stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+    for (int i = 0; i < data.length; i++) {
+      final x = padding + (i * stepX);
+      canvas.drawLine(
+        Offset(x, padding),
+        Offset(x, padding + chartHeight),
+        gridPaint,
+      );
+    }
+
+    // Line paint for the data line
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    // Point paint
+    final pointPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final points = <Offset>[];
+    for (int i = 0; i < data.length; i++) {
+      final x = padding + (i * stepX);
+      final y = padding + chartHeight - ((data[i] / maxValue) * chartHeight);
+      points.add(Offset(x, y));
+    }
+
+    // Draw the data line
+    if (points.length > 1) {
+      final path = Path();
+      path.moveTo(points[0].dx, points[0].dy);
+      for (int i = 1; i < points.length; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
+      canvas.drawPath(path, linePaint);
+    }
+
+    // Draw points
+    for (final point in points) {
+      canvas.drawCircle(point, 4.0, pointPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(LineChartPainter oldDelegate) {
+    return oldDelegate.data != data || 
+           oldDelegate.maxValue != maxValue || 
+           oldDelegate.color != color;
   }
 }
