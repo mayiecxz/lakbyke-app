@@ -12,10 +12,17 @@ class MainNavigation extends StatefulWidget {
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
+
+  // Static method to find and navigate from child widgets
+  static void navigateToHistoryFromContext(BuildContext context, {int initialTabIndex = 0}) {
+    final state = context.findAncestorStateOfType<_MainNavigationState>();
+    state?.navigateToHistory(initialTabIndex: initialTabIndex);
+  }
 }
 
 class _MainNavigationState extends State<MainNavigation> {
   late int _currentIndex;
+  double _slideDirection = 0.0; // Track slide direction for animations
 
   @override
   void initState() {
@@ -23,35 +30,65 @@ class _MainNavigationState extends State<MainNavigation> {
     _currentIndex = widget.initialIndex;
   }
 
-  final List<Widget> _screens = [
+  // Store history tab index to pass to CombinedHistoryScreen
+  int _historyInitialTabIndex = 0;
+
+  List<Widget> get _screens => [
     const HomeScreen(),
     const MapsScreen(),
     const QrScannerScreen(),
     const InsightsScreen(),
-    const CombinedHistoryScreen(),
+    CombinedHistoryScreen(initialTabIndex: _historyInitialTabIndex),
   ];
 
   void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    if (_currentIndex != index) {
+      // Calculate slide direction before updating state
+      _slideDirection = index > _currentIndex ? 1.0 : -1.0;
+      setState(() {
+        _currentIndex = index;
+      });
+    }
+  }
+
+  // Method to navigate to history with specific tab index
+  void navigateToHistory({int initialTabIndex = 0}) {
+    _historyInitialTabIndex = initialTabIndex;
+    _onTabTapped(4); // History is at index 4
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 150), // Reduced from 300ms
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, animation) {
+          // Simplified slide transition - faster
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: Offset(_slideDirection, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          );
+        },
+        child: IndexedStack(
+          key: ValueKey<int>(_currentIndex),
+          index: _currentIndex,
+          children: _screens,
+        ),
       ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
   Widget _buildBottomNavBar() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    final bottomPadding = mediaQuery.padding.bottom;
     
     return Container(
       decoration: BoxDecoration(
@@ -128,43 +165,59 @@ class _MainNavigationState extends State<MainNavigation> {
     );
     
     return Expanded(
-      child: InkWell(
-        onTap: () => _onTabTapped(index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
-          padding: containerPadding,
-          decoration: BoxDecoration(
-            color: isActive 
-                ? const Color(0xFF317263) 
-                : Colors.transparent,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+        padding: containerPadding,
+        decoration: BoxDecoration(
+          color: isActive 
+              ? const Color(0xFF317263) 
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isActive
+              ? Border.all(
+                  color: const Color(0xFF317263),
+                  width: 2,
+                )
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _onTabTapped(index),
             borderRadius: BorderRadius.circular(12),
-            border: isActive
-                ? Border.all(
-                    color: const Color(0xFF317263),
-                    width: 2,
-                  )
-                : null,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isActive ? Colors.white : Colors.grey,
-                size: iconSize,
-              ),
-              SizedBox(height: screenHeight * 0.004),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: fontSize,
-                  color: isActive ? Colors.white : Colors.grey,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(
+                      scale: animation,
+                      child: child,
+                    );
+                  },
+                  child: Icon(
+                    icon,
+                    key: ValueKey('$icon-$isActive'),
+                    color: isActive ? Colors.white : Colors.grey,
+                    size: iconSize,
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: screenHeight * 0.004),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    color: isActive ? Colors.white : Colors.grey,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  child: Text(label),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -187,34 +240,50 @@ class _MainNavigationState extends State<MainNavigation> {
         children: [
           Transform.translate(
             offset: Offset(0, -(screenHeight * 0.015)), // Responsive elevation
-            child: GestureDetector(
-              onTap: () => _onTabTapped(2),
-              child: Container(
-                width: buttonSize,
-                height: buttonSize,
-                decoration: BoxDecoration(
-                  color: isActive 
-                      ? const Color(0xFF70D2C8) 
-                      : const Color(0xFF70D2C8).withOpacity(0.9),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isActive ? Colors.white : Colors.white.withOpacity(0.8),
-                    width: isActive ? 4 : 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isActive 
-                          ? const Color(0xFF70D2C8).withOpacity(0.4)
-                          : Colors.black.withOpacity(0.25),
-                      blurRadius: isActive ? 16 : 12,
-                      offset: Offset(0, isActive ? 8 : 6),
-                    ),
-                  ],
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              width: buttonSize,
+              height: buttonSize,
+              decoration: BoxDecoration(
+                color: isActive 
+                    ? const Color(0xFF70D2C8) 
+                    : const Color(0xFF70D2C8).withOpacity(0.9),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isActive ? Colors.white : Colors.white.withOpacity(0.8),
+                  width: isActive ? 4 : 3,
                 ),
-                child: Icon(
-                  Icons.qr_code_scanner,
-                  color: Colors.white,
-                  size: iconSize,
+                boxShadow: [
+                  BoxShadow(
+                    color: isActive 
+                        ? const Color(0xFF70D2C8).withOpacity(0.4)
+                        : Colors.black.withOpacity(0.25),
+                    blurRadius: isActive ? 16 : 12,
+                    offset: Offset(0, isActive ? 8 : 6),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _onTabTapped(2),
+                  borderRadius: BorderRadius.circular(buttonSize / 2),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, animation) {
+                      return ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      );
+                    },
+                    child: Icon(
+                      Icons.qr_code_scanner,
+                      key: ValueKey('qr-$isActive'),
+                      color: Colors.white,
+                      size: iconSize,
+                    ),
+                  ),
                 ),
               ),
             ),

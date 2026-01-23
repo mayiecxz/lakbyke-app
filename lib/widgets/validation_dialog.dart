@@ -6,6 +6,7 @@ class ValidationDialog extends StatelessWidget {
   final String confirmLabel;
   final String cancelLabel;
   final VoidCallback? onConfirm;
+  final bool isDestructive;
 
   const ValidationDialog({
     super.key,
@@ -14,6 +15,7 @@ class ValidationDialog extends StatelessWidget {
     this.confirmLabel = 'Confirm',
     this.cancelLabel = 'Cancel',
     this.onConfirm,
+    this.isDestructive = false,
   });
 
   static Future<bool?> show(BuildContext context,
@@ -21,7 +23,8 @@ class ValidationDialog extends StatelessWidget {
       required Widget content,
       String confirmLabel = 'Confirm',
       String cancelLabel = 'Cancel',
-      VoidCallback? onConfirm}) {
+      VoidCallback? onConfirm,
+      bool isDestructive = false}) {
     return showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -31,6 +34,7 @@ class ValidationDialog extends StatelessWidget {
         confirmLabel: confirmLabel,
         cancelLabel: cancelLabel,
         onConfirm: onConfirm,
+        isDestructive: isDestructive,
       ),
     );
   }
@@ -71,6 +75,10 @@ class ValidationDialog extends StatelessWidget {
                       Navigator.of(context).pop(true);
                       if (onConfirm != null) onConfirm!();
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDestructive ? Colors.red : null,
+                      foregroundColor: isDestructive ? Colors.white : null,
+                    ),
                     child: Text(confirmLabel),
                   ),
                 ],

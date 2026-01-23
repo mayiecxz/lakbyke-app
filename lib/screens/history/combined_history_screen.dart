@@ -7,7 +7,9 @@ import 'package:lakbyke_mobile/services/kwh_service.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 
 class CombinedHistoryScreen extends StatefulWidget {
-  const CombinedHistoryScreen({super.key});
+  const CombinedHistoryScreen({super.key, this.initialTabIndex = 0});
+
+  final int initialTabIndex;
 
   @override
   State<CombinedHistoryScreen> createState() => _CombinedHistoryScreenState();
@@ -35,9 +37,25 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild when tab changes for icon color updates
+    });
     _loadKwhData();
     _loadTransactionData();
+  }
+
+  @override
+  void didUpdateWidget(CombinedHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update tab controller if initialTabIndex changed
+    if (oldWidget.initialTabIndex != widget.initialTabIndex) {
+      _tabController.animateTo(widget.initialTabIndex.clamp(0, 1));
+    }
   }
 
   @override
@@ -91,19 +109,71 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
       // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
-          TabBar(
-            controller: _tabController,
-            labelColor: AppColors.homePrimary,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppColors.homePrimary,
-            tabs: const [
-              Tab(text: 'Energy History'),
-              Tab(text: 'Transaction History'),
-            ],
+          // Folder-like TabBar
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.grey[700],
+              indicator: BoxDecoration(
+                color: AppColors.homePrimary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.bolt,
+                        size: 18,
+                        color: _tabController.index == 0 
+                            ? Colors.white 
+                            : Colors.grey[700],
+                      ),
+                      const SizedBox(width: 6),
+                      const Text('Energy History'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt,
+                        size: 18,
+                        color: _tabController.index == 1 
+                            ? Colors.white 
+                            : Colors.grey[700],
+                      ),
+                      const SizedBox(width: 6),
+                      const Text('Transaction History'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
+              physics: const BouncingScrollPhysics(),
               children: [
                 _buildKwhHistoryTab(),
                 _buildTransactionHistoryTab(),

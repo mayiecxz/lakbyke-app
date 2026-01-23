@@ -20,6 +20,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   bool _hasScanned = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Start scanner when screen is accessed
+    // mobile_scanner will automatically request camera permission when needed
+    _controller.start();
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -113,6 +121,35 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // Calculate responsive overlay dimensions
+    // Use 70% of the smaller dimension for cutout size
+    final cutOutSize = (screenWidth < screenHeight ? screenWidth : screenHeight) * 0.7;
+    // Responsive border length (proportional to screen width)
+    final borderLength = (screenWidth * 0.08).clamp(25.0, 40.0);
+    // Responsive border width (proportional to screen width)
+    final borderWidth = (screenWidth * 0.01).clamp(3.0, 5.0);
+    // Responsive border radius (proportional to screen width)
+    final borderRadius = (screenWidth * 0.04).clamp(12.0, 20.0);
+    
+    // Responsive spacing and sizes
+    final topPadding = (screenHeight * 0.025).clamp(15.0, 25.0);
+    final bottomPadding = (screenHeight * 0.05).clamp(30.0, 50.0);
+    final instructionPadding = EdgeInsets.symmetric(
+      horizontal: (screenWidth * 0.05).clamp(16.0, 24.0),
+      vertical: (screenHeight * 0.02).clamp(12.0, 18.0),
+    );
+    final instructionMargin = EdgeInsets.symmetric(
+      horizontal: (screenWidth * 0.05).clamp(16.0, 24.0),
+    );
+    final instructionBorderRadius = (screenWidth * 0.03).clamp(10.0, 14.0);
+    final iconSize = (screenWidth * 0.08).clamp(28.0, 36.0);
+    final titleFontSize = (screenWidth * 0.04).clamp(14.0, 18.0);
+    final subtitleFontSize = (screenWidth * 0.03).clamp(10.0, 14.0);
+    
     return Scaffold(
       appBar: const Header(),
       // floatingActionButton: const ChatFAB(), // Hidden for now
@@ -132,17 +169,17 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   decoration: ShapeDecoration(
                     shape: QrScannerOverlayShape(
                       borderColor: const Color(0xFF317263),
-                      borderRadius: 16,
-                      borderLength: 30,
-                      borderWidth: 4,
-                      cutOutSize: 250,
+                      borderRadius: borderRadius,
+                      borderLength: borderLength,
+                      borderWidth: borderWidth,
+                      cutOutSize: cutOutSize,
                     ),
                   ),
                 ),
                 
                 // Top controls
                 Positioned(
-                  top: 20,
+                  top: topPadding,
                   left: 0,
                   right: 0,
                   child: Row(
@@ -164,41 +201,41 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 
                 // Bottom instructions
                 Positioned(
-                  bottom: 40,
+                  bottom: bottomPadding,
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: instructionPadding,
+                    margin: instructionMargin,
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(instructionBorderRadius),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.qr_code_scanner,
                           color: Colors.white,
-                          size: 32,
+                          size: iconSize,
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: screenHeight * 0.01),
                         Text(
                           _hasScanned ? 'Scan Complete!' : 'Position QR code within the frame',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: titleFontSize,
                             fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         if (!_hasScanned) ...[
-                          const SizedBox(height: 4),
-                          const Text(
+                          SizedBox(height: screenHeight * 0.005),
+                          Text(
                             'The code will be scanned automatically',
                             style: TextStyle(
                               color: Colors.white70,
-                              fontSize: 12,
+                              fontSize: subtitleFontSize,
                             ),
                             textAlign: TextAlign.center,
                           ),

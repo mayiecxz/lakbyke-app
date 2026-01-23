@@ -50,7 +50,10 @@ class _MapsScreenState extends State<MapsScreen> {
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    // Request location permission when screen is accessed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _getCurrentLocation();
+    });
   }
   
   @override

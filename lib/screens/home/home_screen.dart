@@ -6,6 +6,7 @@ import 'package:lakbyke_mobile/screens/home/welcome_modal.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 // import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/home.dart';
+import 'package:lakbyke_mobile/screens/main_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -233,10 +234,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   decoration: const BoxDecoration(
                     color: Colors.white, // White background for the main content
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(40),
-                    ),
                   ),
                   child: RefreshIndicator(
                     onRefresh: () async {
@@ -479,6 +476,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: _isLoading ? '...' : formatEnergy((totalGenerated as num).toDouble()),
                 color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
+                onViewHistory: () {
+                  // Navigate to History screen with Energy History tab (index 0) within MainNavigation
+                  MainNavigation.navigateToHistoryFromContext(context, initialTabIndex: 0);
+                },
               ),
               // Total Redeems Button
               _ActionButton(
@@ -488,6 +489,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
                 isCurrency: true,
+                onViewHistory: () {
+                  // Navigate to History screen with Transaction History tab (index 1) within MainNavigation
+                  MainNavigation.navigateToHistoryFromContext(context, initialTabIndex: 1);
+                },
               ),
             ],
           ),
@@ -611,6 +616,7 @@ class _ActionButton extends StatelessWidget {
   final double width;
   final bool isCurrency;
   final bool isFullWidth;
+  final VoidCallback? onViewHistory;
 
   const _ActionButton({
     required this.icon,
@@ -620,30 +626,36 @@ class _ActionButton extends StatelessWidget {
     required this.width,
     this.isCurrency = false,
     this.isFullWidth = false,
+    this.onViewHistory,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(AppDimensions.homeActionButtonPadding),
-      decoration: BoxDecoration(
-        color: Color(0xFF317263), // Dark green background
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onViewHistory,
         borderRadius: BorderRadius.circular(AppDimensions.homeActionButtonRadius),
-        border: Border.all(
-          color: Colors.white,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 3),
+        child: Container(
+          width: width,
+          padding: const EdgeInsets.all(AppDimensions.homeActionButtonPadding),
+          decoration: BoxDecoration(
+            color: Color(0xFF317263), // Dark green background
+            borderRadius: BorderRadius.circular(AppDimensions.homeActionButtonRadius),
+            border: Border.all(
+              color: Colors.white,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
+          child: Column(
         crossAxisAlignment: isFullWidth ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           if (!isFullWidth)
@@ -703,17 +715,23 @@ class _ActionButton extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'View History',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                GestureDetector(
+                  onTap: onViewHistory,
+                  child: Text(
+                    'View History',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.7),
+                      decoration: onViewHistory != null ? TextDecoration.underline : null,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ],
             ),
         ],
+          ),
+        ),
       ),
     );
   }
