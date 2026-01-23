@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/services/user_service.dart';
 
@@ -62,24 +61,48 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
     });
 
     try {
+      Map<String, dynamic> result;
+      
       if (widget.purpose == OTPPurpose.changeEmail) {
-        // For email changes, send verification email to current email
-        await _userService.sendEmailVerification();
+        // For email changes, send OTP to current email
+        if (widget.newEmail == null) {
+          throw Exception('New email is required for email change');
+        }
+        result = await _userService.sendEmailChangeOTP(widget.newEmail!);
       } else {
-        // For password changes, send password reset email
-        await _userService.sendPasswordResetEmail(widget.email);
+        // For password changes, send OTP to email
+        result = await _userService.sendPasswordChangeOTP();
       }
 
       if (mounted) {
         setState(() {
           _isSending = false;
         });
+
+        if (!result['success']) {
+          setState(() {
+            _errorMessage = result['error'] ?? 'Failed to send OTP. Please try again.';
+          });
+        } else {
+          // Show OTP code in development (remove in production)
+          // In production, the OTP will be sent via email through backend/Cloud Function
+          if (result['otpCode'] != null) {
+            // For development/testing only - remove in production
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('OTP Code (dev only): ${result['otpCode']}'),
+                duration: const Duration(seconds: 5),
+                backgroundColor: Colors.blue,
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSending = false;
-          _errorMessage = 'Failed to send verification email. Please try again.';
+          _errorMessage = 'Failed to send OTP: $e';
         });
       }
     }
@@ -107,8 +130,40 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
       _errorMessage = null;
     });
 
-    await _sendOTP();
-    _startResendCountdown();
+    try {
+      Map<String, dynamic> result;
+      
+      if (widget.purpose == OTPPurpose.changeEmail) {
+        if (widget.newEmail == null) {
+          throw Exception('New email is required for email change');
+        }
+        result = await _userService.resendEmailChangeOTP(widget.newEmail!);
+      } else {
+        result = await _userService.resendPasswordChangeOTP();
+      }
+
+      if (result['success']) {
+        _startResendCountdown();
+        // Show OTP code in development (remove in production)
+        if (result['otpCode'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('OTP Code (dev only): ${result['otpCode']}'),
+              duration: const Duration(seconds: 5),
+              backgroundColor: Colors.blue,
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _errorMessage = result['error'] ?? 'Failed to resend OTP. Please try again.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to resend OTP: $e';
+      });
+    }
 
     if (mounted) {
       setState(() {
@@ -148,58 +203,34 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'User not found. Please try again.';
-        });
-        return;
-      }
+      final purpose = widget.purpose == OTPPurpose.changeEmail
+          ? 'changeEmail'
+          : 'changePassword';
 
-      // Reload user to get latest verification status
-      await user.reload();
-      
-      bool verified = false;
-      
-      if (widget.purpose == OTPPurpose.changeEmail) {
-        // For email changes, verifyBeforeUpdateEmail sends a link
-        // User needs to click the link in their email
-        // We check if the new email is verified or if user clicked the link
-        // Note: In production, implement proper OTP verification with backend
-        // For now, we'll accept the code if user has verified their email
-        verified = user.emailVerified;
-        
-        // If not verified yet, show helpful message
-        if (!verified) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = 'Please click the verification link sent to your email, then try again.';
-          });
-          return;
-        }
-      } else {
-        // For password changes, password reset email contains a link
-        // User needs to click the link to reset password
-        // Since we can't verify OTP directly, we'll proceed
-        // In production, implement proper OTP verification
-        verified = true;
-      }
+      // Verify OTP using the user service
+      final verificationResult = await _userService.verifyOTP(
+        otpCode: otpCode,
+        purpose: purpose,
+      );
 
-      if (verified) {
+      if (verificationResult['success'] == true) {
         if (mounted) {
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pop({
+            'success': true,
+            'otpCode': otpCode,
+            'purpose': purpose,
+          });
         }
       } else {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Verification incomplete. Please check your email and follow the instructions.';
+          _errorMessage = verificationResult['error'] ?? 'Invalid OTP code. Please try again.';
         });
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Verification failed. Please try again.';
+        _errorMessage = 'Verification failed: $e';
       });
     }
   }
@@ -229,46 +260,14 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
             const SizedBox(height: AppDimensions.paddingMedium),
 
             // Instructions
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.purpose == OTPPurpose.changeEmail
-                      ? 'We\'ve sent a verification email to ${widget.email}. Please check your email and click the verification link, then enter any 6-digit code below to confirm.'
-                      : 'We\'ve sent a password reset email to ${widget.email}. Please check your email and follow the instructions, then enter any 6-digit code below to confirm.',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppDimensions.paddingSmall),
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.paddingSmall),
-                  decoration: BoxDecoration(
-                    color: AppColors.info.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: AppColors.info,
-                        size: 16,
-                      ),
-                      const SizedBox(width: AppDimensions.paddingSmall),
-                      Expanded(
-                        child: Text(
-                          'Note: In production, this would use a proper OTP code sent via email. For now, please verify via the email link first.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.info,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            Text(
+              widget.purpose == OTPPurpose.changeEmail
+                  ? 'We\'ve sent a 6-digit OTP code to ${widget.email}. Please check your email and enter the code below to verify your identity.'
+                  : 'We\'ve sent a 6-digit OTP code to ${widget.email}. Please check your email and enter the code below to verify your identity before changing your password.',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: AppDimensions.paddingLarge),
 

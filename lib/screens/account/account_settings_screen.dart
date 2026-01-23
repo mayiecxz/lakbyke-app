@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lakbyke_mobile/services/user_service.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/screens/account/otp_verification_dialog.dart';
+import 'package:lakbyke_mobile/models/user/user_model.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -14,9 +14,8 @@ class AccountSettingsScreen extends StatefulWidget {
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   final UserService _userService = UserService();
-  Map<String, dynamic>? _userData;
+  UserModel? _user;
   bool _isLoading = true;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -30,9 +29,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     });
 
     try {
-      final data = await _userService.getUserData();
+      final user = await _userService.getUserData();
       setState(() {
-        _userData = data;
+        _user = user;
         _isLoading = false;
       });
     } catch (e) {
@@ -42,37 +41,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     }
   }
 
-  String _getDisplayName() {
-    if (_userData == null) return 'Loading...';
-    final firstName = _userData!['firstName'] ?? '';
-    final lastName = _userData!['lastName'] ?? '';
-    final middleName = _userData!['middleName'] ?? '';
-    
-    String name = '';
-    if (firstName.isNotEmpty) name += firstName;
-    if (middleName.isNotEmpty) name += ' $middleName';
-    if (lastName.isNotEmpty) name += ' $lastName';
-    
-    return name.trim().isEmpty ? 'User' : name.trim();
-  }
-
-  String _getEmail() {
-    if (_userData == null) return 'Loading...';
-    return _userData!['email'] ?? _auth.currentUser?.email ?? 'N/A';
-  }
-
-  String _getServiceTag() {
-    if (_userData == null) return 'Loading...';
-    return _userData!['serviceTag'] ?? 'N/A';
-  }
-
-  String _getRole() {
-    if (_userData == null) return 'Loading...';
-    return _userData!['userRole'] ?? _userData!['role'] ?? 'N/A';
-  }
-
   Future<void> _handleChangeEmail() async {
-    final currentEmail = _getEmail();
+    if (_user == null) return;
+    
+    final currentEmail = _user!.email;
     final newEmailController = TextEditingController();
     
     // Show dialog to enter new email
@@ -115,7 +87,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
     // Show OTP verification dialog
     if (mounted) {
-      final otpVerified = await showDialog<bool>(
+      final otpResult = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => OTPVerificationDialog(
           email: currentEmail,
@@ -124,30 +96,33 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         ),
       );
 
-      if (otpVerified == true && mounted) {
-        // Update email
-        final success = await _userService.updateEmail(newEmail);
-        
-        if (success) {
-          // Reload user data
-          await _loadUserData();
+      if (otpResult != null && otpResult['success'] == true && mounted) {
+        final otpCode = otpResult['otpCode'] as String?;
+        if (otpCode != null) {
+          // Update email after OTP verification
+          final updateResult = await _userService.updateEmailAfterOTP(otpCode);
           
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Email updated successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to update email. Please try again.'),
-                backgroundColor: Colors.red,
-              ),
-            );
+          if (updateResult['success'] == true) {
+            // Reload user data
+            await _loadUserData();
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(updateResult['message'] ?? 'Email updated successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(updateResult['error'] ?? 'Failed to update email. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         }
       }
@@ -155,7 +130,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   }
 
   Future<void> _handleChangePassword() async {
-    final currentEmail = _getEmail();
+    if (_user == null) return;
+    
+    final currentEmail = _user!.email;
     
     // Show confirmation dialog
     final confirmed = await ValidationDialog.show(
@@ -172,7 +149,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
     // Show OTP verification dialog
     if (mounted) {
-      final otpVerified = await showDialog<bool>(
+      final otpResult = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => OTPVerificationDialog(
           email: currentEmail,
@@ -180,42 +157,48 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         ),
       );
 
-      if (otpVerified == true && mounted) {
-        // Show password input dialog
-        final passwordController = TextEditingController();
-        final confirmPasswordController = TextEditingController();
-        
-        final passwordResult = await showDialog<bool>(
-          context: context,
-          builder: (context) => _PasswordInputDialog(
-            passwordController: passwordController,
-            confirmPasswordController: confirmPasswordController,
-          ),
-        );
+      if (otpResult != null && otpResult['success'] == true && mounted) {
+        final otpCode = otpResult['otpCode'] as String?;
+        if (otpCode != null) {
+          // Show password input dialog
+          final passwordController = TextEditingController();
+          final confirmPasswordController = TextEditingController();
+          
+          final passwordResult = await showDialog<bool>(
+            context: context,
+            builder: (context) => _PasswordInputDialog(
+              passwordController: passwordController,
+              confirmPasswordController: confirmPasswordController,
+            ),
+          );
 
-        if (passwordResult == true) {
-          final newPassword = passwordController.text;
-          
-          // Update password
-          final success = await _userService.updatePassword(newPassword);
-          
-          if (success) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Password updated successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Failed to update password. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+          if (passwordResult == true) {
+            final newPassword = passwordController.text;
+            
+            // Update password after OTP verification
+            final updateResult = await _userService.updatePasswordAfterOTP(
+              otpCode: otpCode,
+              newPassword: newPassword,
+            );
+            
+            if (updateResult['success'] == true) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(updateResult['message'] ?? 'Password updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(updateResult['error'] ?? 'Failed to update password. Please try again.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
           }
         }
@@ -270,10 +253,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
                         // Account Information Card
                         _AccountInfoCard(
-                          displayName: _getDisplayName(),
-                          email: _getEmail(),
-                          serviceTag: _getServiceTag(),
-                          role: _getRole(),
+                          displayName: _user?.displayName ?? 'Loading...',
+                          email: _user?.email ?? 'Loading...',
+                          serviceTag: _user?.serviceTag ?? 'Loading...',
+                          role: _user?.displayRole ?? 'Loading...',
                         ),
 
                         const SizedBox(height: AppDimensions.paddingLarge),

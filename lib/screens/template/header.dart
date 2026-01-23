@@ -3,7 +3,7 @@ import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
-import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart';
+// import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart'; // Temporarily hidden
 
 class Header extends StatelessWidget implements PreferredSizeWidget {
   const Header({super.key});
@@ -91,23 +91,7 @@ class _AccountButtonState extends State<_AccountButton> with SingleTickerProvide
       ),
       elevation: 8,
       items: <PopupMenuEntry<String>>[
-        PopupMenuItem<String>(
-          value: 'settings',
-          child: _AccountMenuItem(
-            icon: Icons.settings,
-            title: 'Account Settings',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AccountSettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ),
-        const PopupMenuDivider(),
+        // Account Settings temporarily hidden - uncomment when ready
         PopupMenuItem<String>(
           value: 'logout',
           child: _AccountMenuItem(

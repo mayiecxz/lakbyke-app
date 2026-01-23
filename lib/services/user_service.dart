@@ -1,17 +1,44 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lakbyke_mobile/models/user/user_model.dart';
+import 'package:lakbyke_mobile/services/otp_service.dart';
 
 class UserService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final OTPService _otpService = OTPService();
 
   // Get current user ID
   String? getCurrentUserId() {
     return _auth.currentUser?.uid;
   }
 
-  // Get user data from userTable
-  Future<Map<String, dynamic>?> getUserData() async {
+  // Get user data from userTable and return as UserModel
+  Future<UserModel?> getUserData() async {
+    try {
+      final userId = getCurrentUserId();
+      if (userId == null) return null;
+
+      final snapshot = await _database.child('userTable/$userId').get();
+      
+      if (snapshot.exists) {
+        final data = snapshot.value;
+        if (data is Map) {
+          return UserModel.fromMap(
+            Map<String, dynamic>.from(data),
+            userId,
+          );
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get user data as Map (for backward compatibility)
+  Future<Map<String, dynamic>?> getUserDataAsMap() async {
     try {
       final userId = getCurrentUserId();
       if (userId == null) return null;
@@ -31,97 +58,253 @@ class UserService {
     }
   }
 
-  // Update user email in Firebase Auth and Realtime Database
-  // Note: This requires the user to be re-authenticated first
-  Future<bool> updateEmail(String newEmail) async {
+  // Send OTP for email change
+  Future<Map<String, dynamic>> sendEmailChangeOTP(String newEmail) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
 
-      // Use verifyBeforeUpdateEmail which sends a verification email
-      // The email will be updated after the user clicks the verification link
+      final currentEmail = user.email;
+      if (currentEmail == null) {
+        return {
+          'success': false,
+          'error': 'Current email not found',
+        };
+      }
+
+      // Send OTP to current email for verification
+      return await _otpService.sendOTP(
+        email: currentEmail,
+        purpose: 'changeEmail',
+        newEmail: newEmail,
+      );
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Failed to send OTP: $e',
+      };
+    }
+  }
+
+  // Update user email after OTP verification
+  Future<Map<String, dynamic>> updateEmailAfterOTP(String otpCode) async {
+    try {
+      // Verify OTP first
+      final verificationResult = await _otpService.verifyOTP(
+        otpCode: otpCode,
+        purpose: 'changeEmail',
+      );
+
+      if (!verificationResult['success']) {
+        return verificationResult;
+      }
+
+      final newEmail = verificationResult['newEmail'] as String?;
+      if (newEmail == null) {
+        return {
+          'success': false,
+          'error': 'New email not found in verification',
+        };
+      }
+
+      final user = _auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // Update email in Firebase Auth
       await user.verifyBeforeUpdateEmail(newEmail);
 
-      // Update email in Realtime Database immediately (or wait for verification)
-      // For now, we'll update it after verification
+      // Update email in Realtime Database
       final userId = getCurrentUserId();
       if (userId != null) {
         await _database.child('userTable/$userId/email').set(newEmail);
       }
 
-      return true;
+      // Clean up OTP
+      await _database.child('otpCodes/$userId/changeEmail').remove();
+
+      return {
+        'success': true,
+        'message': 'Email updated successfully',
+      };
     } catch (e) {
-      return false;
+      return {
+        'success': false,
+        'error': 'Failed to update email: $e',
+      };
     }
   }
 
-  // Update user password in Firebase Auth
-  // Note: This requires the user to be re-authenticated first
-  Future<bool> updatePassword(String newPassword) async {
+  // Send OTP for password change
+  Future<Map<String, dynamic>> sendPasswordChangeOTP() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return false;
-
-      // Note: updatePassword requires recent authentication
-      // In production, re-authenticate the user first using:
-      // AuthCredential credential = EmailAuthProvider.credential(
-      //   email: user.email!,
-      //   password: currentPassword,
-      // );
-      // await user.reauthenticateWithCredential(credential);
-      // Then call updatePassword
-      await user.updatePassword(newPassword);
-      return true;
-    } on FirebaseAuthException catch (e) {
-      // Handle specific Firebase Auth errors
-      if (e.code == 'requires-recent-login') {
-        // User needs to re-authenticate
-        return false;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
       }
-      return false;
+
+      final email = user.email;
+      if (email == null) {
+        return {
+          'success': false,
+          'error': 'Email not found',
+        };
+      }
+
+      // Send OTP to email for verification
+      return await _otpService.sendOTP(
+        email: email,
+        purpose: 'changePassword',
+      );
     } catch (e) {
-      return false;
+      return {
+        'success': false,
+        'error': 'Failed to send OTP: $e',
+      };
     }
   }
 
-  // Send OTP to email for verification
-  Future<bool> sendEmailVerification() async {
+  // Update user password after OTP verification
+  Future<Map<String, dynamic>> updatePasswordAfterOTP({
+    required String otpCode,
+    required String newPassword,
+  }) async {
+    try {
+      // Verify OTP first
+      final verificationResult = await _otpService.verifyOTP(
+        otpCode: otpCode,
+        purpose: 'changePassword',
+      );
+
+      if (!verificationResult['success']) {
+        return verificationResult;
+      }
+
+      final user = _auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // Update password in Firebase Auth
+      // Note: updatePassword may require recent authentication
+      // If it fails with 'requires-recent-login', the user needs to re-authenticate
+      await user.updatePassword(newPassword);
+
+      // Clean up OTP
+      final userId = getCurrentUserId();
+      if (userId != null) {
+        await _database.child('otpCodes/$userId/changePassword').remove();
+      }
+
+      return {
+        'success': true,
+        'message': 'Password updated successfully',
+      };
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        return {
+          'success': false,
+          'error': 'Please re-authenticate to change your password',
+        };
+      }
+      return {
+        'success': false,
+        'error': 'Failed to update password: ${e.message}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Failed to update password: $e',
+      };
+    }
+  }
+
+  // Resend OTP for email change
+  Future<Map<String, dynamic>> resendEmailChangeOTP(String newEmail) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
 
-      await user.sendEmailVerification();
-      return true;
+      final currentEmail = user.email;
+      if (currentEmail == null) {
+        return {
+          'success': false,
+          'error': 'Current email not found',
+        };
+      }
+
+      return await _otpService.resendOTP(
+        email: currentEmail,
+        purpose: 'changeEmail',
+        newEmail: newEmail,
+      );
     } catch (e) {
-      return false;
+      return {
+        'success': false,
+        'error': 'Failed to resend OTP: $e',
+      };
     }
   }
 
-  // Send password reset email (for OTP verification)
-  Future<bool> sendPasswordResetEmail(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Verify OTP code (using email link verification or custom implementation)
-  // Note: Firebase Auth doesn't have built-in OTP verification for email changes
-  // We'll use email verification links or implement a custom OTP system
-  Future<bool> verifyEmailOTP(String email, String code) async {
-    // This is a placeholder - in production, you'd implement a custom OTP system
-    // or use Firebase's email verification links
-    // For now, we'll use email verification links
+  // Resend OTP for password change
+  Future<Map<String, dynamic>> resendPasswordChangeOTP() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
 
-      await user.reload();
-      return user.emailVerified;
+      final email = user.email;
+      if (email == null) {
+        return {
+          'success': false,
+          'error': 'Email not found',
+        };
+      }
+
+      return await _otpService.resendOTP(
+        email: email,
+        purpose: 'changePassword',
+      );
     } catch (e) {
-      return false;
+      return {
+        'success': false,
+        'error': 'Failed to resend OTP: $e',
+      };
     }
+  }
+
+  // Verify OTP code (public method for dialog access)
+  Future<Map<String, dynamic>> verifyOTP({
+    required String otpCode,
+    required String purpose,
+  }) async {
+    return await _otpService.verifyOTP(
+      otpCode: otpCode,
+      purpose: purpose,
+    );
   }
 }
