@@ -52,15 +52,15 @@ abstract class AppDimensions {
   static const double formFieldRadius = 10.0;
   static const double formFieldHeight = 20.0;
 
-  // Dashboard Dimensions
-  static const double dashboardHeaderRadius = 40.0;
-  static const double dashboardIconSize = 60.0;
-  static const double dashboardMetricIconSize = 40.0;
-  static const double dashboardSmallIconSize = 18.0;
-  static const double dashboardActionIconSize = 30.0;
-  static const double dashboardActionButtonRadius = 15.0;
-  static const double dashboardActionButtonPadding = 15.0;
-  static const double dashboardCurvedHeaderVerticalPadding = 15.0;
+  // Home Dimensions
+  static const double homeHeaderRadius = 40.0;
+  static const double homeIconSize = 60.0;
+  static const double homeMetricIconSize = 40.0;
+  static const double homeSmallIconSize = 18.0;
+  static const double homeActionIconSize = 30.0;
+  static const double homeActionButtonRadius = 15.0;
+  static const double homeActionButtonPadding = 15.0;
+  static const double homeCurvedHeaderVerticalPadding = 15.0;
 
   // Onboarding Screen Dimensions
   static const double spacingSmall = 20.0;

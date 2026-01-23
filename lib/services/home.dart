@@ -2,7 +2,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
-class DashboardService {
+class HomeService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -260,10 +260,10 @@ class DashboardService {
     }
   }
 
-  // Get dashboard data for the current user from deviceEnergyData
+  // Get home data for the current user from deviceEnergyData
   // Data is stored by service tag (e.g., "MNT 0001"), not by userId
   // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
-  Future<Map<String, dynamic>?> getDashboardData() async {
+  Future<Map<String, dynamic>?> getHomeData() async {
     try {
       final userId = getCurrentuserTable();
       if (userId == null) {
@@ -287,7 +287,7 @@ class DashboardService {
       // Fetch nested structure: deviceEnergyData/{serviceTag}/* to get all documents
       var snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
       
-      Map<String, dynamic> dashboardData = {};
+      Map<String, dynamic> homeData = {};
       
       if (snapshot.exists) {
         final data = snapshot.value;
@@ -320,13 +320,13 @@ class DashboardService {
           });
           
           if (latestDocument != null) {
-            dashboardData = Map<String, dynamic>.from(latestDocument!);
+            homeData = Map<String, dynamic>.from(latestDocument!);
             
             // Keep totalWh as-is (no conversion to kWh)
           }
         } else {
           // Fallback: handle flat structure if data is not nested
-          dashboardData = Map<String, dynamic>.from(
+          homeData = Map<String, dynamic>.from(
             (data as Map<Object?, Object?>).map((key, value) => MapEntry(key.toString(), value)),
           );
           
@@ -336,39 +336,39 @@ class DashboardService {
 
       // Fetch today's aggregated data
       final todayData = await getTodayData();
-      dashboardData['todayDistance'] = todayData['todayDistance'];
-      dashboardData['todayWh'] = todayData['todayWh'];
+      homeData['todayDistance'] = todayData['todayDistance'];
+      homeData['todayWh'] = todayData['todayWh'];
 
       // Fetch total redeems from transactions table
       final totalRedeems = await getTotalRedeems();
-      dashboardData['totalRedeems'] = totalRedeems;
+      homeData['totalRedeems'] = totalRedeems;
 
       // Fetch total generated from transactions table (in Wh)
       final totalGenerated = await getTotalGenerated();
-      dashboardData['totalGenerated'] = totalGenerated;
+      homeData['totalGenerated'] = totalGenerated;
 
       // Fetch batteries exchanged count from transactions table
       final batteriesExchanged = await getBatteriesExchanged();
-      dashboardData['batteriesExchanged'] = batteriesExchanged;
+      homeData['batteriesExchanged'] = batteriesExchanged;
 
       // Consolidate live effort: always set liveEffort = powerGeneratedInWatts from latest document
-      final powerWatts = dashboardData['powerGeneratedInWatts'];
+      final powerWatts = homeData['powerGeneratedInWatts'];
       if (powerWatts != null) {
         final effortValue = (powerWatts is num) 
             ? powerWatts.toDouble() 
             : (powerWatts is String ? double.tryParse(powerWatts) ?? 0.0 : 0.0);
-        dashboardData['liveEffort'] = effortValue;
+        homeData['liveEffort'] = effortValue;
       } else {
-        dashboardData['liveEffort'] = 0.0;
+        homeData['liveEffort'] = 0.0;
       }
       
       // Add live effort timestamp from latest document
       final latestEffort = await getLatestEffort();
       if (latestEffort != null && latestEffort['timestamp'] != null) {
-        dashboardData['liveEffortTimestamp'] = latestEffort['timestamp'];
+        homeData['liveEffortTimestamp'] = latestEffort['timestamp'];
       }
 
-      return dashboardData;
+      return homeData;
     } catch (e) {
       return null;
     }
@@ -388,11 +388,11 @@ class DashboardService {
     return secondsSinceUpdate > 10;
   }
 
-  // Stream dashboard data for real-time updates from deviceEnergyData
+  // Stream home data for real-time updates from deviceEnergyData
   // Data is stored by service tag (e.g., "MNT 0001"), not by userId
   // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
   // Includes live effort with timestamp and today's aggregated data
-  Stream<Map<String, dynamic>?> getDashboardDataStream() {
+  Stream<Map<String, dynamic>?> getHomeDataStream() {
     final userId = getCurrentuserTable();
     if (userId == null) {
       return Stream.value(null);

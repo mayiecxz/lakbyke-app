@@ -95,9 +95,9 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
           const ScreenTitle(title: 'History'),
           TabBar(
             controller: _tabController,
-            labelColor: AppColors.dashboardPrimary,
+            labelColor: AppColors.homePrimary,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: AppColors.dashboardPrimary,
+            indicatorColor: AppColors.homePrimary,
             tabs: const [
               Tab(text: 'Energy History'),
               Tab(text: 'Transaction History'),
@@ -147,7 +147,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
       child: Container(
         padding: const EdgeInsets.all(18.0),
         decoration: BoxDecoration(
-          color: AppColors.dashboardAccent,
+          color: AppColors.homeAccent,
           borderRadius: BorderRadius.circular(16.0),
         ),
         child: Column(
@@ -212,7 +212,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
       child: Container(
         padding: const EdgeInsets.all(18.0),
         decoration: BoxDecoration(
-          color: AppColors.dashboardAccent,
+          color: AppColors.homeAccent,
           borderRadius: BorderRadius.circular(16.0),
         ),
         child: Column(

@@ -3,7 +3,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:lakbyke_mobile/models/chatbot/chatbot_model.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
-import 'package:lakbyke_mobile/services/dashboard.dart';
+import 'package:lakbyke_mobile/services/home.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
@@ -23,7 +23,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
   final ChatbotService _chatbotService = ChatbotService();
-  final DashboardService _dashboardService = DashboardService();
+  final HomeService _homeService = HomeService();
   
   // Total generated and redeemed values
   double _totalGenerated = 0.0;
@@ -47,14 +47,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _loadStats();
   }
   
-  // Load total generated and redeemed from dashboard service
+  // Load total generated and redeemed from home service
   Future<void> _loadStats() async {
     try {
-      final dashboardData = await _dashboardService.getDashboardData();
-      if (dashboardData != null) {
+      final homeData = await _homeService.getHomeData();
+      if (homeData != null) {
         setState(() {
-          _totalGenerated = (dashboardData['totalGenerated'] as num?)?.toDouble() ?? 0.0;
-          _totalRedeemed = (dashboardData['totalRedeems'] as num?)?.toDouble() ?? 0.0;
+          _totalGenerated = (homeData['totalGenerated'] as num?)?.toDouble() ?? 0.0;
+          _totalRedeemed = (homeData['totalRedeems'] as num?)?.toDouble() ?? 0.0;
           _isLoadingStats = false;
         });
       } else {
@@ -146,10 +146,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       // 1. Get current real-time data
       final bikeData = Provider.of<BikeData>(context, listen: false);
 
-      // 2. Get context data (dashboard data) if available
+      // 2. Get context data (home data) if available
       Map<String, dynamic>? contextData;
       try {
-        contextData = await _dashboardService.getDashboardData();
+        contextData = await _homeService.getHomeData();
       } catch (e) {
         // Continue without context data
       }
@@ -194,7 +194,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           children: [
             const ScreenTitle(title: 'Chatbot'),
             
-            // Dashboard Header (Real-time View)
+            // Home Header (Real-time View)
             Consumer<BikeData>(
               builder: (context, bikeData, child) => Container(
                 padding: const EdgeInsets.all(16),

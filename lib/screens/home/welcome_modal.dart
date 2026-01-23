@@ -173,12 +173,12 @@ class WelcomeModal extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.dashboardAccent.withOpacity(0.2),
+                          color: AppColors.homeAccent.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.wb_sunny,
-                          color: AppColors.dashboardAccent,
+                          color: AppColors.homeAccent,
                           size: 28,
                         ),
                       ),
@@ -217,7 +217,7 @@ class WelcomeModal extends StatelessWidget {
                       _buildAchievementCard(
                         icon: Icons.directions_bike,
                         message: distanceMessage,
-                        color: AppColors.dashboardPrimary,
+                        color: AppColors.homePrimary,
                       ),
                     
                     if (distanceMessage.isNotEmpty && energyMessage.isNotEmpty)
@@ -228,7 +228,7 @@ class WelcomeModal extends StatelessWidget {
                       _buildAchievementCard(
                         icon: Icons.flash_on,
                         message: energyMessage,
-                        color: AppColors.dashboardAccent,
+                        color: AppColors.homeAccent,
                       ),
                     
                     // Personal Wins Section
@@ -300,7 +300,7 @@ class WelcomeModal extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onClose,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.dashboardPrimary,
+                        backgroundColor: AppColors.homePrimary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(

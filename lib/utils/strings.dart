@@ -47,10 +47,10 @@ abstract class AppStrings {
   static const String errorPasswordTooShort = 'Password must be at least 6 characters';
 
   // Success Messages
-  static const String loginSuccess = 'Login successful! Navigating to Dashboard...';
+  static const String loginSuccess = 'Login successful! Navigating to Home...';
 
-  // Dashboard
-  static const String dashboard = 'Dashboard';
+  // Home
+  static const String home = 'Home';
   static const String battery = 'Battery';
   static const String distance = 'Distance';
   static const String effort = 'Effort';

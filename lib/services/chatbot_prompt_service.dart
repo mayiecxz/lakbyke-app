@@ -7,7 +7,7 @@ class ChatbotPromptService {
   /// 
   /// [userQuery] - The user's question or message
   /// [bikeData] - Current real-time sensor data
-  /// [contextData] - Optional context-specific data (dashboard, history, etc.)
+  /// [contextData] - Optional context-specific data (home, history, etc.)
   /// [conversationHistory] - Last 5 messages in format List<Map<String, String>> with 'role' and 'text' keys
   static String buildPrompt({
     required String userQuery,

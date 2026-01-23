@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
-import 'package:lakbyke_mobile/screens/dashboard/welcome_modal.dart';
+import 'package:lakbyke_mobile/screens/home/welcome_modal.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
-import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
-import 'package:lakbyke_mobile/services/dashboard.dart';
+// import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+import 'package:lakbyke_mobile/services/home.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  final DashboardService _dashboardService = DashboardService();
-  Map<String, dynamic>? _dashboardData;
+class _HomeScreenState extends State<HomeScreen> {
+  final HomeService _homeService = HomeService();
+  Map<String, dynamic>? _homeData;
   String? _serviceTag;
   bool _isLoading = true;
   static bool _welcomeModalShown = false; // Track if modal was shown in this session
@@ -27,12 +27,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeDashboard();
+    _initializeHome();
   }
 
-  Future<void> _initializeDashboard() async {
+  Future<void> _initializeHome() async {
     // Load initial data first
-    await _loadDashboardData();
+    await _loadHomeData();
     await _loadServiceTag();
     // Then set up real-time updates
     _setupRealtimeUpdates();
@@ -47,13 +47,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Only show once per app session
     if (_welcomeModalShown) return;
     
-    // Wait a bit for the dashboard to load
+    // Wait a bit for the home to load
     await Future.delayed(const Duration(milliseconds: 800));
     
     if (!mounted) return;
     
     try {
-      final yesterdayData = await _dashboardService.getYesterdayData();
+      final yesterdayData = await _homeService.getYesterdayData();
       final yesterdayDistance = yesterdayData['yesterdayDistance'] as double? ?? 0.0;
       final yesterdayWh = yesterdayData['yesterdayWh'] as double? ?? 0.0;
       
@@ -81,14 +81,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final secondsSinceFirstSeen = DateTime.now().difference(_currentTimestampFirstSeen!).inSeconds;
             if (secondsSinceFirstSeen > 10) {
               // Same timestamp for more than 10 seconds, set effort to zero
-              if (_dashboardData != null) {
-                _dashboardData!['liveEffort'] = 0.0;
+              if (_homeData != null) {
+                _homeData!['liveEffort'] = 0.0;
               }
             }
           } else {
             // No timestamp ever received, set effort to zero
-            if (_dashboardData != null) {
-              _dashboardData!['liveEffort'] = 0.0;
+            if (_homeData != null) {
+              _homeData!['liveEffort'] = 0.0;
             }
           }
         });
@@ -99,7 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Set up real-time stream for deviceEnergyData updates
   void _setupRealtimeUpdates() {
-    _dashboardService.getDashboardDataStream().listen(
+    _homeService.getHomeDataStream().listen(
       (deviceEnergyData) {
         if (deviceEnergyData != null) {
           // Check if we have a new effort timestamp
@@ -132,30 +132,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
           
           setState(() {
             // Merge real-time deviceEnergyData with existing transaction data
-            if (_dashboardData != null) {
+            if (_homeData != null) {
               // Preserve transaction data (totalRedeems, totalGenerated, batteriesExchanged)
-              final totalRedeems = _dashboardData!['totalRedeems'];
-              final totalGenerated = _dashboardData!['totalGenerated'];
-              final batteriesExchanged = _dashboardData!['batteriesExchanged'];
+              final totalRedeems = _homeData!['totalRedeems'];
+              final totalGenerated = _homeData!['totalGenerated'];
+              final batteriesExchanged = _homeData!['batteriesExchanged'];
               
               // Preserve today's data if not in stream update
-              final todayDistance = deviceEnergyData['todayDistance'] ?? _dashboardData!['todayDistance'];
-              final todayWh = deviceEnergyData['todayWh'] ?? _dashboardData!['todayWh'];
+              final todayDistance = deviceEnergyData['todayDistance'] ?? _homeData!['todayDistance'];
+              final todayWh = deviceEnergyData['todayWh'] ?? _homeData!['todayWh'];
               
               // Update with new deviceEnergyData (includes live effort and today's data)
-              _dashboardData = Map<String, dynamic>.from(deviceEnergyData);
+              _homeData = Map<String, dynamic>.from(deviceEnergyData);
               
               // Ensure today's data is set
-              if (todayDistance != null) _dashboardData!['todayDistance'] = todayDistance;
-              if (todayWh != null) _dashboardData!['todayWh'] = todayWh;
+              if (todayDistance != null) _homeData!['todayDistance'] = todayDistance;
+              if (todayWh != null) _homeData!['todayWh'] = todayWh;
               
               // Restore transaction data
-              if (totalRedeems != null) _dashboardData!['totalRedeems'] = totalRedeems;
-              if (totalGenerated != null) _dashboardData!['totalGenerated'] = totalGenerated;
-              if (batteriesExchanged != null) _dashboardData!['batteriesExchanged'] = batteriesExchanged;
+              if (totalRedeems != null) _homeData!['totalRedeems'] = totalRedeems;
+              if (totalGenerated != null) _homeData!['totalGenerated'] = totalGenerated;
+              if (batteriesExchanged != null) _homeData!['batteriesExchanged'] = batteriesExchanged;
             } else {
               // First update, just set the data
-              _dashboardData = deviceEnergyData;
+              _homeData = deviceEnergyData;
             }
             _isLoading = false;
           });
@@ -169,13 +169,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Future<void> _loadDashboardData() async {
+  Future<void> _loadHomeData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final data = await _dashboardService.getDashboardData();
+      final data = await _homeService.getHomeData();
       if (data != null) {
         // Initialize last effort timestamp from initial data
         final initialEffortTimestamp = data['liveEffortTimestamp'];
@@ -193,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
       setState(() {
-        _dashboardData = data;
+        _homeData = data;
         _isLoading = false;
       });
     } catch (e) {
@@ -205,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadServiceTag() async {
     try {
-      final tag = await _dashboardService.getServiceTag();
+      final tag = await _homeService.getServiceTag();
       setState(() {
         _serviceTag = tag;
       });
@@ -241,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   child: RefreshIndicator(
                     onRefresh: () async {
-                      await _loadDashboardData();
+                      await _loadHomeData();
                       await _loadServiceTag();
                     },
                     child: SingleChildScrollView(
@@ -249,8 +249,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          // --- DASHBOARD Header Area ---
-                          const ScreenTitle(title: AppStrings.dashboard),
+                          // --- HOME Header Area ---
+                          const ScreenTitle(title: AppStrings.home),
                           
                           // --- Battery Status and Today's Metrics ---
                           Padding(
@@ -333,12 +333,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Widget for the main "DASHBOARD" title and green background curve is now in ScreenTitle component.
+  // Widget for the main "HOME" title and green background curve is now in ScreenTitle component.
 
   // Widget for the Battery Status
   Widget _buildBatteryStatus() {
     // Battery = mountBatteryPercentage from deviceEnergyData
-    final batteryLevel = _dashboardData?['mountBatteryPercentage'] ?? 85;
+    final batteryLevel = _homeData?['mountBatteryPercentage'] ?? 85;
     final batteryPercent = batteryLevel is int ? batteryLevel : (batteryLevel as num).toInt();
     
     return Row(
@@ -347,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ResponsiveIcon(
           icon: Icons.battery_full,
           maxSizePercent: 0.12,
-          color: AppColors.dashboardPrimary,
+          color: AppColors.homePrimary,
           minSize: 40.0,
         ),
         const SizedBox(width: 15),
@@ -396,10 +396,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Generated = todayWh (sum of today's records)
     
     // Safely extract and convert values
-    final distanceValue = _dashboardData?['todayDistance'];
-    final effortValue = _dashboardData?['liveEffort'] ?? _dashboardData?['powerGeneratedInWatts'];
-    final effortTimestamp = _dashboardData?['liveEffortTimestamp'];
-    final generatedValue = _dashboardData?['todayWh'];
+    final distanceValue = _homeData?['todayDistance'];
+    final effortValue = _homeData?['liveEffort'] ?? _homeData?['powerGeneratedInWatts'];
+    final effortTimestamp = _homeData?['liveEffortTimestamp'];
+    final generatedValue = _homeData?['todayWh'];
     
     // Convert to numbers with safe fallback
     final distance = _convertToDouble(distanceValue) ?? 0.00;
@@ -461,9 +461,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Screen width - outer padding (40) - container padding (40) - spacing (20)
     final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 40 - 20) / 2;
 
-    final totalGenerated = (_dashboardData?['totalGenerated'] as num?)?.toDouble() ?? 0.0;
-    final totalRedeems = _dashboardData?['totalRedeems'] ?? 0;
-    final batteriesExchanged = _dashboardData?['batteriesExchanged'] ?? 0;
+    final totalGenerated = (_homeData?['totalGenerated'] as num?)?.toDouble() ?? 0.0;
+    final totalRedeems = _homeData?['totalRedeems'] ?? 0;
+    final batteriesExchanged = _homeData?['batteriesExchanged'] ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(20.0),
@@ -482,7 +482,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.flash_on,
                 title: 'Total Generated',
                 value: _isLoading ? '...' : formatEnergy((totalGenerated as num).toDouble()),
-                color: AppColors.dashboardPrimary, // Dark Green
+                color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
               ),
               // Total Redeems Button
@@ -490,7 +490,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.account_balance_wallet,
                 title: 'Total Redeems',
                 value: _isLoading ? '...' : '₱ ${(totalRedeems as num).toInt()}',
-                color: AppColors.dashboardPrimary, // Dark Green
+                color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
                 isCurrency: true,
               ),
@@ -505,7 +505,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ? 'Loading...' 
                 : '${(batteriesExchanged as num).toInt()} Batteries Exchanged',
             value: '', // No value displayed below the title
-            color: AppColors.dashboardPrimary, // Dark Green
+            color: AppColors.homePrimary, // Dark Green
             width: double.infinity,
             isFullWidth: true,
           ),
@@ -540,7 +540,7 @@ class _MetricItem extends StatelessWidget {
         ResponsiveIcon(
           icon: icon,
           maxSizePercent: 0.06,
-          color: AppColors.dashboardAccent,
+          color: AppColors.homeAccent,
           minSize: 20.0,
         ),
         const SizedBox(height: 5),
@@ -631,10 +631,10 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding: const EdgeInsets.all(AppDimensions.dashboardActionButtonPadding),
+      padding: const EdgeInsets.all(AppDimensions.homeActionButtonPadding),
       decoration: BoxDecoration(
         color: Color(0xFF317263), // Dark green background
-        borderRadius: BorderRadius.circular(AppDimensions.dashboardActionButtonRadius),
+        borderRadius: BorderRadius.circular(AppDimensions.homeActionButtonRadius),
         border: Border.all(
           color: Colors.white,
           width: 2,

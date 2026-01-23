@@ -30,9 +30,9 @@ abstract class AppColors {
   static const Color overlayLight = Color(0x33000000); // 20% black
   static const Color overlayDim = Colors.black54; // For onboarding dimmed background
 
-  // Dashboard Colors
-  static const Color dashboardPrimary = Color(0xFF317263); // Dark forest green
-  static const Color dashboardAccent = Color(0xFF75C4B1); // Minty green/teal
+  // Home Colors
+  static const Color homePrimary = Color(0xFF317263); // Dark forest green
+  static const Color homeAccent = Color(0xFF75C4B1); // Minty green/teal
   static const Color darkText = Color(0xFF212121);
   static const Color lightText = Colors.white;
 

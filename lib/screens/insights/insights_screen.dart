@@ -6,21 +6,21 @@ import 'package:lakbyke_mobile/services/transaction_service.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 import 'package:intl/intl.dart';
 
-class PredictionScreen extends StatefulWidget {
-  const PredictionScreen({super.key});
+class InsightsScreen extends StatefulWidget {
+  const InsightsScreen({super.key});
 
   @override
-  State<PredictionScreen> createState() => _PredictionScreenState();
+  State<InsightsScreen> createState() => _InsightsScreenState();
 }
 
-class _PredictionScreenState extends State<PredictionScreen> {
+class _InsightsScreenState extends State<InsightsScreen> {
   final TransactionService _transactionService = TransactionService();
   final KwhService _kwhService = KwhService();
   
   bool _isLoading = true;
   List<Map<String, dynamic>> _recentTransactions = [];
   
-  // Prediction settings
+  // Insights settings
   int _sessionsPerWeek = 1;
   double _averageEarningsPerSession = 0.0;
   double _averageEnergyPerSession = 0.0; // in Wh
@@ -42,16 +42,16 @@ class _PredictionScreenState extends State<PredictionScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPredictionData();
+    _loadInsightsData();
   }
 
-  Future<void> _loadPredictionData() async {
+  Future<void> _loadInsightsData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Dashboard data loading removed - not currently used in UI
+      // Home data loading removed - not currently used in UI
 
       // Load transactions from Firebase (transactions/{stationId}/{transaction_id})
       final transactions = await _transactionService.getAllTransactions();
@@ -370,12 +370,12 @@ class _PredictionScreenState extends State<PredictionScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadPredictionData,
+              onRefresh: _loadInsightsData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-                    const ScreenTitle(title: 'Earnings Prediction'),
+                    const ScreenTitle(title: 'Earnings Insights'),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(

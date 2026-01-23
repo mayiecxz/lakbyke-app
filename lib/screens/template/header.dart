@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/screens/template/menu_button.dart';
 
 class Header extends StatelessWidget implements PreferredSizeWidget {
   const Header({super.key});
@@ -14,11 +13,13 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
       child: Container(
         color: Colors.black,
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const MenuButton(),
-            const Expanded(child: SizedBox()),
-            // placeholder for optional actions on right
-            const SizedBox(width: 56),
+            Image.asset(
+              'assets/images/lakbike_logo4.png',
+              height: 40,
+              fit: BoxFit.contain,
+            ),
           ],
         ),
       ),

@@ -79,7 +79,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           child: Container(
             padding: const EdgeInsets.all(18.0),
             decoration: BoxDecoration(
-              color: AppColors.dashboardAccent,
+              color: AppColors.homeAccent,
               borderRadius: BorderRadius.circular(16.0),
             ),
             child: Column(

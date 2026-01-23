@@ -122,10 +122,10 @@ class _SidebarPanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Divider(color: Colors.white12, thickness: 1, height: 1),
-                    _menuItem(context, Icons.directions_bike, AppStrings.dashboard, onTap: () {
+                    _menuItem(context, Icons.directions_bike, AppStrings.home, onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
-                      // Navigate to MainNavigation with dashboard index (0)
+                      // Navigate to MainNavigation with home index (0)
                       navigator.pushReplacement(
                         MaterialPageRoute(builder: (_) => const MainNavigation(initialIndex: 0)),
                       );

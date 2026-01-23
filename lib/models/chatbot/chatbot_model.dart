@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/services/dashboard.dart';
+import 'package:lakbyke_mobile/services/home.dart';
 import 'dart:async';
 
 // ---------------------------------------------------------
@@ -7,7 +7,7 @@ import 'dart:async';
 // ---------------------------------------------------------
 
 class BikeData extends ChangeNotifier {
-  final DashboardService _dashboardService = DashboardService();
+  final HomeService _homeService = HomeService();
   StreamSubscription<Map<String, dynamic>?>? _dataSubscription;
 
   // Real-time sensor data from Firebase
@@ -25,7 +25,7 @@ class BikeData extends ChangeNotifier {
 
   // Initialize real-time data stream from Firebase
   void _initializeDataStream() {
-    _dataSubscription = _dashboardService.getDashboardDataStream().listen(
+    _dataSubscription = _homeService.getHomeDataStream().listen(
       (data) {
         if (data != null) {
           _updateFromFirebaseData(data);

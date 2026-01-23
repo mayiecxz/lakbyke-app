@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/screens/dashboard/dashboard_screen.dart';
+import 'package:lakbyke_mobile/screens/home/home_screen.dart';
 import 'package:lakbyke_mobile/screens/maps/maps_screen.dart';
 import 'package:lakbyke_mobile/screens/qr/qr_scanner_screen.dart';
-import 'package:lakbyke_mobile/screens/prediction/prediction_screen.dart';
+import 'package:lakbyke_mobile/screens/insights/insights_screen.dart';
 import 'package:lakbyke_mobile/screens/history/combined_history_screen.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -24,10 +24,10 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   final List<Widget> _screens = [
-    const DashboardScreen(),
+    const HomeScreen(),
     const MapsScreen(),
     const QrScannerScreen(),
-    const PredictionScreen(),
+    const InsightsScreen(),
     const CombinedHistoryScreen(),
   ];
 
@@ -49,6 +49,9 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _buildBottomNavBar() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -62,14 +65,17 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       child: SafeArea(
         child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          height: 84, // Increased by 20% from 70
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.01, // Responsive horizontal padding
+            vertical: screenHeight * 0.008, // Responsive vertical padding
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(
                 icon: Icons.directions_bike,
-                label: 'Dashboard',
+                label: 'Home',
                 index: 0,
                 isActive: _currentIndex == 0,
               ),
@@ -82,7 +88,7 @@ class _MainNavigationState extends State<MainNavigation> {
               _buildQrButton(),
               _buildNavItem(
                 icon: Icons.trending_up,
-                label: 'Prediction',
+                label: 'Insights',
                 index: 3,
                 isActive: _currentIndex == 3,
               ),
@@ -105,28 +111,58 @@ class _MainNavigationState extends State<MainNavigation> {
     required int index,
     required bool isActive,
   }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Responsive sizing based on screen dimensions
+    final iconSize = isActive 
+        ? (screenWidth * 0.06).clamp(26.0, 32.0) // Larger when active
+        : (screenWidth * 0.055).clamp(22.0, 26.0);
+    final fontSize = (screenWidth * 0.028).clamp(9.0, 12.0);
+    final containerPadding = EdgeInsets.symmetric(
+      horizontal: screenWidth * 0.02,
+      vertical: screenHeight * 0.008,
+    );
+    
     return Expanded(
       child: InkWell(
         onTap: () => _onTabTapped(index),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? const Color(0xFF317263) : Colors.grey,
-              size: 22,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+          padding: containerPadding,
+          decoration: BoxDecoration(
+            color: isActive 
+                ? const Color(0xFF317263).withOpacity(0.15) 
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: isActive
+                ? Border.all(
+                    color: const Color(0xFF317263),
+                    width: 2,
+                  )
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
                 color: isActive ? const Color(0xFF317263) : Colors.grey,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                size: iconSize,
               ),
-            ),
-          ],
+              SizedBox(height: screenHeight * 0.004),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  color: isActive ? const Color(0xFF317263) : Colors.grey,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -134,48 +170,60 @@ class _MainNavigationState extends State<MainNavigation> {
 
   Widget _buildQrButton() {
     final isActive = _currentIndex == 2;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Responsive sizing for QR button
+    final buttonSize = (screenWidth * 0.14).clamp(56.0, 70.0);
+    final iconSize = (screenWidth * 0.07).clamp(28.0, 36.0);
+    final fontSize = (screenWidth * 0.028).clamp(9.0, 12.0);
+    
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Transform.translate(
-            offset: const Offset(0, -12), // Elevate the button above the nav bar
+            offset: Offset(0, -(screenHeight * 0.015)), // Responsive elevation
             child: GestureDetector(
               onTap: () => _onTabTapped(2),
               child: Container(
-                width: 56,
-                height: 56,
+                width: buttonSize,
+                height: buttonSize,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF317263),
+                  color: isActive 
+                      ? const Color(0xFF317263) 
+                      : const Color(0xFF317263).withOpacity(0.9),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white,
-                    width: 3,
+                    color: isActive ? Colors.white : Colors.white.withOpacity(0.8),
+                    width: isActive ? 4 : 3,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+                      color: isActive 
+                          ? const Color(0xFF317263).withOpacity(0.4)
+                          : Colors.black.withOpacity(0.25),
+                      blurRadius: isActive ? 16 : 12,
+                      offset: Offset(0, isActive ? 8 : 6),
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.qr_code_scanner,
                   color: Colors.white,
-                  size: 28,
+                  size: iconSize,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 8), // Extra space for the elevated button
+          SizedBox(height: screenHeight * 0.01), // Responsive spacing
           Text(
             'QR',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: fontSize,
               color: isActive ? const Color(0xFF317263) : Colors.grey,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
             ),
           ),
         ],
