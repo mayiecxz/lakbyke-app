@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
-import 'package:lakbyke_mobile/services/chatbot_service.dart';
+// import 'package:lakbyke_mobile/services/chatbot_service.dart'; // Commented out - chatbot disabled
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -36,9 +36,9 @@ class AuthService {
       UserCredential result = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return result.user;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
@@ -76,9 +76,9 @@ class AuthService {
         UserCredential result = await _auth.signInWithCredential(credential);
         return result.user;
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
@@ -89,9 +89,9 @@ class AuthService {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
       return result.user;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
@@ -100,8 +100,8 @@ class AuthService {
   Future<void> signOut() async {
     try {
       // Delete chat history before signing out
-      final chatbotService = ChatbotService();
-      await chatbotService.deleteChatHistory();
+      // final chatbotService = ChatbotService(); // Commented out - chatbot disabled
+      // await chatbotService.deleteChatHistory();
       
       await _auth.signOut();
       // Only sign out from google_sign_in on mobile platforms
@@ -135,13 +135,13 @@ class AuthService {
   // Handle session end
   Future<void> _handleSessionEnd() async {
     try {
-      final chatbotService = ChatbotService();
+      // final chatbotService = ChatbotService(); // Commented out - chatbot disabled
       // Use the previous user ID before it's cleared
-      final userId = _previousUser?.uid;
-      if (userId != null) {
-        // Delete chat history for the user whose session ended
-        await chatbotService.deleteChatHistoryForUser(userId);
-      }
+      // final userId = _previousUser?.uid;
+      // if (userId != null) {
+      //   // Delete chat history for the user whose session ended
+      //   await chatbotService.deleteChatHistoryForUser(userId);
+      // }
     } catch (e) {
       // Error deleting chat history on session end
     }

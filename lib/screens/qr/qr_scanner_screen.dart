@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
-import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+// import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});

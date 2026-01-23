@@ -9,6 +9,8 @@ import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/models/maps/direction_step.dart';
 import 'package:lakbyke_mobile/models/maps/route_info.dart';
 import 'package:lakbyke_mobile/models/maps/polyline_decoder.dart';
+import 'package:lakbyke_mobile/models/maps/lakbyke_station.dart';
+import 'package:lakbyke_mobile/services/lakbyke_stations_service.dart';
 
 class MapsScreen extends StatefulWidget {
   const MapsScreen({super.key});
@@ -41,6 +43,10 @@ class _MapsScreenState extends State<MapsScreen> {
   double _distanceToNextTurn = 0.0;
   DirectionStep? _currentInstruction;
   String _googleMapsApiKey = 'AIzaSyCiuyIvt52hTNwThuyx2HSdCGJtIewKV0Q';
+  
+  // Lakbyke stations
+  List<LakbykeStation> _lakbykeStations = [];
+  LakbykeStation? _nearestStation;
 
   @override
   void initState() {
@@ -103,6 +109,9 @@ class _MapsScreenState extends State<MapsScreen> {
       _mapController?.animateCamera(
         CameraUpdate.newLatLngZoom(_currentPosition, 15.0),
       );
+      
+      // Load Lakbyke stations after getting current location
+      _loadLakbykeStations();
     } catch (e) {
       setState(() {
         _errorMessage = 'Unable to get current location.';
@@ -369,8 +378,13 @@ class _MapsScreenState extends State<MapsScreen> {
       
       final routeInfo = RouteInfo.fromDirectionsResponse(directionsData, points);
 
-      // Update markers
+      // Update markers - keep station markers and add origin/destination
+      final stationMarkers = _markers.where((m) => 
+        m.markerId.value.startsWith('station_')
+      ).toSet();
+      
       _markers = {
+        ...stationMarkers,
         Marker(
           markerId: const MarkerId('origin'),
           position: _currentPosition,
@@ -452,7 +466,6 @@ class _MapsScreenState extends State<MapsScreen> {
     _stopNavigation();
     setState(() {
       _polylines.clear();
-      _markers.clear();
       _destination = null;
       _routeDistance = '';
       _routeDuration = '';
@@ -463,6 +476,14 @@ class _MapsScreenState extends State<MapsScreen> {
       _currentInstruction = null;
       _distanceToNextTurn = 0.0;
     });
+    // Remove only origin and destination markers, keep station markers
+    _markers = _markers.where((m) => 
+      m.markerId.value.startsWith('station_')
+    ).toSet();
+    // Re-add station markers if they exist
+    if (_lakbykeStations.isNotEmpty) {
+      _updateStationMarkers();
+    }
     // Move camera to current position
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(_currentPosition, 15.0),
@@ -542,6 +563,62 @@ class _MapsScreenState extends State<MapsScreen> {
       _distanceToNextTurn = 200.0; // Placeholder
     });
   }
+
+  Future<void> _loadLakbykeStations() async {
+    // Load stations by geocoding their addresses from Google Maps
+    // This gets exact coordinates from the actual Google Maps locations
+    try {
+      final stations = await LakbykeStationsService.getStationsSortedByDistance(
+        _currentPosition,
+        _googleMapsApiKey,
+      );
+      final nearest = await LakbykeStationsService.getNearestStation(
+        _currentPosition,
+        _googleMapsApiKey,
+      );
+
+      setState(() {
+        _lakbykeStations = stations;
+        _nearestStation = nearest;
+      });
+
+      // Update markers to include stations
+      _updateStationMarkers();
+    } catch (e) {
+      // Silently fail - stations are optional
+      // In production, you might want to log this
+    }
+  }
+
+  void _updateStationMarkers() {
+    Set<Marker> stationMarkers = {};
+    
+    for (var station in _lakbykeStations) {
+      final isNearest = station.placeId == _nearestStation?.placeId;
+      
+      stationMarkers.add(
+        Marker(
+          markerId: MarkerId('station_${station.placeId}'),
+          position: station.location,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            isNearest ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueBlue,
+          ),
+          infoWindow: InfoWindow(
+            title: station.name,
+            snippet: '${station.address}\n${station.getFormattedDistance()}',
+          ),
+        ),
+      );
+    }
+
+    // Merge with existing markers (origin/destination)
+    setState(() {
+      _markers = {
+        ..._markers.where((m) => m.markerId.value == 'origin' || m.markerId.value == 'destination'),
+        ...stationMarkers,
+      };
+    });
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -614,6 +691,148 @@ class _MapsScreenState extends State<MapsScreen> {
                     ),
                   ],
                 ),
+                // Nearest Lakbyke Station Recommendation
+                if (_nearestStation != null && _destination == null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF317263).withOpacity(0.9),
+                          const Color(0xFF317263),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Station icon
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.ev_station,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Station info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'Nearest Station',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _nearestStation!.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Colors.white.withOpacity(0.9),
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _nearestStation!.address,
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.straighten,
+                                    color: Colors.white.withOpacity(0.9),
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _nearestStation!.getFormattedDistance(),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Directions button
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            _destinationController.text = _nearestStation!.name;
+                            _getDirections(_nearestStation!.name);
+                          },
+                          icon: const Icon(Icons.directions, size: 18),
+                          label: const Text('Go'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF317263),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // Route information
                 if (_routeDistance != null && _routeDistance!.isNotEmpty)
                   Column(

@@ -3,7 +3,7 @@ import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
-import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+// import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 
