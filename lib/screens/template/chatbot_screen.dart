@@ -142,7 +142,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 150), // Optimized for speed
           curve: Curves.easeOut,
         );
       }

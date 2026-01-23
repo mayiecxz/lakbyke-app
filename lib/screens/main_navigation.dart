@@ -32,12 +32,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
   // Store history tab index to pass to CombinedHistoryScreen
   int _historyInitialTabIndex = 0;
-
-  List<Widget> get _screens => [
+  
+  // Cache static screens to avoid rebuilding
+  static final List<Widget> _staticScreens = [
     const HomeScreen(),
     const MapsScreen(),
     const QrScannerScreen(),
     const InsightsScreen(),
+  ];
+  
+  List<Widget> get _screens => [
+    ..._staticScreens,
     CombinedHistoryScreen(initialTabIndex: _historyInitialTabIndex),
   ];
 
@@ -166,8 +171,8 @@ class _MainNavigationState extends State<MainNavigation> {
     
     return Expanded(
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 100), // Reduced from 250ms
+        curve: Curves.easeOut,
         margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
         padding: containerPadding,
         decoration: BoxDecoration(
@@ -191,30 +196,19 @@ class _MainNavigationState extends State<MainNavigation> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder: (child, animation) {
-                    return ScaleTransition(
-                      scale: animation,
-                      child: child,
-                    );
-                  },
-                  child: Icon(
-                    icon,
-                    key: ValueKey('$icon-$isActive'),
-                    color: isActive ? Colors.white : Colors.grey,
-                    size: iconSize,
-                  ),
+                Icon(
+                  icon,
+                  color: isActive ? Colors.white : Colors.grey,
+                  size: iconSize,
                 ),
                 SizedBox(height: screenHeight * 0.004),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
+                Text(
+                  label,
                   style: TextStyle(
                     fontSize: fontSize,
                     color: isActive ? Colors.white : Colors.grey,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                   ),
-                  child: Text(label),
                 ),
               ],
             ),
@@ -226,12 +220,13 @@ class _MainNavigationState extends State<MainNavigation> {
 
   Widget _buildQrButton() {
     final isActive = _currentIndex == 2;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
     
     // Larger responsive sizing for QR button
-    final buttonSize = (screenWidth * 0.18).clamp(70.0, 85.0); // Increased from 56-70 to 70-85
-    final iconSize = (screenWidth * 0.09).clamp(36.0, 44.0); // Increased from 28-36 to 36-44
+    final buttonSize = (screenWidth * 0.18).clamp(70.0, 85.0);
+    final iconSize = (screenWidth * 0.09).clamp(36.0, 44.0);
     
     return Expanded(
       child: Column(
@@ -239,10 +234,10 @@ class _MainNavigationState extends State<MainNavigation> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Transform.translate(
-            offset: Offset(0, -(screenHeight * 0.015)), // Responsive elevation
+            offset: Offset(0, -(screenHeight * 0.015)),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 100), // Reduced from 250ms
+              curve: Curves.easeOut,
               width: buttonSize,
               height: buttonSize,
               decoration: BoxDecoration(
@@ -269,20 +264,10 @@ class _MainNavigationState extends State<MainNavigation> {
                 child: InkWell(
                   onTap: () => _onTabTapped(2),
                   borderRadius: BorderRadius.circular(buttonSize / 2),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, animation) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: child,
-                      );
-                    },
-                    child: Icon(
-                      Icons.qr_code_scanner,
-                      key: ValueKey('qr-$isActive'),
-                      color: Colors.white,
-                      size: iconSize,
-                    ),
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    color: Colors.white,
+                    size: iconSize,
                   ),
                 ),
               ),

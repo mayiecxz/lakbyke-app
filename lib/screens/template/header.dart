@@ -3,6 +3,7 @@ import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
+import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart';
 
 class Header extends StatelessWidget implements PreferredSizeWidget {
   const Header({super.key});
@@ -58,10 +59,10 @@ class _AccountButtonState extends State<_AccountButton> with SingleTickerProvide
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 100), // Reduced from 200ms
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
   }
 
@@ -97,11 +98,10 @@ class _AccountButtonState extends State<_AccountButton> with SingleTickerProvide
             title: 'Account Settings',
             onTap: () {
               Navigator.pop(context);
-              // TODO: Navigate to account settings screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account Settings - Coming Soon'),
-                  duration: Duration(seconds: 2),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AccountSettingsScreen(),
                 ),
               );
             },

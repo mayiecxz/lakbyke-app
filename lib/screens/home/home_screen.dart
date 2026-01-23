@@ -47,8 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // Only show once per app session
     if (_welcomeModalShown) return;
     
-    // Wait a bit for the home to load
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Wait a bit for the home to load (reduced delay for faster UX)
+    await Future.delayed(const Duration(milliseconds: 400));
     
     if (!mounted) return;
     
