@@ -365,7 +365,7 @@ class _LoginModalState extends State<LoginModal> {
                         ),
                         TextButton(
                           onPressed: () {
-                            print('Forgot Password Pressed');
+                            // Forgot password functionality
                           },
                           child: const Text(
                             AppStrings.forgotPassword,

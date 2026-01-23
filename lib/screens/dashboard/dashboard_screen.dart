@@ -66,7 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
     } catch (e) {
-      print('Error showing welcome modal: $e');
+      // Error showing welcome modal
     }
   }
 
@@ -101,15 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _setupRealtimeUpdates() {
     _dashboardService.getDashboardDataStream().listen(
       (deviceEnergyData) {
-        print('Stream received deviceEnergyData: ${deviceEnergyData != null}');
         if (deviceEnergyData != null) {
-          print('Stream data keys: ${deviceEnergyData.keys.toList()}');
-          print('Stream totalDistanceKm: ${deviceEnergyData['totalDistanceKm']}');
-          print('Stream powerGeneratedInWatts: ${deviceEnergyData['powerGeneratedInWatts']}');
-          print('Stream todayWh: ${deviceEnergyData['todayWh']}');
-          print('Stream liveEffort: ${deviceEnergyData['liveEffort']}');
-          print('Stream liveEffortTimestamp: ${deviceEnergyData['liveEffortTimestamp']}');
-          
           // Check if we have a new effort timestamp
           final newEffortTimestamp = deviceEnergyData['liveEffortTimestamp'];
           DateTime? parsedTimestamp;
@@ -170,7 +162,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       onError: (error) {
-        print('Error in real-time stream: $error');
         setState(() {
           _isLoading = false;
         });
@@ -185,15 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final data = await _dashboardService.getDashboardData();
-      print('Dashboard screen received data: ${data != null}');
       if (data != null) {
-        print('Data keys: ${data.keys.toList()}');
-        print('totalDistanceKm: ${data['totalDistanceKm']}');
-        print('powerGeneratedInWatts: ${data['powerGeneratedInWatts']}');
-        print('todayWh: ${data['todayWh']}');
-        print('liveEffort: ${data['liveEffort']}');
-        print('liveEffortTimestamp: ${data['liveEffortTimestamp']}');
-        
         // Initialize last effort timestamp from initial data
         final initialEffortTimestamp = data['liveEffortTimestamp'];
         if (initialEffortTimestamp != null) {
@@ -214,7 +197,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading dashboard data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -228,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _serviceTag = tag;
       });
     } catch (e) {
-      print('Error loading service tag: $e');
+      // Error loading service tag
     }
   }
 

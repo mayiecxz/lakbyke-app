@@ -16,7 +16,6 @@ class ChatbotService {
     try {
       final userId = getCurrentUserId();
       if (userId == null) {
-        print('No user logged in, cannot save message');
         return;
       }
 
@@ -29,10 +28,8 @@ class ChatbotService {
         'isUser': isUser,
         'time': time.millisecondsSinceEpoch,
       });
-
-      print('Message saved to Firebase: $messageId');
     } catch (e) {
-      print('Error saving message to Firebase: $e');
+      // Error saving message to Firebase
     }
   }
 
@@ -41,14 +38,12 @@ class ChatbotService {
     try {
       final userId = getCurrentUserId();
       if (userId == null) {
-        print('No user logged in, cannot load chat history');
         return [];
       }
 
       final snapshot = await _database.child('chatHistory/$userId/messages').get();
       
       if (!snapshot.exists) {
-        print('No chat history found for user');
         return [];
       }
 
@@ -72,7 +67,7 @@ class ChatbotService {
                 time: DateTime.fromMillisecondsSinceEpoch(timestamp),
               ));
             } catch (e) {
-              print('Error parsing message $key: $e');
+              // Error parsing message
             }
           }
         });
@@ -81,10 +76,8 @@ class ChatbotService {
       // Sort messages by time (oldest first)
       messages.sort((a, b) => a.time.compareTo(b.time));
 
-      print('Loaded ${messages.length} messages from Firebase');
       return messages;
     } catch (e) {
-      print('Error loading chat history: $e');
       return [];
     }
   }
@@ -93,9 +86,8 @@ class ChatbotService {
   Future<void> deleteChatHistoryForUser(String userId) async {
     try {
       await _database.child('chatHistory/$userId/messages').remove();
-      print('Chat history deleted for user: $userId');
     } catch (e) {
-      print('Error deleting chat history: $e');
+      // Error deleting chat history
     }
   }
 
@@ -103,7 +95,6 @@ class ChatbotService {
   Future<void> deleteChatHistory() async {
     final userId = getCurrentUserId();
     if (userId == null) {
-      print('No user logged in, cannot delete chat history');
       return;
     }
     await deleteChatHistoryForUser(userId);

@@ -32,7 +32,7 @@ class BikeData extends ChangeNotifier {
         }
       },
       onError: (error) {
-        print('Error in BikeData stream: $error');
+        // Error in BikeData stream
       },
     );
   }

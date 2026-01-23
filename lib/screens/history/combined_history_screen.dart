@@ -62,7 +62,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
         _kwhLoading = false;
       });
     } catch (e) {
-      print('Error loading kWh history: $e');
       setState(() => _kwhLoading = false);
     }
   }
@@ -82,7 +81,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
         _transactionLoading = false;
       });
     } catch (e) {
-      print('Error loading transaction history: $e');
       setState(() => _transactionLoading = false);
     }
   }

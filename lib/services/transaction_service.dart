@@ -48,7 +48,6 @@ class TransactionService {
       
       return null;
     } catch (e) {
-      print('Error parsing timestamp: $timestamp - $e');
       return null;
     }
   }
@@ -57,13 +56,10 @@ class TransactionService {
   // New structure: transactions/STN0001/{transaction_id}/[fields]
   Future<List<Map<String, dynamic>>> getAllTransactions() async {
     try {
-      print('Fetching transactions from Firebase...');
-      
       // Fetch all records from transactions node
       final snapshot = await _database.child('transactions').get();
       
       if (!snapshot.exists) {
-        print('No transactions found in Firebase');
         return [];
       }
 
@@ -125,10 +121,8 @@ class TransactionService {
         return bTime.compareTo(aTime);
       });
 
-      print('Fetched ${transactions.length} transactions from Firebase');
       return transactions;
     } catch (e) {
-      print('Error fetching transactions: $e');
       return [];
     }
   }
@@ -215,7 +209,6 @@ class TransactionService {
 
       return entries;
     } catch (e) {
-      print('Error aggregating transaction data: $e');
       return [];
     }
   }
@@ -234,7 +227,6 @@ class TransactionService {
 
       return total;
     } catch (e) {
-      print('Error calculating total redeemed: $e');
       return 0.0;
     }
   }
@@ -274,10 +266,8 @@ class TransactionService {
         }
       }
 
-      print('Total generated calculated: ${totalGenerated.toStringAsFixed(2)} Wh${serviceTag != null ? ' for service tag: $serviceTag' : ''}');
       return totalGenerated;
     } catch (e) {
-      print('Error calculating total generated: $e');
       return 0.0;
     }
   }
@@ -299,7 +289,6 @@ class TransactionService {
       }
       return count;
     } catch (e) {
-      print('Error calculating battery exchange count: $e');
       return 0;
     }
   }

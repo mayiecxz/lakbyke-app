@@ -24,7 +24,6 @@ class KwhService {
       
       return null;
     } catch (e) {
-      print('Error fetching service tag: $e');
       return null;
     }
   }
@@ -58,7 +57,6 @@ class KwhService {
       
       return DateTime(year, month, day, hour, minute, second);
     } catch (e) {
-      print('Error parsing timestamp: $timestampStr - $e');
       return null;
     }
   }
@@ -69,20 +67,16 @@ class KwhService {
     try {
       final serviceTag = await getServiceTag();
       if (serviceTag == null || serviceTag.isEmpty) {
-        print('Service tag not found for user');
         return [];
       }
 
       // Clean service tag: remove spaces and dashes, convert to uppercase
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-      
-      print('Fetching Wh history for service tag: "$serviceTag" (cleaned: "$cleanServiceTag")');
 
       // Fetch all records from deviceEnergyData/{serviceTag} (nested structure)
       final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
       
       if (!snapshot.exists) {
-        print('No history data found for service tag: "$cleanServiceTag"');
         return [];
       }
 
@@ -133,10 +127,8 @@ class KwhService {
         (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime)
       );
 
-      print('Fetched ${historyRecords.length} history records from deviceEnergyData');
       return historyRecords;
     } catch (e) {
-      print('Error fetching history data: $e');
       return [];
     }
   }
@@ -225,7 +217,6 @@ class KwhService {
 
       return entries;
     } catch (e) {
-      print('Error aggregating data: $e');
       return [];
     }
   }
@@ -243,7 +234,6 @@ class KwhService {
 
       return total; // Returns Wh
     } catch (e) {
-      print('Error calculating total Wh: $e');
       return 0.0;
     }
   }
@@ -261,7 +251,6 @@ class KwhService {
 
       return total; // Returns km
     } catch (e) {
-      print('Error calculating total distance: $e');
       return 0.0;
     }
   }

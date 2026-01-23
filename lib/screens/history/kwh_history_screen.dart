@@ -50,7 +50,6 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
         _currentPage = 1; // Reset to first page when filter changes
       });
     } catch (e) {
-      print('Error loading kWh history: $e');
       setState(() {
         _errorMessage = 'Failed to load data. Please try again.';
         _isLoading = false;

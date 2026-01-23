@@ -66,9 +66,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
         kwhHistory = await _kwhService.getHistoryData();
         setState(() {
         });
-        print('KWH history loaded: ${kwhHistory.length} records');
       } catch (e) {
-        print('Warning: Could not load KWH history (this may be due to Firebase permissions): $e');
         // Continue without KWH history - app can still function with transaction data
         setState(() {
         });
@@ -84,7 +82,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading prediction data: $e');
       setState(() {
         _isLoading = false;
       });

@@ -37,10 +37,8 @@ class AuthService {
           email: email, password: password);
       return result.user;
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error: ${e.code} - ${e.message}');
       return null;
     } catch (e) {
-      print('General Error signing in: $e');
       return null;
     }
   }
@@ -79,10 +77,8 @@ class AuthService {
         return result.user;
       }
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error: ${e.code} - ${e.message}');
       return null;
     } catch (e) {
-      print('General Error signing in with Google: $e');
       return null;
     }
   }
@@ -94,10 +90,8 @@ class AuthService {
           email: email, password: password);
       return result.user;
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error: ${e.code} - ${e.message}');
       return null;
     } catch (e) {
-      print('General Error registering: $e');
       return null;
     }
   }
@@ -115,7 +109,7 @@ class AuthService {
         await _googleSignIn.signOut();
       }
     } catch (e) {
-      print('Error signing out: $e');
+      // Error signing out
     }
   }
 
@@ -149,7 +143,7 @@ class AuthService {
         await chatbotService.deleteChatHistoryForUser(userId);
       }
     } catch (e) {
-      print('Error deleting chat history on session end: $e');
+      // Error deleting chat history on session end
     }
   }
 

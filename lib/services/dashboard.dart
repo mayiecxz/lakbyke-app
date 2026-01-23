@@ -17,7 +17,6 @@ class DashboardService {
     try {
       return DateTime.parse(timestampStr);
     } catch (e) {
-      print('Error parsing ISO timestamp: $timestampStr - $e');
       return null;
     }
   }
@@ -112,7 +111,6 @@ class DashboardService {
         'yesterdayWh': yesterdayWh,
       };
     } catch (e) {
-      print('Error fetching yesterday data: $e');
       return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
     }
   }
@@ -191,7 +189,6 @@ class DashboardService {
         'todayWh': todayWh,
       };
     } catch (e) {
-      print('Error fetching today data: $e');
       return {'todayDistance': 0.0, 'todayWh': 0.0};
     }
   }
@@ -259,7 +256,6 @@ class DashboardService {
 
       return null;
     } catch (e) {
-      print('Error fetching latest effort: $e');
       return null;
     }
   }
@@ -271,27 +267,22 @@ class DashboardService {
     try {
       final userId = getCurrentuserTable();
       if (userId == null) {
-        print('No user logged in');
         return null;
       }
 
       // First, get the user's service tag
       final serviceTagSnapshot = await _database.child('userTable/$userId/serviceTag').get();
       if (!serviceTagSnapshot.exists) {
-        print('Service tag not found for user');
         return null;
       }
 
       final serviceTag = serviceTagSnapshot.value as String?;
       if (serviceTag == null || serviceTag.isEmpty) {
-        print('Service tag is empty');
         return null;
       }
 
       // Clean service tag: remove spaces and dashes, convert to uppercase for consistency
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-      
-      print('Fetching dashboard data for service tag: "$serviceTag" (cleaned: "$cleanServiceTag")');
 
       // Fetch nested structure: deviceEnergyData/{serviceTag}/* to get all documents
       var snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
@@ -332,13 +323,6 @@ class DashboardService {
             dashboardData = Map<String, dynamic>.from(latestDocument!);
             
             // Keep totalWh as-is (no conversion to kWh)
-            print('Successfully fetched dashboard data from deviceEnergyData/$cleanServiceTag');
-            print('Fetched deviceEnergyData keys: ${dashboardData.keys.toList()}');
-            print('totalDistanceKm: ${dashboardData['totalDistanceKm']}');
-            print('powerGeneratedInWatts: ${dashboardData['powerGeneratedInWatts']}');
-            print('totalWh: ${dashboardData['totalWh']}');
-          } else {
-            print('No valid documents found in deviceEnergyData/$cleanServiceTag');
           }
         } else {
           // Fallback: handle flat structure if data is not nested
@@ -348,8 +332,6 @@ class DashboardService {
           
           // Keep totalWh as-is (no conversion)
         }
-      } else {
-        print('No deviceEnergyData found for service tag: "$cleanServiceTag" (cleaned from "$serviceTag")');
       }
 
       // Fetch today's aggregated data
@@ -386,12 +368,8 @@ class DashboardService {
         dashboardData['liveEffortTimestamp'] = latestEffort['timestamp'];
       }
 
-      print('Final dashboardData keys: ${dashboardData.keys.toList()}');
-      print('Returning dashboardData: ${dashboardData.isNotEmpty}');
-      
       return dashboardData;
     } catch (e) {
-      print('Error fetching dashboard data: $e');
       return null;
     }
   }
@@ -604,7 +582,6 @@ class DashboardService {
       
       return null;
     } catch (e) {
-      print('Error fetching today metrics: $e');
       return null;
     }
   }
@@ -623,7 +600,6 @@ class DashboardService {
       
       return null;
     } catch (e) {
-      print('Error fetching service tag: $e');
       return null;
     }
   }
@@ -650,7 +626,6 @@ class DashboardService {
       final transactionsSnapshot = await _database.child('transactions').get();
       
       if (!transactionsSnapshot.exists) {
-        print('No transactions found');
         return 0.0;
       }
 
@@ -688,10 +663,8 @@ class DashboardService {
         }
       });
 
-      print('Total redeems calculated: $totalRedeems for service tag: $cleanServiceTag');
       return totalRedeems;
     } catch (e) {
-      print('Error calculating total redeems: $e');
       return 0.0;
     }
   }
@@ -719,7 +692,6 @@ class DashboardService {
       final transactionsSnapshot = await _database.child('transactions').get();
       
       if (!transactionsSnapshot.exists) {
-        print('No transactions found for total generated');
         return 0.0;
       }
 
@@ -767,10 +739,8 @@ class DashboardService {
         }
       });
 
-      print('Total generated calculated: ${totalGenerated.toStringAsFixed(2)} Wh for service tag: $cleanServiceTag');
       return totalGenerated;
     } catch (e) {
-      print('Error calculating total generated: $e');
       return 0.0;
     }
   }
@@ -827,10 +797,8 @@ class DashboardService {
         }
       });
 
-      print('Batteries exchanged count: $batteryCount for service tag: $cleanServiceTag');
       return batteryCount;
     } catch (e) {
-      print('Error calculating batteries exchanged: $e');
       return 0;
     }
   }

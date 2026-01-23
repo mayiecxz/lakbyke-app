@@ -63,7 +63,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         });
       }
     } catch (e) {
-      print('Error loading stats: $e');
       setState(() {
         _isLoadingStats = false;
       });
@@ -152,7 +151,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       try {
         contextData = await _dashboardService.getDashboardData();
       } catch (e) {
-        print('Error fetching context data: $e');
         // Continue without context data
       }
 
@@ -180,7 +178,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _addMessage(response.text ?? "I couldn't read the sensors right now.", false);
 
     } catch (e) {
-      print('Error in chatbot: $e');
       _addMessage("Error: Check your API Key or internet connection.", false);
     } finally {
       setState(() => _isLoading = false);

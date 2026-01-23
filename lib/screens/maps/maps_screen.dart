@@ -102,7 +102,6 @@ class _MapsScreenState extends State<MapsScreen> {
         CameraUpdate.newLatLngZoom(_currentPosition, 15.0),
       );
     } catch (e) {
-      print('Error getting location: $e');
       setState(() {
         _errorMessage = 'Unable to get current location.';
         _isLoading = false;
@@ -124,8 +123,6 @@ class _MapsScreenState extends State<MapsScreen> {
         'https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(destination)}&region=ph&key=$_googleMapsApiKey',
       );
       
-      print('Geocoding URL: $geocodeUrl');
-      
       http.Response geocodeResponse;
       try {
         geocodeResponse = await http.get(
@@ -140,7 +137,6 @@ class _MapsScreenState extends State<MapsScreen> {
           },
         );
       } catch (e) {
-        print('Error fetching geocode: $e');
         setState(() {
           _isLoadingDirections = false;
         });
@@ -186,10 +182,6 @@ class _MapsScreenState extends State<MapsScreen> {
 
       final geocodeData = json.decode(geocodeResponse.body);
       
-      // Debug: Print the response
-      print('Geocoding Response Status: ${geocodeData['status']}');
-      print('Geocoding Response: ${geocodeResponse.body}');
-      
       // Check for API errors
       if (geocodeData['status'] != null && geocodeData['status'] != 'OK') {
         final status = geocodeData['status'] as String;
@@ -222,7 +214,6 @@ class _MapsScreenState extends State<MapsScreen> {
           );
         }
         
-        print('Geocoding API Error: $status - $errorMessage');
         return;
       }
       
@@ -273,8 +264,6 @@ class _MapsScreenState extends State<MapsScreen> {
           },
         );
       } catch (e) {
-        print('Error fetching directions: $e');
-        print('Error type: ${e.runtimeType}');
         setState(() {
           _isLoadingDirections = false;
         });
@@ -300,7 +289,7 @@ class _MapsScreenState extends State<MapsScreen> {
               action: SnackBarAction(
                 label: 'Details',
                 onPressed: () {
-                  print('Full error details: $e');
+                  // Error details removed
                 },
               ),
             ),
@@ -356,7 +345,6 @@ class _MapsScreenState extends State<MapsScreen> {
           );
         }
         
-        print('Directions API Error: $status - $errorMessage');
         return;
       }
 
@@ -486,7 +474,6 @@ class _MapsScreenState extends State<MapsScreen> {
         );
       }
     } catch (e) {
-      print('Error getting directions: $e');
       setState(() {
         _isLoadingDirections = false;
       });
