@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 // import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
@@ -375,7 +374,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-                    const ScreenTitle(title: 'Earnings Insights'),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(

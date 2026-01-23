@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 // import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
@@ -92,7 +91,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
       // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
-          const ScreenTitle(title: 'History'),
           TabBar(
             controller: _tabController,
             labelColor: AppColors.homePrimary,
@@ -273,6 +271,9 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
 
   Widget _buildKwhFilterChips() {
     const choices = ['daily', 'weekly', 'monthly', 'yearly'];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0); // Responsive font size
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
@@ -282,7 +283,10 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ChoiceChip(
-              label: Text(c[0].toUpperCase() + c.substring(1)),
+              label: Text(
+                c[0].toUpperCase() + c.substring(1),
+                style: TextStyle(fontSize: fontSize),
+              ),
               selected: selected,
               onSelected: (_) {
                 setState(() => _kwhFilter = c);
@@ -291,6 +295,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
               selectedColor: AppColors.primary,
               backgroundColor: AppColors.surfaceDim,
               labelStyle: TextStyle(
+                fontSize: fontSize,
                 color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
@@ -303,6 +308,9 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
 
   Widget _buildTransactionFilterChips() {
     const choices = ['daily', 'weekly', 'monthly', 'yearly'];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0); // Responsive font size
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
@@ -312,7 +320,10 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ChoiceChip(
-              label: Text(c[0].toUpperCase() + c.substring(1)),
+              label: Text(
+                c[0].toUpperCase() + c.substring(1),
+                style: TextStyle(fontSize: fontSize),
+              ),
               selected: selected,
               onSelected: (_) {
                 setState(() => _transactionFilter = c);
@@ -321,6 +332,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
               selectedColor: AppColors.primary,
               backgroundColor: AppColors.surfaceDim,
               labelStyle: TextStyle(
+                fontSize: fontSize,
                 color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),

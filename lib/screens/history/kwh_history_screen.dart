@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 
 class KwhHistoryScreen extends StatefulWidget {
@@ -63,7 +62,6 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     
     // Calculate reserved space for UI elements:
     // - AppBar/Header: ~60
-    // - ScreenTitle: ~80
     // - Top card: ~140 (padding + content)
     // - Filter chips: ~50
     // - Spacing: ~28 (8 + 12 + 8)
@@ -170,6 +168,9 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
 
   Widget _buildFilterChips() {
     const choices = ['daily', 'weekly', 'monthly', 'yearly'];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0); // Responsive font size
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
@@ -179,12 +180,16 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ChoiceChip(
-              label: Text(c[0].toUpperCase() + c.substring(1)),
+              label: Text(
+                c[0].toUpperCase() + c.substring(1),
+                style: TextStyle(fontSize: fontSize),
+              ),
               selected: selected,
               onSelected: (_) => _setFilter(c),
               selectedColor: AppColors.primary,
               backgroundColor: AppColors.surfaceDim,
               labelStyle: TextStyle(
+                fontSize: fontSize,
                 color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
@@ -363,7 +368,6 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
       appBar: const Header(),
       body: Column(
         children: [
-          const ScreenTitle(title: 'Wh History'),
           _buildTopCard(),
           const SizedBox(height: 8),
           _buildFilterChips(),

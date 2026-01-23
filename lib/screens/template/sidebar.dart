@@ -5,7 +5,6 @@ import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/screens/main_navigation.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
-import 'package:lakbyke_mobile/screens/template/menu_button.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 
 class Sidebar extends StatelessWidget {
@@ -99,10 +98,11 @@ class _SidebarPanel extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                       child: Row(
                         children: [
-                          MenuButton(
-                            size: 28.0,
-                            padding: EdgeInsets.zero,
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28.0),
                             onPressed: () => Navigator.of(context).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                           const SizedBox(width: 12),
                           Expanded(

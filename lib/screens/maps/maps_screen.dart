@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/models/maps/direction_step.dart';
 import 'package:lakbyke_mobile/models/maps/route_info.dart';
 import 'package:lakbyke_mobile/models/maps/polyline_decoder.dart';
@@ -627,7 +626,6 @@ class _MapsScreenState extends State<MapsScreen> {
       // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
-          const ScreenTitle(title: 'Maps'),
           // Destination search bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),

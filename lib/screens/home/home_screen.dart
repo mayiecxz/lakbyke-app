@@ -4,7 +4,6 @@ import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/screens/home/welcome_modal.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 // import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/home.dart';
 
@@ -249,12 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          // --- HOME Header Area ---
-                          const ScreenTitle(title: AppStrings.home),
-                          
                           // --- Battery Status and Today's Metrics ---
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+                            padding: const EdgeInsets.all(16.0),
                             child: Column(
                               children: [
                                 _buildBatteryStatus(),
@@ -288,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           // --- Service Tag Section ---
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                             child: Row(
                               children: [
                                 Image.asset(
@@ -311,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           // --- Action Buttons Section (Total Generated, Redeems, Exchanged) ---
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                             child: _buildActionButtons(context),
                           ),
                           
@@ -333,7 +329,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget for the main "HOME" title and green background curve is now in ScreenTitle component.
 
   // Widget for the Battery Status
   Widget _buildBatteryStatus() {
@@ -469,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: Color(0xFF317263), // Dark green background
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [

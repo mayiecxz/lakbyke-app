@@ -4,7 +4,7 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
   const Header({super.key});
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(64); // Increased from 56 to 64 for extra padding
 
   @override
   Widget build(BuildContext context) {
@@ -12,6 +12,7 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
       height: preferredSize.height,
       child: Container(
         color: Colors.black,
+        padding: const EdgeInsets.symmetric(vertical: 8.0), // Extra top and bottom padding
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

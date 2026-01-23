@@ -51,6 +51,7 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget _buildBottomNavBar() {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     
     return Container(
       decoration: BoxDecoration(
@@ -63,43 +64,45 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Container(
-          height: 84, // Increased by 20% from 70
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.01, // Responsive horizontal padding
-            vertical: screenHeight * 0.008, // Responsive vertical padding
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.directions_bike,
-                label: 'Home',
-                index: 0,
-                isActive: _currentIndex == 0,
-              ),
-              _buildNavItem(
-                icon: Icons.map,
-                label: 'Maps',
-                index: 1,
-                isActive: _currentIndex == 1,
-              ),
-              _buildQrButton(),
-              _buildNavItem(
-                icon: Icons.trending_up,
-                label: 'Insights',
-                index: 3,
-                isActive: _currentIndex == 3,
-              ),
-              _buildNavItem(
-                icon: Icons.history,
-                label: 'History',
-                index: 4,
-                isActive: _currentIndex == 4,
-              ),
-            ],
-          ),
+      child: Container(
+        padding: EdgeInsets.only(
+          left: screenWidth * 0.01,
+          right: screenWidth * 0.01,
+          top: screenHeight * 0.008,
+          bottom: bottomPadding > 0 ? bottomPadding : 1, // Align to bottom, prevent overflow
+        ),
+        constraints: BoxConstraints(
+          minHeight: 84,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(
+              icon: Icons.directions_bike,
+              label: 'Home',
+              index: 0,
+              isActive: _currentIndex == 0,
+            ),
+            _buildNavItem(
+              icon: Icons.map,
+              label: 'Maps',
+              index: 1,
+              isActive: _currentIndex == 1,
+            ),
+            _buildQrButton(),
+            _buildNavItem(
+              icon: Icons.trending_up,
+              label: 'Insights',
+              index: 3,
+              isActive: _currentIndex == 3,
+            ),
+            _buildNavItem(
+              icon: Icons.history,
+              label: 'History',
+              index: 4,
+              isActive: _currentIndex == 4,
+            ),
+          ],
         ),
       ),
     );
@@ -133,7 +136,7 @@ class _MainNavigationState extends State<MainNavigation> {
           padding: containerPadding,
           decoration: BoxDecoration(
             color: isActive 
-                ? const Color(0xFF317263).withOpacity(0.15) 
+                ? const Color(0xFF317263) 
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: isActive
@@ -149,7 +152,7 @@ class _MainNavigationState extends State<MainNavigation> {
             children: [
               Icon(
                 icon,
-                color: isActive ? const Color(0xFF317263) : Colors.grey,
+                color: isActive ? Colors.white : Colors.grey,
                 size: iconSize,
               ),
               SizedBox(height: screenHeight * 0.004),
@@ -157,7 +160,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 label,
                 style: TextStyle(
                   fontSize: fontSize,
-                  color: isActive ? const Color(0xFF317263) : Colors.grey,
+                  color: isActive ? Colors.white : Colors.grey,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -173,10 +176,9 @@ class _MainNavigationState extends State<MainNavigation> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     
-    // Responsive sizing for QR button
-    final buttonSize = (screenWidth * 0.14).clamp(56.0, 70.0);
-    final iconSize = (screenWidth * 0.07).clamp(28.0, 36.0);
-    final fontSize = (screenWidth * 0.028).clamp(9.0, 12.0);
+    // Larger responsive sizing for QR button
+    final buttonSize = (screenWidth * 0.18).clamp(70.0, 85.0); // Increased from 56-70 to 70-85
+    final iconSize = (screenWidth * 0.09).clamp(36.0, 44.0); // Increased from 28-36 to 36-44
     
     return Expanded(
       child: Column(
@@ -192,8 +194,8 @@ class _MainNavigationState extends State<MainNavigation> {
                 height: buttonSize,
                 decoration: BoxDecoration(
                   color: isActive 
-                      ? const Color(0xFF317263) 
-                      : const Color(0xFF317263).withOpacity(0.9),
+                      ? const Color(0xFF70D2C8) 
+                      : const Color(0xFF70D2C8).withOpacity(0.9),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isActive ? Colors.white : Colors.white.withOpacity(0.8),
@@ -202,7 +204,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   boxShadow: [
                     BoxShadow(
                       color: isActive 
-                          ? const Color(0xFF317263).withOpacity(0.4)
+                          ? const Color(0xFF70D2C8).withOpacity(0.4)
                           : Colors.black.withOpacity(0.25),
                       blurRadius: isActive ? 16 : 12,
                       offset: Offset(0, isActive ? 8 : 6),
@@ -215,15 +217,6 @@ class _MainNavigationState extends State<MainNavigation> {
                   size: iconSize,
                 ),
               ),
-            ),
-          ),
-          SizedBox(height: screenHeight * 0.01), // Responsive spacing
-          Text(
-            'QR',
-            style: TextStyle(
-              fontSize: fontSize,
-              color: isActive ? const Color(0xFF317263) : Colors.grey,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
             ),
           ),
         ],

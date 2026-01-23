@@ -6,7 +6,6 @@ import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
 import 'package:lakbyke_mobile/services/home.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -192,7 +191,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         appBar: const Header(),
         body: Column(
           children: [
-            const ScreenTitle(title: 'Chatbot'),
             
             // Home Header (Real-time View)
             Consumer<BikeData>(
