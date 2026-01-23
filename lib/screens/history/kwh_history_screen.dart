@@ -82,13 +82,13 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     return count > 0 ? count : 1;
   }
 
-  int get _totalPages {
+  int _totalPages(BuildContext context) {
     final itemsPerPage = _getItemsPerPage(context);
     final total = _aggregatedData.length;
     return (total / itemsPerPage).ceil();
   }
 
-  List<Map<String, dynamic>> get _paginatedData {
+  List<Map<String, dynamic>> _paginatedData(BuildContext context) {
     final all = _aggregatedData;
     final itemsPerPage = _getItemsPerPage(context);
     if (all.length <= itemsPerPage) return all;
@@ -197,7 +197,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(BuildContext context) {
     if (_isLoading) {
       return const Center(
         child: Padding(
@@ -232,7 +232,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
       );
     }
 
-    final items = _paginatedData;
+    final items = _paginatedData(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
       child: Column(
@@ -262,18 +262,24 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Flexible(child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600))),
-                              const SizedBox(width: 12),
-                              Row(
-                                children: [
-                                  Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  const SizedBox(width: 16),
-                                  Text(
-                                    '${(item['distance'] as double? ?? 0.0).toStringAsFixed(2)} km',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                              Flexible(
+                                child: Row(
+                                  children: [
+                                    Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${(item['distance'] as double? ?? 0.0).toStringAsFixed(2)} km',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 12),
+                              Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -312,7 +318,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                     ),
                     child: Row(
                       children: List.generate(
-                        _totalPages,
+                        _totalPages(context),
                         (i) => Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
                           child: GestureDetector(
@@ -334,13 +340,13 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                   // Next button
                   Container(
                     decoration: BoxDecoration(
-                      color: _currentPage < _totalPages ? AppColors.primary : Colors.grey.shade300,
+                      color: _currentPage < _totalPages(context) ? AppColors.primary : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_forward, size: 20),
-                      color: _currentPage < _totalPages ? Colors.white : Colors.grey,
-                      onPressed: _currentPage < _totalPages ? () => setState(() => _currentPage++) : null,
+                      color: _currentPage < _totalPages(context) ? Colors.white : Colors.grey,
+                      onPressed: _currentPage < _totalPages(context) ? () => setState(() => _currentPage++) : null,
                       constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                       padding: EdgeInsets.zero,
                     ),
@@ -365,7 +371,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
           _buildFilterChips(),
           const SizedBox(height: 12),
           Expanded(
-            child: _buildHistoryList(),
+            child: _buildHistoryList(context),
           ),
         ],
       ),

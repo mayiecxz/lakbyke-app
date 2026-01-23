@@ -81,10 +81,21 @@ class _PredictionScreenState extends State<PredictionScreen> {
       });
 
       // Load KWH history from Firebase (deviceEnergyData/{serviceTag}/{document_id})
-      final kwhHistory = await _kwhService.getHistoryData();
-      setState(() {
-        _kwhHistory = kwhHistory;
-      });
+      // Handle permission errors gracefully - continue even if history can't be loaded
+      List<Map<String, dynamic>> kwhHistory = [];
+      try {
+        kwhHistory = await _kwhService.getHistoryData();
+        setState(() {
+          _kwhHistory = kwhHistory;
+        });
+        print('KWH history loaded: ${kwhHistory.length} records');
+      } catch (e) {
+        print('Warning: Could not load KWH history (this may be due to Firebase permissions): $e');
+        // Continue without KWH history - app can still function with transaction data
+        setState(() {
+          _kwhHistory = [];
+        });
+      }
 
       // Calculate historical averages from real Firebase data
       _calculateHistoricalAverages(transactions, kwhHistory);
@@ -352,19 +363,25 @@ class _PredictionScreenState extends State<PredictionScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem(
-                  'Total Sessions',
-                  '$_totalSessions',
-                  Icons.directions_bike,
+                Expanded(
+                  child: _buildStatItem(
+                    'Total Sessions',
+                    '$_totalSessions',
+                    Icons.directions_bike,
+                  ),
                 ),
-                _buildStatItem(
-                  'Active Days',
-                  '$_daysWithActivity',
-                  Icons.calendar_today,
+                Expanded(
+                  child: _buildStatItem(
+                    'Active Days',
+                    '$_daysWithActivity',
+                    Icons.calendar_today,
+                  ),
                 ),
-                _buildStatItemWithPeso(
-                  'Avg/Session',
-                  '₱${_averageEarningsPerSession.toStringAsFixed(2)}',
+                Expanded(
+                  child: _buildStatItemWithPeso(
+                    'Avg/Session',
+                    '₱${_averageEarningsPerSession.toStringAsFixed(2)}',
+                  ),
                 ),
               ],
             ),
