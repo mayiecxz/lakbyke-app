@@ -76,13 +76,6 @@ class ChatbotContextBuilder {
     return null;
   }
 
-  static DateTime? _parseTimestamp(dynamic timestamp) {
-    if (timestamp == null) return null;
-    if (timestamp is DateTime) return timestamp;
-    if (timestamp is String) return DateTime.tryParse(timestamp);
-    return null;
-  }
-
   static String? _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return null;
     if (timestamp is DateTime) return timestamp.toIso8601String();

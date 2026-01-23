@@ -21,7 +21,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   
   // KWH History state
   String _kwhFilter = 'daily';
-  int _kwhPage = 1;
   List<Map<String, dynamic>> _kwhData = [];
   double _totalGenerated = 0.0;
   double _totalDistance = 0.0;
@@ -29,7 +28,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   
   // Transaction History state
   String _transactionFilter = 'daily';
-  int _transactionPage = 1;
   List<Map<String, dynamic>> _transactionData = [];
   double _totalRedeemed = 0.0;
   int _batteryExchangeCount = 0;
@@ -62,7 +60,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
         _totalGenerated = (results[1] as num?)?.toDouble() ?? 0.0;
         _totalDistance = (results[2] as num?)?.toDouble() ?? 0.0;
         _kwhLoading = false;
-        _kwhPage = 1;
       });
     } catch (e) {
       print('Error loading kWh history: $e');
@@ -83,7 +80,6 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
         _totalRedeemed = (results[1] as num?)?.toDouble() ?? 0.0;
         _batteryExchangeCount = (results[2] as num?)?.toInt() ?? 0;
         _transactionLoading = false;
-        _transactionPage = 1;
       });
     } catch (e) {
       print('Error loading transaction history: $e');

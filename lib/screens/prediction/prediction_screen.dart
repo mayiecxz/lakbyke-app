@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
-import 'package:lakbyke_mobile/services/dashboard.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 import 'package:intl/intl.dart';
@@ -15,14 +14,11 @@ class PredictionScreen extends StatefulWidget {
 }
 
 class _PredictionScreenState extends State<PredictionScreen> {
-  final DashboardService _dashboardService = DashboardService();
   final TransactionService _transactionService = TransactionService();
   final KwhService _kwhService = KwhService();
   
   bool _isLoading = true;
-  Map<String, dynamic>? _dashboardData;
   List<Map<String, dynamic>> _recentTransactions = [];
-  List<Map<String, dynamic>> _kwhHistory = [];
   
   // Prediction settings
   int _sessionsPerWeek = 1;
@@ -36,17 +32,9 @@ class _PredictionScreenState extends State<PredictionScreen> {
   
   // Historical data from Firebase
   double _weeklyAverageEarnings = 0.0;
-  double _weeklyAverageEnergy = 0.0;
   double _weeklyAverageDistance = 0.0;
   int _totalSessions = 0;
   int _daysWithActivity = 0;
-  
-  // Real data from Firebase
-  double _totalDistance = 0.0;
-  double _totalGenerated = 0.0; // in Wh
-  double _totalRedeemed = 0.0;
-  int _batteriesExchanged = 0;
-  double _currentEffort = 0.0; // powerGeneratedInWatts
   
   // Analytics chart filter
   String _analyticsFilter = 'weekly';
@@ -63,19 +51,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
     });
 
     try {
-      // Load dashboard data (contains distance, effort, generated, batteries, redeemed)
-      final dashboardData = await _dashboardService.getDashboardData();
-      setState(() {
-        _dashboardData = dashboardData;
-        
-        // Extract real data from Firebase
-        _totalDistance = (dashboardData?['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
-        _totalGenerated = (dashboardData?['totalGenerated'] as num?)?.toDouble() ?? 0.0; // in Wh
-        _totalRedeemed = (dashboardData?['totalRedeems'] as num?)?.toDouble() ?? 0.0;
-        _batteriesExchanged = (dashboardData?['batteriesExchanged'] as num?)?.toInt() ?? 0;
-        _currentEffort = (dashboardData?['powerGeneratedInWatts'] as num?)?.toDouble() ?? 
-                        (dashboardData?['liveEffort'] as num?)?.toDouble() ?? 0.0;
-      });
+      // Dashboard data loading removed - not currently used in UI
 
       // Load transactions from Firebase (transactions/{stationId}/{transaction_id})
       final transactions = await _transactionService.getAllTransactions();
@@ -89,14 +65,12 @@ class _PredictionScreenState extends State<PredictionScreen> {
       try {
         kwhHistory = await _kwhService.getHistoryData();
         setState(() {
-          _kwhHistory = kwhHistory;
         });
         print('KWH history loaded: ${kwhHistory.length} records');
       } catch (e) {
         print('Warning: Could not load KWH history (this may be due to Firebase permissions): $e');
         // Continue without KWH history - app can still function with transaction data
         setState(() {
-          _kwhHistory = [];
         });
       }
 
@@ -126,7 +100,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
         _totalSessions = 0;
         _daysWithActivity = 0;
         _weeklyAverageEarnings = 0.0;
-        _weeklyAverageEnergy = 0.0;
         _weeklyAverageDistance = 0.0;
         _averageEarningsPerSession = 0.0;
         _averageEnergyPerSession = 0.0;
@@ -199,7 +172,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
     }).toList();
 
     double weeklyEarnings = 0.0;
-    double weeklyEnergy = 0.0;
     double weeklyDistance = 0.0;
     int recentWeeks = 1; // Default to 1 week if no recent data
 
@@ -227,13 +199,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
         final payout = transaction['payout'] as double? ?? 
                       transaction['amount'] as double? ?? 0.0;
         weeklyEarnings += payout;
-
-        final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ?? 
-                                transaction['powerSubmitted'] as double? ?? 0.0;
-        final voltage = transaction['voltage'] as double? ?? 0.0;
-        if (voltage > 0 && powerSubmittedAh > 0) {
-          weeklyEnergy += powerSubmittedAh * voltage;
-        }
       }
 
       // Calculate weekly distance from recent KWH history
@@ -250,7 +215,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
     
     // Calculate weekly average (divide by number of weeks)
     final weeklyAvgEarnings = recentWeeks > 0 ? weeklyEarnings / recentWeeks : 0.0;
-    final weeklyAvgEnergy = recentWeeks > 0 ? weeklyEnergy / recentWeeks : 0.0;
     final weeklyAvgDistance = recentWeeks > 0 ? weeklyDistance / recentWeeks : 0.0;
 
     setState(() {
@@ -260,7 +224,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
       _averageEnergyPerSession = avgEnergyPerSession;
       _averageDistancePerSession = avgDistancePerSession;
       _weeklyAverageEarnings = weeklyAvgEarnings;
-      _weeklyAverageEnergy = weeklyAvgEnergy;
       _weeklyAverageDistance = weeklyAvgDistance;
       
       // Set initial sessions per week based on activity
@@ -281,8 +244,6 @@ class _PredictionScreenState extends State<PredictionScreen> {
     
     // Current monthly projection (based on weekly average)
     final currentMonthlyEarnings = _weeklyAverageEarnings * weeksPerMonth;
-    final currentMonthlyEnergy = _weeklyAverageEnergy * weeksPerMonth;
-    final currentMonthlyDistance = _weeklyAverageDistance * weeksPerMonth;
 
     setState(() {
       _projectedMonthlyEarnings = projectedEarnings;

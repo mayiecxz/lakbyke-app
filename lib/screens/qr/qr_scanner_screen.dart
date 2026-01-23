@@ -18,7 +18,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   );
   
   bool _isScanning = true;
-  String? _scannedCode;
   bool _hasScanned = false;
 
   @override
@@ -35,7 +34,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       final String code = barcodes.first.rawValue ?? '';
       if (code.isNotEmpty) {
         setState(() {
-          _scannedCode = code;
           _hasScanned = true;
           _isScanning = false;
         });
@@ -100,7 +98,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   void _resetScanner() {
     setState(() {
-      _scannedCode = null;
       _hasScanned = false;
       _isScanning = true;
     });
@@ -176,7 +173,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -268,9 +265,7 @@ class QrScannerOverlayShape extends ShapeBorder {
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
     final width = rect.width;
-    final borderWidthSize = width / 2;
     final height = rect.height;
-    final borderOffset = borderWidth / 2;
     final _cutOutSize = cutOutSize < width || cutOutSize < height
         ? (width < height ? width * 0.8 : height * 0.8)
         : cutOutSize;

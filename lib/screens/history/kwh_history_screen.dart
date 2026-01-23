@@ -60,7 +60,6 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
 
   int _getItemsPerPage(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
     final padding = MediaQuery.of(context).padding;
     
     // Calculate reserved space for UI elements:
