@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 // import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
-import 'package:lakbyke_mobile/services/transaction_service.dart';
-import 'package:lakbyke_mobile/services/kwh_service.dart';
-import 'package:intl/intl.dart';
+import 'package:lakbyke_mobile/models/insights/insights_model.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -13,30 +11,8 @@ class InsightsScreen extends StatefulWidget {
 }
 
 class _InsightsScreenState extends State<InsightsScreen> {
-  final TransactionService _transactionService = TransactionService();
-  final KwhService _kwhService = KwhService();
-  
+  final InsightsModel _insightsModel = InsightsModel();
   bool _isLoading = true;
-  List<Map<String, dynamic>> _recentTransactions = [];
-  
-  // Insights settings
-  int _sessionsPerWeek = 1;
-  double _averageEarningsPerSession = 0.0;
-  double _averageEnergyPerSession = 0.0; // in Wh
-  double _averageDistancePerSession = 0.0; // in km
-  double _currentMonthlyProjection = 0.0;
-  double _projectedMonthlyEarnings = 0.0;
-  double _projectedMonthlyEnergy = 0.0; // in Wh
-  double _projectedMonthlyDistance = 0.0; // in km
-  
-  // Historical data from Firebase
-  double _weeklyAverageEarnings = 0.0;
-  double _weeklyAverageDistance = 0.0;
-  int _totalSessions = 0;
-  int _daysWithActivity = 0;
-  
-  // Analytics chart filter
-  String _analyticsFilter = 'weekly';
 
   @override
   void initState() {
@@ -50,33 +26,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     });
 
     try {
-      // Home data loading removed - not currently used in UI
-
-      // Load transactions from Firebase (transactions/{stationId}/{transaction_id})
-      final transactions = await _transactionService.getAllTransactions();
-      setState(() {
-        _recentTransactions = transactions;
-      });
-
-      // Load KWH history from Firebase (deviceEnergyData/{serviceTag}/{document_id})
-      // Handle permission errors gracefully - continue even if history can't be loaded
-      List<Map<String, dynamic>> kwhHistory = [];
-      try {
-        kwhHistory = await _kwhService.getHistoryData();
-        setState(() {
-        });
-      } catch (e) {
-        // Continue without KWH history - app can still function with transaction data
-        setState(() {
-        });
-      }
-
-      // Calculate historical averages from real Firebase data
-      _calculateHistoricalAverages(transactions, kwhHistory);
-
-      // Calculate projections
-      _calculateProjections();
-
+      await _insightsModel.loadInsightsData();
       setState(() {
         _isLoading = false;
       });
@@ -87,279 +37,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
     }
   }
 
-  void _calculateHistoricalAverages(
-    List<Map<String, dynamic>> transactions,
-    List<Map<String, dynamic>> kwhHistory,
-  ) {
-    if (transactions.isEmpty && kwhHistory.isEmpty) {
-      setState(() {
-        _totalSessions = 0;
-        _daysWithActivity = 0;
-        _weeklyAverageEarnings = 0.0;
-        _weeklyAverageDistance = 0.0;
-        _averageEarningsPerSession = 0.0;
-        _averageEnergyPerSession = 0.0;
-        _averageDistancePerSession = 0.0;
-      });
-      return;
-    }
-
-    // Group transactions by date
-    final Map<String, List<Map<String, dynamic>>> transactionsByDate = {};
-    final Set<String> uniqueDates = {};
-
-    for (var transaction in transactions) {
-      final timestamp = transaction['timestamp'] as DateTime? ?? 
-                        transaction['timeStamp'] as DateTime?;
-      if (timestamp == null) continue;
-
-      final dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
-      uniqueDates.add(dateKey);
-
-      if (!transactionsByDate.containsKey(dateKey)) {
-        transactionsByDate[dateKey] = [];
-      }
-      transactionsByDate[dateKey]!.add(transaction);
-    }
-
-    // Calculate totals from transactions
-    double totalEarnings = 0.0;
-    double totalEnergy = 0.0; // in Wh
-    double totalDistance = 0.0; // in km
-
-    for (var transaction in transactions) {
-      // Earnings from payout
-      final payout = transaction['payout'] as double? ?? 
-                     transaction['amount'] as double? ?? 0.0;
-      totalEarnings += payout;
-
-      // Energy from powerSubmitted_Ah and voltage (convert Ah to Wh)
-      final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ?? 
-                               transaction['powerSubmitted'] as double? ?? 0.0;
-      final voltage = transaction['voltage'] as double? ?? 0.0;
-      if (voltage > 0 && powerSubmittedAh > 0) {
-        totalEnergy += powerSubmittedAh * voltage; // Convert Ah to Wh
-      }
-    }
-
-    // Calculate distance from KWH history (deviceEnergyData)
-    // Sum distance from all history records
-    for (var record in kwhHistory) {
-      final distance = record['totalDistanceKm'] as double? ?? 0.0;
-      totalDistance += distance;
-    }
-
-    // Calculate averages
-    final daysWithActivity = uniqueDates.length;
-    final totalSessions = transactions.length;
-    
-    // Calculate weekly average (last 4 weeks or all time)
-    final now = DateTime.now();
-    final fourWeeksAgo = now.subtract(const Duration(days: 28));
-    
-    final recentTransactions = transactions.where((t) {
-      final timestamp = t['timestamp'] as DateTime? ?? t['timeStamp'] as DateTime?;
-      return timestamp != null && timestamp.isAfter(fourWeeksAgo);
-    }).toList();
-
-    final recentKwhHistory = kwhHistory.where((r) {
-      final timestamp = r['timestamp'] as DateTime?;
-      return timestamp != null && timestamp.isAfter(fourWeeksAgo);
-    }).toList();
-
-    double weeklyEarnings = 0.0;
-    double weeklyDistance = 0.0;
-    int recentWeeks = 1; // Default to 1 week if no recent data
-
-    if (recentTransactions.isNotEmpty || recentKwhHistory.isNotEmpty) {
-      // Calculate average per week over last 4 weeks
-      final weeksData = <int, List<Map<String, dynamic>>>{};
-      for (var transaction in recentTransactions) {
-        final timestamp = transaction['timestamp'] as DateTime? ?? 
-                         transaction['timeStamp'] as DateTime?;
-        if (timestamp == null) continue;
-        
-        final weeksSince = now.difference(timestamp).inDays ~/ 7;
-        if (weeksSince < 4) {
-          if (!weeksData.containsKey(weeksSince)) {
-            weeksData[weeksSince] = [];
-          }
-          weeksData[weeksSince]!.add(transaction);
-        }
-      }
-
-      recentWeeks = weeksData.isEmpty ? 1 : weeksData.length;
-      
-      // Calculate weekly totals
-      for (var transaction in recentTransactions) {
-        final payout = transaction['payout'] as double? ?? 
-                      transaction['amount'] as double? ?? 0.0;
-        weeklyEarnings += payout;
-      }
-
-      // Calculate weekly distance from recent KWH history
-      for (var record in recentKwhHistory) {
-        final distance = record['totalDistanceKm'] as double? ?? 0.0;
-        weeklyDistance += distance;
-      }
-    }
-
-    // Calculate average per session
-    final avgEarningsPerSession = totalSessions > 0 ? totalEarnings / totalSessions : 0.0;
-    final avgEnergyPerSession = totalSessions > 0 ? totalEnergy / totalSessions : 0.0;
-    final avgDistancePerSession = totalSessions > 0 ? totalDistance / totalSessions : 0.0;
-    
-    // Calculate weekly average (divide by number of weeks)
-    final weeklyAvgEarnings = recentWeeks > 0 ? weeklyEarnings / recentWeeks : 0.0;
-    final weeklyAvgDistance = recentWeeks > 0 ? weeklyDistance / recentWeeks : 0.0;
-
-    setState(() {
-      _totalSessions = totalSessions;
-      _daysWithActivity = daysWithActivity;
-      _averageEarningsPerSession = avgEarningsPerSession;
-      _averageEnergyPerSession = avgEnergyPerSession;
-      _averageDistancePerSession = avgDistancePerSession;
-      _weeklyAverageEarnings = weeklyAvgEarnings;
-      _weeklyAverageDistance = weeklyAvgDistance;
-      
-      // Set initial sessions per week based on activity
-      if (daysWithActivity > 0) {
-        _sessionsPerWeek = (daysWithActivity / 7).ceil().clamp(1, 7);
-      }
-    });
-  }
-
-  void _calculateProjections() {
-    // Calculate monthly projection based on sessions per week
-    final weeksPerMonth = 4.33; // Average weeks per month
-    final sessionsPerMonth = _sessionsPerWeek * weeksPerMonth;
-    
-    final projectedEarnings = _averageEarningsPerSession * sessionsPerMonth;
-    final projectedEnergy = _averageEnergyPerSession * sessionsPerMonth;
-    final projectedDistance = _averageDistancePerSession * sessionsPerMonth;
-    
-    // Current monthly projection (based on weekly average)
-    final currentMonthlyEarnings = _weeklyAverageEarnings * weeksPerMonth;
-
-    setState(() {
-      _projectedMonthlyEarnings = projectedEarnings;
-      _projectedMonthlyEnergy = projectedEnergy;
-      _projectedMonthlyDistance = projectedDistance;
-      _currentMonthlyProjection = currentMonthlyEarnings;
-    });
-  }
-
-  // Calculate analytics data based on selected filter
-  List<Map<String, dynamic>> _getAnalyticsData() {
-    if (_recentTransactions.isEmpty) return [];
-
-    final aggregated = <DateTime, double>{};
-    
-    // Determine limit based on filter (outside the loop)
-    int limit;
-    switch (_analyticsFilter) {
-      case 'weekly':
-        limit = 4; // Last 4 weeks
-        break;
-      case 'monthly':
-        limit = 6; // Last 6 months
-        break;
-      case 'all time':
-        limit = 999; // All available data
-        break;
-      default:
-        limit = 4;
-    }
-
-    for (final transaction in _recentTransactions) {
-      final timestamp = transaction['timestamp'] as DateTime? ?? 
-                       transaction['timeStamp'] as DateTime?;
-      if (timestamp == null) continue;
-      
-      final amount = transaction['payout'] as double? ?? 
-                     transaction['amount'] as double? ?? 0.0;
-
-      DateTime key;
-      
-      switch (_analyticsFilter) {
-        case 'weekly':
-          final weekStart = timestamp.subtract(Duration(days: timestamp.weekday - 1));
-          key = DateTime(weekStart.year, weekStart.month, weekStart.day);
-          break;
-        case 'monthly':
-          key = DateTime(timestamp.year, timestamp.month);
-          break;
-        case 'all time':
-          key = DateTime(timestamp.year, timestamp.month);
-          break;
-        default:
-          final weekStart = timestamp.subtract(Duration(days: timestamp.weekday - 1));
-          key = DateTime(weekStart.year, weekStart.month, weekStart.day);
-      }
-
-      aggregated[key] = (aggregated[key] ?? 0.0) + amount;
-    }
-
-    // Helper function for full month names
-    String fullMonthName(int m) {
-      const names = [
-        '', 'January', 'February', 'March', 'April', 'May', 'June', 
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      return names[m];
-    }
-
-    // Convert to list and format
-    final entries = aggregated.entries.map((e) {
-      final DateTime dt = e.key;
-      String label;
-
-      switch (_analyticsFilter) {
-        case 'weekly':
-          // Will be updated after sorting to show Week 1, Week 2, etc.
-          label = ''; // Placeholder, will be set after sorting
-          break;
-        case 'monthly':
-          // Show full month name (e.g., "January", "February")
-          label = fullMonthName(dt.month);
-          break;
-        case 'all time':
-          // Show full month name (e.g., "January", "February")
-          label = fullMonthName(dt.month);
-          break;
-        default:
-          label = '';
-      }
-
-      return {
-        'label': label,
-        'amount': e.value,
-        'date': dt,
-      };
-    }).toList();
-
-    // Sort by date ascending (oldest first for chart)
-    entries.sort((a, b) => 
-      (a['date'] as DateTime).compareTo(b['date'] as DateTime)
-    );
-
-    // Limit to recent periods
-    List<Map<String, dynamic>> limitedEntries;
-    if (_analyticsFilter != 'all time' && entries.length > limit) {
-      limitedEntries = entries.sublist(entries.length - limit);
-    } else {
-      limitedEntries = entries;
-    }
-
-    // For weekly filter, update labels to show Week 1, Week 2, etc.
-    if (_analyticsFilter == 'weekly' && limitedEntries.isNotEmpty) {
-      for (int i = 0; i < limitedEntries.length; i++) {
-        limitedEntries[i]['label'] = 'Week ${i + 1}';
-      }
-    }
-
-    return limitedEntries;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -437,26 +114,26 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 Expanded(
                   child: _buildStatItem(
                     'Total Sessions',
-                    '$_totalSessions',
+                    '${_insightsModel.totalSessions}',
                     Icons.directions_bike,
                   ),
                 ),
                 Expanded(
                   child: _buildStatItem(
                     'Active Days',
-                    '$_daysWithActivity',
+                    '${_insightsModel.daysWithActivity}',
                     Icons.calendar_today,
                   ),
                 ),
                 Expanded(
                   child: _buildStatItemWithPeso(
                     'Avg/Session',
-                    '₱${_averageEarningsPerSession.toStringAsFixed(2)}',
+                    '₱${_insightsModel.averageEarningsPerSession.toStringAsFixed(2)}',
                   ),
                 ),
               ],
             ),
-            if (_weeklyAverageEarnings > 0) ...[
+            if (_insightsModel.weeklyAverageEarnings > 0) ...[
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 8),
@@ -468,7 +145,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   Text(
-                    '₱${_weeklyAverageEarnings.toStringAsFixed(2)}',
+                    '₱${_insightsModel.weeklyAverageEarnings.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -477,7 +154,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ),
                 ],
               ),
-              if (_weeklyAverageDistance > 0) ...[
+              if (_insightsModel.weeklyAverageDistance > 0) ...[
                 const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -487,7 +164,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     Text(
-                      '${_weeklyAverageDistance.toStringAsFixed(1)} km',
+                      '${_insightsModel.weeklyAverageDistance.toStringAsFixed(1)} km',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -584,7 +261,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Sessions per week: $_sessionsPerWeek',
+              'Sessions per week: ${_insightsModel.sessionsPerWeek}',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -592,17 +269,17 @@ class _InsightsScreenState extends State<InsightsScreen> {
             ),
             const SizedBox(height: 8),
             Slider(
-              value: _sessionsPerWeek.toDouble(),
+              value: _insightsModel.sessionsPerWeek.toDouble(),
               min: 1,
               max: 7,
               divisions: 6,
-              label: '$_sessionsPerWeek sessions/week',
+              label: '${_insightsModel.sessionsPerWeek} sessions/week',
               activeColor: const Color(0xFF317263),
               onChanged: (value) {
                 setState(() {
-                  _sessionsPerWeek = value.round();
+                  _insightsModel.sessionsPerWeek = value.round();
+                  _insightsModel.calculateProjections();
                 });
-                _calculateProjections();
               },
             ),
             const SizedBox(height: 8),
@@ -626,9 +303,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   Widget _buildProjectionCard() {
-    final increase = _projectedMonthlyEarnings - _currentMonthlyProjection;
-    final increasePercent = _currentMonthlyProjection > 0
-        ? (increase / _currentMonthlyProjection * 100)
+    final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
+    final increasePercent = _insightsModel.currentMonthlyProjection > 0
+        ? (increase / _insightsModel.currentMonthlyProjection * 100)
         : 0.0;
 
     return Card(
@@ -673,7 +350,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       ),
                     ),
                     Text(
-                      '₱${_projectedMonthlyEarnings.toStringAsFixed(2)}',
+                      '₱${_insightsModel.projectedMonthlyEarnings.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -722,7 +399,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       ),
                     ),
                     Text(
-                      '₱${_currentMonthlyProjection.toStringAsFixed(2)}',
+                      '₱${_insightsModel.currentMonthlyProjection.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white,
@@ -742,7 +419,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       ),
                     ),
                     Text(
-                      '${(_projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
+                      '${(_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
                       style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white,
@@ -753,7 +430,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 ),
               ],
             ),
-            if (_projectedMonthlyDistance > 0) ...[
+            if (_insightsModel.projectedMonthlyDistance > 0) ...[
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -769,7 +446,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                         ),
                       ),
                       Text(
-                        '${_projectedMonthlyDistance.toStringAsFixed(1)} km',
+                        '${_insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.white,
@@ -788,11 +465,66 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   Widget _buildComparisonChart() {
-    final analyticsData = _getAnalyticsData();
-    final maxValue = analyticsData.isEmpty 
-        ? 1.0 
-        : analyticsData.map((e) => e['amount'] as double).reduce((a, b) => a > b ? a : b);
-    final chartHeight = 180.0;
+    final analyticsData = _insightsModel.getAnalyticsData();
+    
+    // Even with no transactions, we should have data points (with zeros)
+    // But check if we have any data points at all
+    if (analyticsData.isEmpty) {
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.analytics, color: const Color(0xFF317263)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Earnings Analytics',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF317263),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 250,
+                alignment: Alignment.center,
+                child: Text(
+                  'No data available',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Calculate max and min values (handle case where all values might be 0)
+    final amounts = analyticsData.map((e) => e['amount'] as double).toList();
+    final maxValue = amounts.isNotEmpty ? amounts.reduce((a, b) => a > b ? a : b) : 1.0;
+    final minValue = amounts.isNotEmpty ? amounts.reduce((a, b) => a < b ? a : b) : 0.0;
+    final chartHeight = 250.0;
+    final leftPadding = 50.0; // Space for Y-axis labels
+    final bottomPadding = 40.0; // Space for X-axis labels
+    final topPadding = 20.0;
+    final rightPadding = 20.0;
+
+    // Calculate nice rounded Y-axis values (industry standard)
+    final range = maxValue - minValue;
+    final niceRange = InsightsModel.niceNumber(range, true);
+    final niceMin = (minValue / niceRange).floor() * niceRange;
+    final niceMax = (maxValue / niceRange).ceil() * niceRange;
+    final niceStep = InsightsModel.niceNumber((niceMax - niceMin) / 5, false);
+    final yAxisSteps = ((niceMax - niceMin) / niceStep).ceil();
+    final actualMax = niceMin + (yAxisSteps * niceStep);
 
     return Card(
       elevation: 2,
@@ -820,14 +552,32 @@ class _InsightsScreenState extends State<InsightsScreen> {
             // Filter chips
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: ['weekly', 'monthly', 'all time'].map((filter) {
-                final selected = _analyticsFilter == filter;
+              children: ['past week', 'past month', 'past year', 'all time'].map((filter) {
+                final selected = _insightsModel.analyticsFilter == filter;
+                String displayLabel;
+                switch (filter) {
+                  case 'past week':
+                    displayLabel = 'Week';
+                    break;
+                  case 'past month':
+                    displayLabel = 'Month';
+                    break;
+                  case 'past year':
+                    displayLabel = 'Year';
+                    break;
+                  case 'all time':
+                    displayLabel = 'All Time';
+                    break;
+                  default:
+                    displayLabel = filter;
+                }
+                
                 return Padding(
                   padding: const EdgeInsets.only(left: 8.0),
                   child: ChoiceChip(
                     label: Text(
-                      filter == 'all time' ? 'All Time' : (filter[0].toUpperCase() + filter.substring(1)),
-                      style: TextStyle(
+                      displayLabel,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -835,7 +585,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     selected: selected,
                     onSelected: (_) {
                       setState(() {
-                        _analyticsFilter = filter;
+                        _insightsModel.analyticsFilter = filter;
                       });
                     },
                     selectedColor: const Color(0xFF317263),
@@ -849,94 +599,96 @@ class _InsightsScreenState extends State<InsightsScreen> {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            // Line graph
-            if (analyticsData.isEmpty)
-              Container(
-                height: chartHeight,
-                alignment: Alignment.center,
-                child: Text(
-                  'No data available',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              )
-            else
-              SizedBox(
-                height: chartHeight,
-                child: Stack(
-                  children: [
-                    // Line chart background
-                    CustomPaint(
-                      size: Size.infinite,
-                      painter: LineChartPainter(
+            // Proper line graph with axes
+            SizedBox(
+              height: chartHeight,
+              child: Stack(
+                children: [
+                  // Y-axis labels (vertical axis on the left)
+                  Positioned(
+                    left: 0,
+                    top: topPadding,
+                    bottom: bottomPadding,
+                    width: leftPadding - 10,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: List.generate(yAxisSteps + 1, (index) {
+                        final value = actualMax - (index * niceStep);
+                        return Text(
+                          '₱${value.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.right,
+                        );
+                      }).reversed.toList(),
+                    ),
+                  ),
+                  // Chart area with proper line graph
+                  Positioned(
+                    left: leftPadding,
+                    right: rightPadding,
+                    top: topPadding,
+                    bottom: bottomPadding,
+                    child: CustomPaint(
+                      painter: ProfessionalLineChartPainter(
                         data: analyticsData.map((e) => e['amount'] as double).toList(),
-                        maxValue: maxValue,
+                        minValue: niceMin,
+                        maxValue: actualMax,
                         color: const Color(0xFF317263),
                       ),
                     ),
-                    // Labels overlay
-                    Padding(
-                      padding: const EdgeInsets.only(top: 20.0, bottom: 30.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: analyticsData.asMap().entries.map((entry) {
-                          final item = entry.value;
-                          final amount = item['amount'] as double;
-                          final label = item['label'] as String;
-                          
-                          return Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                // Value on top
-                                Text(
-                                  '₱${amount.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[700],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                // Label at bottom
-                                Text(
-                                  label,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                  ),
+                  // X-axis labels (horizontal axis at the bottom)
+                  Positioned(
+                    left: leftPadding,
+                    right: rightPadding,
+                    bottom: 0,
+                    height: bottomPadding,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: analyticsData.asMap().entries.map((entry) {
+                        final item = entry.value;
+                        final label = item['label'] as String;
+                        
+                        return Expanded(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
                             ),
-                          );
-                        }).toList(),
-                      ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),
     );
   }
 
+
   Widget _buildMotivationCard() {
-    final increase = _projectedMonthlyEarnings - _currentMonthlyProjection;
+    final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
     String motivationText = '';
     String tipText = '';
 
     if (increase > 0) {
-      motivationText = 'By increasing to $_sessionsPerWeek sessions per week, you could earn an additional ₱${increase.toStringAsFixed(2)} per month!';
+      motivationText = 'By increasing to ${_insightsModel.sessionsPerWeek} sessions per week, you could earn an additional ₱${increase.toStringAsFixed(2)} per month!';
       tipText = '💡 Tip: Consistency is key! Even small increases in frequency can lead to significant earnings over time.';
-    } else if (_totalSessions == 0) {
+    } else if (_insightsModel.totalSessions == 0) {
       motivationText = 'Start your first session to begin earning! Every ride counts towards your monthly projection.';
       tipText = '💡 Tip: Begin with 1-2 sessions per week and gradually increase as you build your routine.';
     } else {
@@ -997,52 +749,75 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 }
 
-// Custom painter for line chart
-class LineChartPainter extends CustomPainter {
+// Professional line chart painter with proper axes and grid lines
+class ProfessionalLineChartPainter extends CustomPainter {
   final List<double> data;
+  final double minValue;
   final double maxValue;
   final Color color;
 
-  LineChartPainter({
+  ProfessionalLineChartPainter({
     required this.data,
+    required this.minValue,
     required this.maxValue,
     required this.color,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.isEmpty || maxValue <= 0) return;
+    if (data.isEmpty || maxValue <= minValue) return;
 
-    final padding = 20.0;
-    final chartWidth = size.width - (padding * 2);
-    final chartHeight = size.height - (padding * 2);
+    final chartWidth = size.width;
+    final chartHeight = size.height;
+    final valueRange = maxValue - minValue;
     
-    // Draw horizontal grid lines
+    // Draw horizontal grid lines (Y-axis grid)
     final gridPaint = Paint()
       ..color = Colors.grey[300]!
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
     
-    final numGridLines = 4;
+    // Calculate number of grid lines (typically 4-6 for readability)
+    final numGridLines = 5;
     for (int i = 0; i <= numGridLines; i++) {
-      final y = padding + (chartHeight / numGridLines) * i;
+      final y = (chartHeight / numGridLines) * i;
       canvas.drawLine(
-        Offset(padding, y),
-        Offset(padding + chartWidth, y),
+        Offset(0, y),
+        Offset(chartWidth, y),
         gridPaint,
       );
     }
 
-    // Draw vertical grid lines at data points
-    final stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+    // Draw vertical grid lines at data points (X-axis grid)
+    final stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0.0;
     for (int i = 0; i < data.length; i++) {
-      final x = padding + (i * stepX);
+      final x = (i * stepX).toDouble();
       canvas.drawLine(
-        Offset(x, padding),
-        Offset(x, padding + chartHeight),
+        Offset(x, 0.0),
+        Offset(x, chartHeight),
         gridPaint,
       );
     }
+
+    // Draw axes (X and Y axis lines)
+    final axisPaint = Paint()
+      ..color = Colors.grey[600]!
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    
+    // X-axis (bottom)
+    canvas.drawLine(
+      const Offset(0, 0),
+      Offset(chartWidth, 0),
+      axisPaint,
+    );
+    
+    // Y-axis (left)
+    canvas.drawLine(
+      const Offset(0, 0),
+      Offset(0, chartHeight),
+      axisPaint,
+    );
 
     // Line paint for the data line
     final linePaint = Paint()
@@ -1052,37 +827,51 @@ class LineChartPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Point paint
+    // Point paint with outline
     final pointPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
+    
+    final pointOutlinePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
 
+    // Calculate data points
     final points = <Offset>[];
     for (int i = 0; i < data.length; i++) {
-      final x = padding + (i * stepX);
-      final y = padding + chartHeight - ((data[i] / maxValue) * chartHeight);
+      final x = (i * stepX).toDouble();
+      // Normalize value to chart height (inverted Y-axis: 0 at bottom, max at top)
+      final normalizedValue = (data[i] - minValue) / valueRange;
+      final y = (chartHeight - (normalizedValue * chartHeight)).toDouble();
       points.add(Offset(x, y));
     }
 
-    // Draw the data line
+    // Draw the data line with smooth curve (optional: can use quadratic bezier for smoother curves)
     if (points.length > 1) {
       final path = Path();
       path.moveTo(points[0].dx, points[0].dy);
+      
+      // Use straight lines (industry standard for time series)
       for (int i = 1; i < points.length; i++) {
         path.lineTo(points[i].dx, points[i].dy);
       }
+      
       canvas.drawPath(path, linePaint);
     }
 
-    // Draw points
+    // Draw data points with white outline for better visibility
     for (final point in points) {
+      // Draw white outline circle
+      canvas.drawCircle(point, 6.0, pointOutlinePaint);
+      // Draw colored point
       canvas.drawCircle(point, 4.0, pointPaint);
     }
   }
 
   @override
-  bool shouldRepaint(LineChartPainter oldDelegate) {
+  bool shouldRepaint(ProfessionalLineChartPainter oldDelegate) {
     return oldDelegate.data != data || 
+           oldDelegate.minValue != minValue ||
            oldDelegate.maxValue != maxValue || 
            oldDelegate.color != color;
   }
