@@ -32,6 +32,12 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Build artifacts and cache files
+build/
+*.dill
+*.dill.track.dill
+*.cache.dill
+
 # Symbolication related
 app.*.symbols
 
