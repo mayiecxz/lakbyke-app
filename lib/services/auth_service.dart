@@ -152,4 +152,19 @@ class AuthService {
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
   }
+
+  // Send password reset email
+  Future<String?> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        return 'No account found with this email address.';
+      }
+      return e.message ?? 'An error occurred. Please try again.';
+    } catch (e) {
+      return 'An error occurred. Please try again.';
+    }
+  }
 }

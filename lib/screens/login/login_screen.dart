@@ -4,7 +4,8 @@ import 'package:lakbyke_mobile/screens/main_navigation.dart';
 import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart'; 
+import 'package:firebase_database/firebase_database.dart';
+import 'package:shared_preferences/shared_preferences.dart'; 
 
 class LoginModal extends StatefulWidget {
   const LoginModal({super.key, this.onClose});
@@ -20,17 +21,29 @@ class _LoginModalState extends State<LoginModal> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  bool _rememberMe = false; 
+  bool _rememberMe = false;
+  bool _isLoading = false;
+  bool _isSendingResetEmail = false; 
 
   // Updated Login Function with Email Verification Check
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Save email if remember me is checked
+      await _saveRememberedEmail(_emailController.text.trim());
       
       // 1. Sign In with Firebase Auth
       User? user = await _authService.signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
+
+      setState(() {
+        _isLoading = false;
+      });
 
       if (user != null) { 
         // ---------------------------------------------------------
@@ -230,6 +243,210 @@ class _LoginModalState extends State<LoginModal> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadRememberedEmail();
+  }
+
+  // Load remembered email from SharedPreferences
+  Future<void> _loadRememberedEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rememberedEmail = prefs.getString('remembered_email');
+      final shouldRemember = prefs.getBool('remember_me') ?? false;
+      
+      if (rememberedEmail != null && shouldRemember) {
+        setState(() {
+          _emailController.text = rememberedEmail;
+          _rememberMe = true;
+        });
+      }
+    } catch (e) {
+      // Error loading preferences
+    }
+  }
+
+  // Save email to SharedPreferences if remember me is checked
+  Future<void> _saveRememberedEmail(String email) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_rememberMe) {
+        await prefs.setString('remembered_email', email);
+        await prefs.setBool('remember_me', true);
+      } else {
+        await prefs.remove('remembered_email');
+        await prefs.setBool('remember_me', false);
+      }
+    } catch (e) {
+      // Error saving preferences
+    }
+  }
+
+  // Check if email exists in database
+  Future<bool> _checkEmailInDatabase(String email) async {
+    try {
+      final DatabaseReference userTableRef = FirebaseDatabase.instance.ref("userTable");
+      final DataSnapshot snapshot = await userTableRef.get();
+      
+      if (snapshot.exists && snapshot.value != null) {
+        final Map<dynamic, dynamic> users = snapshot.value as Map<dynamic, dynamic>;
+        
+        // Search through all users to find matching email
+        for (var userEntry in users.entries) {
+          final userData = userEntry.value as Map<dynamic, dynamic>?;
+          if (userData != null) {
+            final userEmail = userData['email'] as String?;
+            if (userEmail != null && userEmail.toLowerCase() == email.toLowerCase()) {
+              return true; // Email found in database
+            }
+          }
+        }
+      }
+      return false; // Email not found
+    } catch (e) {
+      return false; // Error checking database
+    }
+  }
+
+  // Forgot password functionality
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    
+    // Check if email is entered
+    if (email.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter your email address first.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Validate email format
+    if (!email.contains('@') || !email.contains('.')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid email address.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Check if email exists in database
+    setState(() {
+      _isSendingResetEmail = true;
+    });
+
+    final emailExistsInDb = await _checkEmailInDatabase(email);
+
+    setState(() {
+      _isSendingResetEmail = false;
+    });
+
+    if (!emailExistsInDb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No account found with this email address. Please sign up first.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock_reset, color: Color(0xFF70D2C8)),
+            SizedBox(width: 8),
+            Text('Reset Password'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'We\'ll send a password reset link to:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              email,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF70D2C8),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF70D2C8),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Send Reset Link'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _isSendingResetEmail = true;
+      });
+
+      final error = await _authService.sendPasswordResetEmail(email);
+
+      setState(() {
+        _isSendingResetEmail = false;
+      });
+
+      if (mounted) {
+        if (error == null) {
+          // Success
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Password reset email sent to $email! Please check your inbox.'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } else {
+          // Error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -364,13 +581,20 @@ class _LoginModalState extends State<LoginModal> {
                           ],
                         ),
                         TextButton(
-                          onPressed: () {
-                            // Forgot password functionality
-                          },
-                          child: const Text(
-                            AppStrings.forgotPassword,
-                            style: TextStyle(color: Color(0xFF70D2C8)),
-                          ),
+                          onPressed: _isSendingResetEmail ? null : _handleForgotPassword,
+                          child: _isSendingResetEmail
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF70D2C8)),
+                                  ),
+                                )
+                              : const Text(
+                                  AppStrings.forgotPassword,
+                                  style: TextStyle(color: Color(0xFF70D2C8)),
+                                ),
                         ),
                       ],
                     ),
@@ -381,18 +605,28 @@ class _LoginModalState extends State<LoginModal> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _login, // Calls our updated logic
+                        onPressed: _isLoading ? null : _login, // Calls our updated logic
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF70D2C8),
                           minimumSize: const Size(double.infinity, 55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
+                          disabledBackgroundColor: Colors.grey[300],
                         ),
-                        child: const Text(
-                          AppStrings.loginButton,
-                          style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                AppStrings.loginButton,
+                                style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
 
