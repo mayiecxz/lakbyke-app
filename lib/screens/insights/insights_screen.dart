@@ -174,6 +174,90 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ],
                 ),
               ],
+            ] else if (_insightsModel.totalSessions == 0) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No activity recorded yet. Complete a session to start tracking your earnings!',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.orange[900],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (!_insightsModel.hasActivityInPastWeek() && !_insightsModel.hasActivityInPastMonth()) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No activity in the past week or month. Start a new session to see recent earnings!',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.orange[900],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (!_insightsModel.hasActivityInPastWeek()) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No activity in the past week. Your weekly average will update once you complete a session.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.blue[900],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),
@@ -464,11 +548,26 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  /// Get the chart title based on the selected filter
+  String _getChartTitle() {
+    switch (_insightsModel.analyticsFilter) {
+      case 'past week':
+        return 'Earnings for the Past Week';
+      case 'past month':
+        return 'Earnings for the Past Month';
+      case 'past year':
+        return 'Earnings for the Past Year';
+      case 'all time':
+        return 'All Time Earnings';
+      default:
+        return 'Earnings Analytics';
+    }
+  }
+
   Widget _buildComparisonChart() {
     final analyticsData = _insightsModel.getAnalyticsData();
     
-    // Even with no transactions, we should have data points (with zeros)
-    // But check if we have any data points at all
+    // Check if we have any data points at all
     if (analyticsData.isEmpty) {
       return Card(
         elevation: 2,
@@ -492,13 +591,163 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              // Dynamic title based on filter
+              Text(
+                _getChartTitle(),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF317263),
+                ),
+              ),
               const SizedBox(height: 16),
               Container(
                 height: 250,
                 alignment: Alignment.center,
-                child: Text(
-                  'No data available',
-                  style: TextStyle(color: Colors.grey[600]),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bar_chart,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No data available',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Check if there's actual data (non-zero amounts) for the selected period
+    final hasData = _insightsModel.hasDataForCurrentPeriod();
+    if (!hasData) {
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.analytics, color: const Color(0xFF317263)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Earnings Analytics',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF317263),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Dynamic title based on filter
+              Text(
+                _getChartTitle(),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF317263),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Filter chips
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: ['past week', 'past month', 'past year', 'all time'].map((filter) {
+                  final selected = _insightsModel.analyticsFilter == filter;
+                  String displayLabel;
+                  switch (filter) {
+                    case 'past week':
+                      displayLabel = 'Week';
+                      break;
+                    case 'past month':
+                      displayLabel = 'Month';
+                      break;
+                    case 'past year':
+                      displayLabel = 'Year';
+                      break;
+                    case 'all time':
+                      displayLabel = 'All Time';
+                      break;
+                    default:
+                      displayLabel = filter;
+                  }
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        displayLabel,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() {
+                          _insightsModel.analyticsFilter = filter;
+                        });
+                      },
+                      selectedColor: const Color(0xFF317263),
+                      backgroundColor: Colors.grey[200],
+                      labelStyle: TextStyle(
+                        color: selected ? Colors.white : Colors.black87,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 250,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _insightsModel.getNoDataMessage(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your earnings will appear here once you complete a session.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -547,6 +796,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            // Dynamic title based on filter
+            Text(
+              _getChartTitle(),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF317263),
+              ),
             ),
             const SizedBox(height: 12),
             // Filter chips

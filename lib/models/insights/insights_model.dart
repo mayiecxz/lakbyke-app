@@ -365,6 +365,55 @@ class InsightsModel {
     return allDataPoints;
   }
 
+  /// Check if there's actual data (non-zero amounts) for the current filter period
+  bool hasDataForCurrentPeriod() {
+    final analyticsData = getAnalyticsData();
+    if (analyticsData.isEmpty) return false;
+    
+    // Check if any data point has a non-zero amount
+    return analyticsData.any((dataPoint) => (dataPoint['amount'] as double) > 0);
+  }
+
+  /// Check if there's activity in the past week
+  bool hasActivityInPastWeek() {
+    final now = DateTime.now();
+    final oneWeekAgo = now.subtract(const Duration(days: 7));
+    
+    return recentTransactions.any((transaction) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      return timestamp != null && timestamp.isAfter(oneWeekAgo);
+    });
+  }
+
+  /// Check if there's activity in the past month
+  bool hasActivityInPastMonth() {
+    final now = DateTime.now();
+    final oneMonthAgo = now.subtract(const Duration(days: 30));
+    
+    return recentTransactions.any((transaction) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      return timestamp != null && timestamp.isAfter(oneMonthAgo);
+    });
+  }
+
+  /// Get a descriptive message for when there's no data for the current period
+  String getNoDataMessage() {
+    switch (analyticsFilter) {
+      case 'past week':
+        return 'No earnings data for the past week. Start a session to see your earnings!';
+      case 'past month':
+        return 'No earnings data for the past month. Start a session to see your earnings!';
+      case 'past year':
+        return 'No earnings data for the past year. Start a session to see your earnings!';
+      case 'all time':
+        return 'No earnings data available. Start a session to see your earnings!';
+      default:
+        return 'No data available';
+    }
+  }
+
   /// Helper function to calculate nice rounded numbers for Y-axis (statistical standard)
   static double niceNumber(double range, bool round) {
     if (range == 0) return 1.0;
