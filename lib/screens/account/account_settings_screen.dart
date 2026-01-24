@@ -41,93 +41,93 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     }
   }
 
-  Future<void> _handleChangeEmail() async {
-    if (_user == null) return;
-    
-    final currentEmail = _user!.email;
-    final newEmailController = TextEditingController();
-    
-    // Show dialog to enter new email
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => _EmailInputDialog(
-        currentEmail: currentEmail,
-        newEmailController: newEmailController,
-      ),
-    );
+  // Future<void> _handleChangeEmail() async {
+  //   if (_user == null) return;
+  //   
+  //   final currentEmail = _user!.email;
+  //   final newEmailController = TextEditingController();
+  //   
+  //   // Show dialog to enter new email
+  //   final result = await showDialog<String>(
+  //     context: context,
+  //     builder: (context) => _EmailInputDialog(
+  //       currentEmail: currentEmail,
+  //       newEmailController: newEmailController,
+  //     ),
+  //   );
 
-    if (result == null || result.isEmpty) return;
+  //   if (result == null || result.isEmpty) return;
 
-    final newEmail = result.trim();
-    
-    // Validate email format
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(newEmail)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter a valid email address'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
+  //   final newEmail = result.trim();
+  //   
+  //   // Validate email format
+  //   if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(newEmail)) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Please enter a valid email address'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //     return;
+  //   }
 
-    if (newEmail == currentEmail) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('New email must be different from current email'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
+  //   if (newEmail == currentEmail) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('New email must be different from current email'),
+  //           backgroundColor: Colors.orange,
+  //         ),
+  //       );
+  //     }
+  //     return;
+  //   }
 
-    // Show OTP verification dialog
-    if (mounted) {
-      final otpResult = await showDialog<Map<String, dynamic>>(
-        context: context,
-        builder: (context) => OTPVerificationDialog(
-          email: currentEmail,
-          purpose: OTPPurpose.changeEmail,
-          newEmail: newEmail,
-        ),
-      );
+  //   // Show OTP verification dialog
+  //   if (mounted) {
+  //     final otpResult = await showDialog<Map<String, dynamic>>(
+  //       context: context,
+  //       builder: (context) => OTPVerificationDialog(
+  //         email: currentEmail,
+  //         purpose: OTPPurpose.changeEmail,
+  //         newEmail: newEmail,
+  //       ),
+  //     );
 
-      if (otpResult != null && otpResult['success'] == true && mounted) {
-        final otpCode = otpResult['otpCode'] as String?;
-        if (otpCode != null) {
-          // Update email after OTP verification
-          final updateResult = await _userService.updateEmailAfterOTP(otpCode);
-          
-          if (updateResult['success'] == true) {
-            // Reload user data
-            await _loadUserData();
-            
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(updateResult['message'] ?? 'Email updated successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(updateResult['error'] ?? 'Failed to update email. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        }
-      }
-    }
-  }
+  //     if (otpResult != null && otpResult['success'] == true && mounted) {
+  //       final otpCode = otpResult['otpCode'] as String?;
+  //       if (otpCode != null) {
+  //         // Update email after OTP verification
+  //         final updateResult = await _userService.updateEmailAfterOTP(otpCode);
+  //         
+  //         if (updateResult['success'] == true) {
+  //           // Reload user data
+  //           await _loadUserData();
+  //           
+  //           if (mounted) {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               SnackBar(
+  //                 content: Text(updateResult['message'] ?? 'Email updated successfully'),
+  //                 backgroundColor: Colors.green,
+  //               ),
+  //             );
+  //           }
+  //         } else {
+  //           if (mounted) {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               SnackBar(
+  //                 content: Text(updateResult['error'] ?? 'Failed to update email. Please try again.'),
+  //                 backgroundColor: Colors.red,
+  //               ),
+  //             );
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
 
   Future<void> _handleChangePassword() async {
     if (_user == null) return;
@@ -265,12 +265,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                         _SettingsSection(
                           title: 'Security',
                           children: [
-                            _SettingsTile(
-                              icon: Icons.email_outlined,
-                              title: 'Change Email',
-                              subtitle: 'Update your email address',
-                              onTap: _handleChangeEmail,
-                            ),
+                            // _SettingsTile(
+                            //   icon: Icons.email_outlined,
+                            //   title: 'Change Email',
+                            //   subtitle: 'Update your email address',
+                            //   onTap: _handleChangeEmail,
+                            // ),
                             _SettingsTile(
                               icon: Icons.lock_outline,
                               title: 'Change Password',
