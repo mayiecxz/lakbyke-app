@@ -3,6 +3,7 @@ import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
+import 'package:lakbyke_mobile/widgets/energy_detail_modal.dart';
 
 class KwhHistoryScreen extends StatefulWidget {
   const KwhHistoryScreen({super.key});
@@ -256,34 +257,48 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                       final item = entry.value;
                       return Padding(
                         padding: EdgeInsets.only(bottom: index < items.length - 1 ? 12 : 0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceDim,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _showEnergyDetailModal(context, item),
                             borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Flexible(
-                                child: Row(
-                                  children: [
-                                    Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${(item['distance'] as double? ?? 0.0).toStringAsFixed(2)} km',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceDim,
+                                borderRadius: BorderRadius.circular(12.0),
                               ),
-                              const SizedBox(width: 12),
-                              Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${(item['distance'] as double? ?? 0.0).toStringAsFixed(2)} km',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -360,6 +375,46 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showEnergyDetailModal(BuildContext context, Map<String, dynamic> item) async {
+    try {
+      final periodDate = item['date'] as DateTime?;
+      if (periodDate == null) return;
+
+      final energy = (item['value'] as num?)?.toDouble() ?? 0.0;
+      final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
+      final label = item['label'] as String? ?? '';
+
+      // Fetch detailed records for this period
+      final detailedRecords = await _kwhService.getDetailedRecordsForPeriod(
+        periodDate: periodDate,
+        filterType: _selectedFilter,
+      );
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => EnergyDetailModal(
+            periodLabel: label,
+            periodDate: periodDate,
+            filterType: _selectedFilter,
+            totalEnergy: energy,
+            totalDistance: distance,
+            detailedRecords: detailedRecords,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

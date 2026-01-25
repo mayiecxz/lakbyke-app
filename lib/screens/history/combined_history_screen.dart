@@ -5,6 +5,8 @@ import 'package:lakbyke_mobile/screens/template/header.dart';
 // import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
+import 'package:lakbyke_mobile/widgets/energy_detail_modal.dart';
+import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
 
 class CombinedHistoryScreen extends StatefulWidget {
   const CombinedHistoryScreen({super.key, this.initialTabIndex = 0});
@@ -434,27 +436,41 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
         final item = _kwhData[index];
         return Padding(
           padding: EdgeInsets.only(bottom: index < _kwhData.length - 1 ? 12 : 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceDim,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _showEnergyDetailModal(context, item),
               borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    item['label'] as String,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDim,
+                  borderRadius: BorderRadius.circular(12.0),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  formatEnergy((item['energy'] as num?)?.toDouble() ?? 0.0),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item['label'] as String,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          formatEnergy((item['value'] as num?)?.toDouble() ?? 0.0),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -483,31 +499,123 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
         final item = _transactionData[index];
         return Padding(
           padding: EdgeInsets.only(bottom: index < _transactionData.length - 1 ? 12 : 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceDim,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _showTransactionDetailModal(context, item),
               borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    item['label'] as String,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDim,
+                  borderRadius: BorderRadius.circular(12.0),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  '₱ ${((item['amount'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item['label'] as String,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '₱ ${((item['amount'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
       },
     );
+  }
+
+  Future<void> _showEnergyDetailModal(BuildContext context, Map<String, dynamic> item) async {
+    try {
+      final periodDate = item['date'] as DateTime?;
+      if (periodDate == null) return;
+
+      final energy = (item['value'] as num?)?.toDouble() ?? 0.0;
+      final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
+      final label = item['label'] as String? ?? '';
+
+      // Fetch detailed records for this period
+      final detailedRecords = await _kwhService.getDetailedRecordsForPeriod(
+        periodDate: periodDate,
+        filterType: _kwhFilter,
+      );
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => EnergyDetailModal(
+            periodLabel: label,
+            periodDate: periodDate,
+            filterType: _kwhFilter,
+            totalEnergy: energy,
+            totalDistance: distance,
+            detailedRecords: detailedRecords,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showTransactionDetailModal(BuildContext context, Map<String, dynamic> item) async {
+    try {
+      final periodDate = item['date'] as DateTime?;
+      if (periodDate == null) return;
+
+      final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+      final label = item['label'] as String? ?? '';
+
+      // Fetch detailed transactions for this period
+      final detailedTransactions = await _transactionService.getDetailedTransactionsForPeriod(
+        periodDate: periodDate,
+        filterType: _transactionFilter,
+      );
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => TransactionDetailModal(
+            periodLabel: label,
+            periodDate: periodDate,
+            filterType: _transactionFilter,
+            totalAmount: amount,
+            detailedTransactions: detailedTransactions,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

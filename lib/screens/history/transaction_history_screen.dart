@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
+import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -221,21 +222,35 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           final item = entry.value;
                           return Padding(
                             padding: EdgeInsets.only(bottom: index < items.length - 1 ? 12 : 0),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceDim,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _showTransactionDetailModal(context, item, aggregatedData),
                                 borderRadius: BorderRadius.circular(12.0),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceDim,
+                                    borderRadius: BorderRadius.circular(12.0),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                ],
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                          const SizedBox(width: 8),
+                                          Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           );
@@ -314,6 +329,48 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showTransactionDetailModal(
+    BuildContext context,
+    Map<String, dynamic> item,
+    List<Map<String, dynamic>> allData,
+  ) async {
+    try {
+      final periodDate = item['date'] as DateTime?;
+      if (periodDate == null) return;
+
+      final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+      final label = item['label'] as String? ?? '';
+
+      // Fetch detailed transactions for this period
+      final detailedTransactions = await _transactionService.getDetailedTransactionsForPeriod(
+        periodDate: periodDate,
+        filterType: _selectedFilter,
+      );
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => TransactionDetailModal(
+            periodLabel: label,
+            periodDate: periodDate,
+            filterType: _selectedFilter,
+            totalAmount: amount,
+            detailedTransactions: detailedTransactions,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

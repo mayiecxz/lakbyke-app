@@ -93,31 +93,68 @@ class KwhService {
               documentData.map((key, value) => MapEntry(key.toString(), value)),
             );
             
-            // Extract timestamp, totalWh, and totalDistanceKm
+            // Extract timestamp (required field)
             final timestampStr = record['timestamp'] as String?;
-            final totalWh = record['totalWh'];
-            final totalDistanceKm = record['totalDistanceKm'];
-            
-            if (timestampStr != null && totalWh != null) {
-              final timestamp = _parseTimestamp(timestampStr);
-              if (timestamp != null) {
-                double whValue = (totalWh is num) ? totalWh.toDouble() : 
-                               (totalWh is String) ? double.tryParse(totalWh) ?? 0.0 : 0.0;
-                
-                double distanceValue = 0.0;
-                if (totalDistanceKm != null) {
-                  distanceValue = (totalDistanceKm is num) ? totalDistanceKm.toDouble() : 
-                                 (totalDistanceKm is String) ? double.tryParse(totalDistanceKm) ?? 0.0 : 0.0;
-                }
-                
-                historyRecords.add({
-                  'timestamp': timestamp,
-                  'totalWh': whValue,
-                  'totalDistanceKm': distanceValue,
-                  'recordId': documentId.toString(),
-                });
-              }
+            if (timestampStr == null || timestampStr.isEmpty) {
+              return; // Skip records without timestamp
             }
+            
+            final timestamp = _parseTimestamp(timestampStr);
+            if (timestamp == null) {
+              return; // Skip records with invalid timestamp
+            }
+            
+            // Helper function to safely parse numeric values
+            double? parseNumeric(dynamic value) {
+              if (value == null) return null;
+              if (value is num) return value.toDouble();
+              if (value is String) return double.tryParse(value);
+              return null;
+            }
+            
+            // Helper function to safely parse integer values
+            int? parseInteger(dynamic value) {
+              if (value == null) return null;
+              if (value is int) return value;
+              if (value is double) return value.toInt();
+              if (value is String) return int.tryParse(value);
+              return null;
+            }
+            
+            // Helper function to safely parse boolean values
+            bool? parseBoolean(dynamic value) {
+              if (value == null) return null;
+              if (value is bool) return value;
+              if (value is String) {
+                return value.toLowerCase() == 'true' || value == '1';
+              }
+              if (value is num) return value != 0;
+              return null;
+            }
+            
+            // Extract all fields from Firebase structure
+            final historyRecord = <String, dynamic>{
+              'timestamp': timestamp,
+              'recordId': documentId.toString(),
+              
+              // Energy and distance fields
+              'totalWh': parseNumeric(record['totalWh']) ?? 0.0,
+              'totalDistanceKm': parseNumeric(record['totalDistanceKm']) ?? 0.0,
+              
+              // Battery and voltage fields
+              'mountBatteryPercentage': parseInteger(record['mountBatteryPercentage']),
+              'mountVoltage': parseNumeric(record['mountVoltage']),
+              
+              // Power and speed fields
+              'powerGeneratedInWatts': parseNumeric(record['powerGeneratedInWatts']) ?? 0.0,
+              'speedKmh': parseInteger(record['speedKmh']) ?? 0,
+              
+              // Additional fields
+              'mAh': parseInteger(record['mAh']) ?? 0,
+              'isMotorRunning': parseBoolean(record['isMotorRunning']) ?? false,
+            };
+            
+            historyRecords.add(historyRecord);
           }
         });
       }
@@ -128,6 +165,58 @@ class KwhService {
       );
 
       return historyRecords;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Get detailed records for a specific period
+  // Returns all records that fall within the specified date range
+  Future<List<Map<String, dynamic>>> getDetailedRecordsForPeriod({
+    required DateTime periodDate,
+    required String filterType,
+  }) async {
+    try {
+      final allRecords = await getHistoryData();
+      if (allRecords.isEmpty) return [];
+
+      List<Map<String, dynamic>> periodRecords = [];
+
+      for (final record in allRecords) {
+        final recordDate = record['timestamp'] as DateTime;
+        bool isInPeriod = false;
+
+        switch (filterType) {
+          case 'daily':
+            // Same day
+            isInPeriod = recordDate.year == periodDate.year &&
+                recordDate.month == periodDate.month &&
+                recordDate.day == periodDate.day;
+            break;
+          case 'weekly':
+            // Week starting from periodDate
+            final weekStart = DateTime(periodDate.year, periodDate.month, periodDate.day);
+            final weekEnd = weekStart.add(const Duration(days: 6));
+            isInPeriod = recordDate.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+                recordDate.isBefore(weekEnd.add(const Duration(days: 1)));
+            break;
+          case 'monthly':
+            // Same month and year
+            isInPeriod = recordDate.year == periodDate.year &&
+                recordDate.month == periodDate.month;
+            break;
+          case 'yearly':
+            // Same year
+            isInPeriod = recordDate.year == periodDate.year;
+            break;
+        }
+
+        if (isInPeriod) {
+          periodRecords.add(record);
+        }
+      }
+
+      return periodRecords;
     } catch (e) {
       return [];
     }
@@ -258,5 +347,81 @@ class KwhService {
   // Alias for backward compatibility - returns Wh
   Future<double> getTotalWhGenerated() async {
     return getTotalKwhGenerated();
+  }
+
+  // Verify Firebase connection and return diagnostic information
+  Future<Map<String, dynamic>> verifyConnection() async {
+    try {
+      final serviceTag = await getServiceTag();
+      if (serviceTag == null || serviceTag.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No service tag found for current user',
+        };
+      }
+
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      
+      // Try to fetch data from Firebase
+      final snapshot = await _database.child('deviceEnergyData/$cleanServiceTag').get();
+      
+      if (!snapshot.exists) {
+        return {
+          'success': false,
+          'error': 'No data found at deviceEnergyData/$cleanServiceTag',
+          'serviceTag': serviceTag,
+          'cleanServiceTag': cleanServiceTag,
+        };
+      }
+
+      final data = snapshot.value;
+      if (data == null) {
+        return {
+          'success': false,
+          'error': 'Data is null at deviceEnergyData/$cleanServiceTag',
+          'serviceTag': serviceTag,
+          'cleanServiceTag': cleanServiceTag,
+        };
+      }
+
+      // Count records and check structure
+      int recordCount = 0;
+      List<String> sampleFields = [];
+      
+      if (data is Map<Object?, Object?>) {
+        recordCount = data.length;
+        
+        // Get sample fields from first record
+        if (data.isNotEmpty) {
+          final firstRecord = data.values.first;
+          if (firstRecord is Map<Object?, Object?>) {
+            sampleFields = firstRecord.keys.map((k) => k.toString()).toList();
+          }
+        }
+      }
+
+      // Get a sample record to verify field mappings
+      final historyData = await getHistoryData();
+      Map<String, dynamic>? sampleRecord;
+      if (historyData.isNotEmpty) {
+        sampleRecord = historyData.first;
+      }
+
+      return {
+        'success': true,
+        'serviceTag': serviceTag,
+        'cleanServiceTag': cleanServiceTag,
+        'firebasePath': 'deviceEnergyData/$cleanServiceTag',
+        'recordCount': recordCount,
+        'sampleFields': sampleFields,
+        'sampleRecord': sampleRecord,
+        'totalHistoryRecords': historyData.length,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Exception occurred: $e',
+      };
+    }
   }
 }

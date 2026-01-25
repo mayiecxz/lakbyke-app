@@ -127,6 +127,61 @@ class TransactionService {
     }
   }
 
+  // Get detailed transactions for a specific period
+  // Returns all transactions that fall within the specified date range
+  Future<List<Map<String, dynamic>>> getDetailedTransactionsForPeriod({
+    required DateTime periodDate,
+    required String filterType,
+  }) async {
+    try {
+      final allTransactions = await getAllTransactions();
+      if (allTransactions.isEmpty) return [];
+
+      List<Map<String, dynamic>> periodTransactions = [];
+
+      for (final transaction in allTransactions) {
+        final transactionDate = transaction['timestamp'] as DateTime? ??
+            transaction['timeStamp'] as DateTime?;
+        if (transactionDate == null) continue;
+
+        bool isInPeriod = false;
+
+        switch (filterType) {
+          case 'daily':
+            // Same day
+            isInPeriod = transactionDate.year == periodDate.year &&
+                transactionDate.month == periodDate.month &&
+                transactionDate.day == periodDate.day;
+            break;
+          case 'weekly':
+            // Week starting from periodDate
+            final weekStart = DateTime(periodDate.year, periodDate.month, periodDate.day);
+            final weekEnd = weekStart.add(const Duration(days: 6));
+            isInPeriod = transactionDate.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+                transactionDate.isBefore(weekEnd.add(const Duration(days: 1)));
+            break;
+          case 'monthly':
+            // Same month and year
+            isInPeriod = transactionDate.year == periodDate.year &&
+                transactionDate.month == periodDate.month;
+            break;
+          case 'yearly':
+            // Same year
+            isInPeriod = transactionDate.year == periodDate.year;
+            break;
+        }
+
+        if (isInPeriod) {
+          periodTransactions.add(transaction);
+        }
+      }
+
+      return periodTransactions;
+    } catch (e) {
+      return [];
+    }
+  }
+
   // Get aggregated data by filter type (daily, weekly, monthly, yearly)
   Future<List<Map<String, dynamic>>> getAggregatedData(String filterType) async {
     try {
