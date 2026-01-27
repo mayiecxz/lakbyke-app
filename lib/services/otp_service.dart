@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lakbyke_mobile/services/email_service.dart';
 
 /// Service for handling OTP generation, storage, and verification
 /// 
@@ -12,6 +13,7 @@ class OTPService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Random _random = Random();
+  final EmailService _emailService = EmailService();
 
   // OTP expiration time in minutes
   static const int _otpExpirationMinutes = 10;
@@ -73,16 +75,31 @@ class OTPService {
       final otpPath = 'otpCodes/$userId/$purpose';
       await _database.child(otpPath).set(otpData);
 
-      // TODO: Send OTP via email using backend service or Cloud Function
-      // For now, we'll return the OTP code (in production, remove this)
-      // In production, implement email sending:
-      // - Call Cloud Function: sendOTPEmail(email: email, code: otpCode, purpose: purpose)
-      // - Or call backend API endpoint
+      // Send OTP via email
+      final emailResult = await _emailService.sendOTPEmail(
+        email: email,
+        otpCode: otpCode,
+        purpose: purpose,
+        newEmail: newEmail,
+      );
 
+      // If email sending fails, return an error and DO NOT expose the OTP
+      if (emailResult['success'] != true) {
+        final error = emailResult['error'] ??
+            'Failed to send OTP email. Please check your email service configuration.';
+
+        print('❌ Failed to send OTP email: $error');
+
+        return {
+          'success': false,
+          'error': error,
+        };
+      }
+
+      // Email sent successfully
       return {
         'success': true,
-        'otpCode': otpCode, // Remove this in production - only for testing
-        'message': 'OTP code generated and stored',
+        'message': emailResult['message'] ?? 'OTP code sent to your email',
       };
     } catch (e) {
       return {

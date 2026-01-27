@@ -92,41 +92,71 @@ class _SignupScreenState extends State<SignupScreen> {
       });
 
       // 5. SEND EMAIL VERIFICATION
+      bool emailSent = false;
+      String? emailError;
       if (!user.emailVerified) {
-        await user.sendEmailVerification();
+        try {
+          await user.sendEmailVerification();
+          emailSent = true;
+          // Wait a moment to ensure email is queued
+          await Future.delayed(const Duration(seconds: 1));
+        } catch (e) {
+          emailError = 'Failed to send verification email: ${e.toString()}';
+          emailSent = false;
+        }
       }
 
-      // 6. SIGN OUT (Prevent auto-login until verified)
-      await FirebaseAuth.instance.signOut();
-
-      // 7. Hide Loading
+      // 6. Hide Loading
       if (mounted) Navigator.pop(context);
 
-      // 8. Show Success Dialog & Navigate to Login
+      // 7. Show Success Dialog (user still signed in for resend functionality)
       if (mounted) {
-        showDialog(
+        final userEmail = _emailController.text.trim();
+        await showDialog(
           context: context,
           barrierDismissible: false, // User must click button
           builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text("Verify your email"),
-              content: Text(
-                  "Account created successfully!\n\n"
-                  "We have sent a verification link to:\n"
-                  "${_emailController.text.trim()}\n\n"
-                  "Please check your email and click the link to verify your account before logging in."
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    // Close the dialog
-                    Navigator.of(context).pop();
-                    // Navigate back to Login Screen
-                    Navigator.of(context).pop(); 
-                  },
-                  child: const Text("OK, I'll check it"),
-                ),
-              ],
+            return _EmailVerificationDialog(
+              email: userEmail,
+              emailSent: emailSent,
+              emailError: emailError,
+              onResend: () async {
+                // Resend email verification (user is still signed in)
+                try {
+                  final currentUser = FirebaseAuth.instance.currentUser;
+                  if (currentUser != null && !currentUser.emailVerified) {
+                    await currentUser.sendEmailVerification();
+                    
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Verification email resent successfully! Please check your inbox.'),
+                          backgroundColor: Colors.green,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to resend email: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              },
+              onClose: () async {
+                // Sign out when closing dialog (prevent auto-login until verified)
+                await FirebaseAuth.instance.signOut();
+                // Close the dialog
+                if (context.mounted) Navigator.of(context).pop();
+                // Navigate back to Login Screen
+                if (context.mounted) Navigator.of(context).pop();
+              },
             );
           },
         );
@@ -519,6 +549,148 @@ class _SignupScreenState extends State<SignupScreen> {
           onPressed: onVisibilityToggle,
         ),
       ),
+    );
+  }
+}
+
+// Email Verification Dialog Widget
+class _EmailVerificationDialog extends StatelessWidget {
+  final String email;
+  final bool emailSent;
+  final String? emailError;
+  final VoidCallback onResend;
+  final VoidCallback onClose;
+
+  const _EmailVerificationDialog({
+    required this.email,
+    required this.emailSent,
+    this.emailError,
+    required this.onResend,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(
+            emailSent ? Icons.mark_email_read : Icons.error_outline,
+            color: emailSent ? Colors.green : Colors.orange,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text("Verify your email"),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (emailSent) ...[
+              const Text(
+                "Account created successfully!",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "We have sent a verification link to:",
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                email,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Please check your email and click the link to verify your account before logging in.",
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "If you don't see the email, check your spam/junk folder.",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const Text(
+                "Account created successfully!",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "However, there was an issue sending the verification email:",
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Text(
+                  emailError ?? 'Unknown error',
+                  style: TextStyle(
+                    color: Colors.red[900],
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Please try clicking 'Resend Email' below.",
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: onResend,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.refresh, size: 18),
+              const SizedBox(width: 4),
+              const Text("Resend Email"),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: onClose,
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+          ),
+          child: const Text("OK, I'll check it"),
+        ),
+      ],
     );
   }
 }

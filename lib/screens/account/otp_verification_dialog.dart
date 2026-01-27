@@ -55,6 +55,8 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
   }
 
   Future<void> _sendOTP() async {
+    if (!mounted) return;
+    
     setState(() {
       _isSending = true;
       _errorMessage = null;
@@ -74,35 +76,37 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
         result = await _userService.sendPasswordChangeOTP();
       }
 
-      if (mounted) {
-        setState(() {
-          _isSending = false;
-        });
+      if (!mounted) return;
 
-        if (!result['success']) {
+      setState(() {
+        _isSending = false;
+      });
+
+      if (!result['success']) {
+        if (mounted) {
           setState(() {
-            _errorMessage = result['error'] ?? 'Failed to send OTP. Please try again.';
+            _errorMessage =
+                result['error'] ?? 'Failed to send OTP. Please try again.';
           });
-        } else {
-          // Show OTP code in development (remove in production)
-          // In production, the OTP will be sent via email through backend/Cloud Function
-          if (result['otpCode'] != null) {
-            // For development/testing only - remove in production
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('OTP Code (dev only): ${result['otpCode']}'),
-                duration: const Duration(seconds: 5),
-                backgroundColor: Colors.blue,
-              ),
-            );
-          }
+        }
+      } else {
+        // OTP sent successfully via email
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  result['message'] ?? 'OTP code sent to your email. Please check your inbox.'),
+              duration: const Duration(seconds: 4),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSending = false;
-          _errorMessage = 'Failed to send OTP: $e';
+          _errorMessage = 'Failed to send OTP: ${e.toString()}';
         });
       }
     }
@@ -144,25 +148,29 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
 
       if (result['success']) {
         _startResendCountdown();
-        // Show OTP code in development (remove in production)
-        if (result['otpCode'] != null) {
+        if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('OTP Code (dev only): ${result['otpCode']}'),
-              duration: const Duration(seconds: 5),
-              backgroundColor: Colors.blue,
+              content: Text(result['message'] ??
+                  'OTP code resent to your email. Please check your inbox.'),
+              duration: const Duration(seconds: 4),
+              backgroundColor: Colors.green,
             ),
           );
         }
       } else {
-        setState(() {
-          _errorMessage = result['error'] ?? 'Failed to resend OTP. Please try again.';
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = result['error'] ?? 'Failed to resend OTP. Please try again.';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to resend OTP: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to resend OTP: ${e.toString()}';
+        });
+      }
     }
 
     if (mounted) {
@@ -242,12 +250,18 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             // Title
             const Text(
               'Verify Your Identity',
@@ -260,25 +274,54 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
             const SizedBox(height: AppDimensions.paddingMedium),
 
             // Instructions
-            Text(
-              widget.purpose == OTPPurpose.changeEmail
-                  ? 'We\'ve sent a 6-digit OTP code to ${widget.email}. Please check your email and enter the code below to verify your identity.'
-                  : 'We\'ve sent a 6-digit OTP code to ${widget.email}. Please check your email and enter the code below to verify your identity before changing your password.',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.purpose == OTPPurpose.changeEmail
+                      ? 'We\'ve sent a 6-digit OTP code to ${widget.email}. Please check your email and enter the code below to verify your identity.'
+                      : 'We\'ve sent a 6-digit OTP code to ${widget.email}. Please check your email and enter the code below to verify your identity before changing your password.',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.email_outlined, color: Colors.blue[700], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Please check your email inbox (and spam folder) for the OTP code.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[900],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppDimensions.paddingLarge),
+            const SizedBox(height: AppDimensions.paddingMedium),
 
             // OTP Input Fields
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(
                 6,
                 (index) => SizedBox(
-                  width: 45,
-                  height: 55,
+                  width: 40,
+                  height: 50,
                   child: TextField(
                     controller: _otpControllers[index],
                     focusNode: _focusNodes[index],
@@ -350,7 +393,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
               ),
             ],
 
-            const SizedBox(height: AppDimensions.paddingLarge),
+            const SizedBox(height: AppDimensions.paddingMedium),
 
             // Resend OTP
             Center(
@@ -417,7 +460,9 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
                   child: CircularProgressIndicator(),
                 ),
               ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
