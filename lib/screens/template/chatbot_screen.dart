@@ -45,6 +45,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   // Total generated and redeemed values
   double _totalGenerated = 0.0;
   double _totalRedeemed = 0.0;
+  int? _batteryPercentage; // Nullable to indicate no data available
   bool _isLoadingStats = true;
 
   // TODO: Replace with valid API Key
@@ -65,23 +66,41 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     _loadStats();
   }
   
-  // Load total generated and redeemed from home service
+  // Load total generated, redeemed, and battery percentage from home service
   Future<void> _loadStats() async {
     try {
       final homeData = await _homeService.getHomeData();
+      if (!mounted) return;
+      
       if (homeData != null) {
         setState(() {
           _totalGenerated = (homeData['totalGenerated'] as num?)?.toDouble() ?? 0.0;
           _totalRedeemed = (homeData['totalRedeems'] as num?)?.toDouble() ?? 0.0;
+          
+          // Get battery percentage from mountBatteryPercentage
+          // Only set if it exists, otherwise leave as null to indicate no data
+          final batteryLevel = homeData['mountBatteryPercentage'];
+          if (batteryLevel != null) {
+            _batteryPercentage = batteryLevel is int 
+                ? batteryLevel 
+                : (batteryLevel as num).toInt().clamp(0, 100);
+          } else {
+            _batteryPercentage = null; // No battery data available
+          }
+          
           _isLoadingStats = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
+          _batteryPercentage = null; // No battery data available
           _isLoadingStats = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
+        _batteryPercentage = null; // No battery data available
         _isLoadingStats = false;
       });
     }
@@ -111,6 +130,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   // Load chat history from Firebase
   Future<void> _loadChatHistory() async {
     final history = await _chatbotService.loadChatHistory();
+    if (!mounted) return;
     
     if (history.isEmpty) {
       // If no history, add welcome message
@@ -124,6 +144,8 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   }
 
   void _addMessage(String text, bool isUser) {
+    if (!mounted) return;
+    
     // Clean text for bot messages only (preserve user input as-is)
     final cleanedText = isUser ? text : _cleanText(text);
     
@@ -139,6 +161,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     
     // Auto-scroll to bottom when new message is added
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -154,14 +177,16 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
 
   Future<void> _sendMessage() async {
     final userText = _controller.text.trim();
-    if (userText.isEmpty) return;
+    if (userText.isEmpty || !mounted) return;
 
     _controller.clear();
     _addMessage(userText, true);
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       // 1. Get current real-time data
+      if (!mounted) return;
       final bikeData = Provider.of<BikeData>(context, listen: false);
 
       // 2. Get context data (home data) if available
@@ -171,6 +196,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
       } catch (e) {
         // Continue without context data
       }
+      if (!mounted) return;
 
       // 3. Prepare conversation history (last 5 messages)
       final conversationHistory = _messages
@@ -191,14 +217,18 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
       // 5. Send to AI
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
+      if (!mounted) return;
 
       // 6. Display result (text cleaning is handled in _addMessage for bot messages)
       _addMessage(response.text ?? "I couldn't read the sensors right now.", false);
 
     } catch (e) {
+      if (!mounted) return;
       _addMessage("Error: Check your API Key or internet connection.", false);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -282,7 +312,13 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat("Battery", "${bikeData.batteryLevel}%", Icons.battery_charging_full),
+                _buildStat(
+                  "Battery", 
+                  _isLoadingStats 
+                      ? "..." 
+                      : (_batteryPercentage != null ? "${_batteryPercentage}%" : "N/A"), 
+                  Icons.battery_charging_full
+                ),
                 _buildStat(
                   "Total Generated", 
                   _isLoadingStats ? "..." : formatEnergy(_totalGenerated), 

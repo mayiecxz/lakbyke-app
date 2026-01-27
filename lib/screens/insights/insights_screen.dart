@@ -60,16 +60,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           _buildCurrentActivityCard(),
                           const SizedBox(height: 16),
                           
-                          // Frequency Selector
-                          _buildFrequencySelector(),
-                          const SizedBox(height: 16),
-                          
                           // Monthly Projection Card
                           _buildProjectionCard(),
                           const SizedBox(height: 16),
                           
-                          // Comparison Chart
-                          _buildComparisonChart(),
+                          // Battery Pictograph Chart
+                          _buildBatteryPictograph(),
                           const SizedBox(height: 16),
                           
                           // Tips and Motivation
@@ -320,77 +316,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildFrequencySelector() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.tune, color: const Color(0xFF317263)),
-                const SizedBox(width: 8),
-                const Text(
-                  'Adjust Your Frequency',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF317263),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Sessions per week: ${_insightsModel.sessionsPerWeek}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Slider(
-              value: _insightsModel.sessionsPerWeek.toDouble(),
-              min: 1,
-              max: 7,
-              divisions: 6,
-              label: '${_insightsModel.sessionsPerWeek} sessions/week',
-              activeColor: const Color(0xFF317263),
-              onChanged: (value) {
-                setState(() {
-                  _insightsModel.sessionsPerWeek = value.round();
-                  _insightsModel.calculateProjections();
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '1x/week',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                Text(
-                  'Daily',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildProjectionCard() {
     final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
     final increasePercent = _insightsModel.currentMonthlyProjection > 0
         ? (increase / _insightsModel.currentMonthlyProjection * 100)
         : 0.0;
+    
+    final hasNoData = _insightsModel.totalSessions == 0;
 
     return Card(
       elevation: 2,
@@ -419,6 +352,32 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 color: Colors.white,
               ),
             ),
+            if (hasNoData) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.white.withOpacity(0.9), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Complete your first session to see earnings projections based on your activity.',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -548,232 +507,97 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  /// Get the chart title based on the selected filter
-  String _getChartTitle() {
-    switch (_insightsModel.analyticsFilter) {
-      case 'past week':
-        return 'Earnings for the Past Week';
-      case 'past month':
-        return 'Earnings for the Past Month';
-      case 'past year':
-        return 'Earnings for the Past Year';
-      case 'all time':
-        return 'All Time Earnings';
-      default:
-        return 'Earnings Analytics';
+  // Calculate earnings for different periods
+  double _calculateWeeklyEarnings() {
+    final now = DateTime.now();
+    final oneWeekAgo = now.subtract(const Duration(days: 7));
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      if (timestamp != null && timestamp.isAfter(oneWeekAgo)) {
+        final amount = transaction['payout'] as double? ??
+            transaction['amount'] as double? ??
+            0.0;
+        total += amount;
+      }
     }
+    return total;
   }
 
-  Widget _buildComparisonChart() {
-    final analyticsData = _insightsModel.getAnalyticsData();
+  double _calculateMonthlyEarnings() {
+    final now = DateTime.now();
+    final oneMonthAgo = now.subtract(const Duration(days: 30));
+    double total = 0.0;
     
-    // Check if we have any data points at all
-    if (analyticsData.isEmpty) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics, color: const Color(0xFF317263)),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Earnings Analytics',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Dynamic title based on filter
-              Text(
-                _getChartTitle(),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF317263),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 250,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.bar_chart,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No data available',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+    for (final transaction in _insightsModel.recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      if (timestamp != null && timestamp.isAfter(oneMonthAgo)) {
+        final amount = transaction['payout'] as double? ??
+            transaction['amount'] as double? ??
+            0.0;
+        total += amount;
+      }
     }
+    return total;
+  }
 
-    // Check if there's actual data (non-zero amounts) for the selected period
-    final hasData = _insightsModel.hasDataForCurrentPeriod();
-    if (!hasData) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics, color: const Color(0xFF317263)),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Earnings Analytics',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Dynamic title based on filter
-              Text(
-                _getChartTitle(),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF317263),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Filter chips
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: ['past week', 'past month', 'past year', 'all time'].map((filter) {
-                  final selected = _insightsModel.analyticsFilter == filter;
-                  String displayLabel;
-                  switch (filter) {
-                    case 'past week':
-                      displayLabel = 'Week';
-                      break;
-                    case 'past month':
-                      displayLabel = 'Month';
-                      break;
-                    case 'past year':
-                      displayLabel = 'Year';
-                      break;
-                    case 'all time':
-                      displayLabel = 'All Time';
-                      break;
-                    default:
-                      displayLabel = filter;
-                  }
-                  
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: ChoiceChip(
-                      label: Text(
-                        displayLabel,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      selected: selected,
-                      onSelected: (_) {
-                        setState(() {
-                          _insightsModel.analyticsFilter = filter;
-                        });
-                      },
-                      selectedColor: const Color(0xFF317263),
-                      backgroundColor: Colors.grey[200],
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 250,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inbox_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _insightsModel.getNoDataMessage(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your earnings will appear here once you complete a session.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+  double _calculateYearlyEarnings() {
+    final now = DateTime.now();
+    final oneYearAgo = now.subtract(const Duration(days: 365));
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      if (timestamp != null && timestamp.isAfter(oneYearAgo)) {
+        final amount = transaction['payout'] as double? ??
+            transaction['amount'] as double? ??
+            0.0;
+        total += amount;
+      }
     }
+    return total;
+  }
 
-    // Calculate max and min values (handle case where all values might be 0)
-    final amounts = analyticsData.map((e) => e['amount'] as double).toList();
-    final maxValue = amounts.isNotEmpty ? amounts.reduce((a, b) => a > b ? a : b) : 1.0;
-    final minValue = amounts.isNotEmpty ? amounts.reduce((a, b) => a < b ? a : b) : 0.0;
-    final chartHeight = 250.0;
-    final leftPadding = 50.0; // Space for Y-axis labels
-    final bottomPadding = 40.0; // Space for X-axis labels
-    final topPadding = 20.0;
-    final rightPadding = 20.0;
+  double _calculateAllTimeEarnings() {
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final amount = transaction['payout'] as double? ??
+          transaction['amount'] as double? ??
+          0.0;
+      total += amount;
+    }
+    return total;
+  }
 
-    // Calculate nice rounded Y-axis values (industry standard)
-    final range = maxValue - minValue;
-    final niceRange = InsightsModel.niceNumber(range, true);
-    final niceMin = (minValue / niceRange).floor() * niceRange;
-    final niceMax = (maxValue / niceRange).ceil() * niceRange;
-    final niceStep = InsightsModel.niceNumber((niceMax - niceMin) / 5, false);
-    final yAxisSteps = ((niceMax - niceMin) / niceStep).ceil();
-    final actualMax = niceMin + (yAxisSteps * niceStep);
+  Widget _buildBatteryPictograph() {
+    final weeklyEarnings = _calculateWeeklyEarnings();
+    final monthlyEarnings = _calculateMonthlyEarnings();
+    final yearlyEarnings = _calculateYearlyEarnings();
+    final allTimeEarnings = _calculateAllTimeEarnings();
+    
+    // Calculate projected earnings if cycling consistently
+    // Use average earnings per session to project potential earnings
+    final avgPerSession = _insightsModel.averageEarningsPerSession;
+    
+    // Project based on current activity patterns
+    // Weekly: if cycling daily (7 sessions)
+    final projectedWeekly = avgPerSession > 0 ? avgPerSession * 7 : 0.0;
+    
+    // Monthly: if cycling daily for a month (30 sessions)
+    final projectedMonthly = avgPerSession > 0 ? avgPerSession * 30 : 0.0;
+    
+    // Yearly: if cycling daily for a year (365 sessions)
+    final projectedYearly = avgPerSession > 0 ? avgPerSession * 365 : 0.0;
+    
+    // All time: show current total + one year projection if cycling daily
+    final projectedAllTime = avgPerSession > 0 
+        ? allTimeEarnings + (avgPerSession * 365)
+        : allTimeEarnings;
 
     return Card(
       elevation: 2,
@@ -785,10 +609,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.analytics, color: const Color(0xFF317263)),
+                Icon(Icons.battery_charging_full, color: const Color(0xFF317263)),
                 const SizedBox(width: 8),
                 const Text(
-                  'Earnings Analytics',
+                  'Energy Earnings Pictograph',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -797,140 +621,66 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Dynamic title based on filter
-            Text(
-              _getChartTitle(),
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF317263),
+            const SizedBox(height: 8),
+            const Text(
+              'How much you can earn if cycling',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             // Filter chips
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: ['past week', 'past month', 'past year', 'all time'].map((filter) {
-                final selected = _insightsModel.analyticsFilter == filter;
-                String displayLabel;
-                switch (filter) {
-                  case 'past week':
-                    displayLabel = 'Week';
-                    break;
-                  case 'past month':
-                    displayLabel = 'Month';
-                    break;
-                  case 'past year':
-                    displayLabel = 'Year';
-                    break;
-                  case 'all time':
-                    displayLabel = 'All Time';
-                    break;
-                  default:
-                    displayLabel = filter;
-                }
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                {'key': 'weekly', 'label': 'Week', 'filter': 'past week'},
+                {'key': 'monthly', 'label': 'Month', 'filter': 'past month'},
+                {'key': 'yearly', 'label': 'Year', 'filter': 'past year'},
+                {'key': 'all time', 'label': 'All Time', 'filter': 'all time'},
+              ].map((period) {
+                final selected = _insightsModel.analyticsFilter == period['filter'];
                 
-                return Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: ChoiceChip(
-                    label: Text(
-                      displayLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        period['label']!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() {
+                          _insightsModel.analyticsFilter = period['filter'] as String;
+                        });
+                      },
+                      selectedColor: const Color(0xFF317263),
+                      backgroundColor: Colors.grey[200],
+                      labelStyle: TextStyle(
+                        color: selected ? Colors.white : Colors.black87,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     ),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        _insightsModel.analyticsFilter = filter;
-                      });
-                    },
-                    selectedColor: const Color(0xFF317263),
-                    backgroundColor: Colors.grey[200],
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
-            // Proper line graph with axes
-            SizedBox(
-              height: chartHeight,
-              child: Stack(
-                children: [
-                  // Y-axis labels (vertical axis on the left)
-                  Positioned(
-                    left: 0,
-                    top: topPadding,
-                    bottom: bottomPadding,
-                    width: leftPadding - 10,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: List.generate(yAxisSteps + 1, (index) {
-                        final value = actualMax - (index * niceStep);
-                        return Text(
-                          '₱${value.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.right,
-                        );
-                      }).reversed.toList(),
-                    ),
-                  ),
-                  // Chart area with proper line graph
-                  Positioned(
-                    left: leftPadding,
-                    right: rightPadding,
-                    top: topPadding,
-                    bottom: bottomPadding,
-                    child: CustomPaint(
-                      painter: ProfessionalLineChartPainter(
-                        data: analyticsData.map((e) => e['amount'] as double).toList(),
-                        minValue: niceMin,
-                        maxValue: actualMax,
-                        color: const Color(0xFF317263),
-                      ),
-                    ),
-                  ),
-                  // X-axis labels (horizontal axis at the bottom)
-                  Positioned(
-                    left: leftPadding,
-                    right: rightPadding,
-                    bottom: 0,
-                    height: bottomPadding,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: analyticsData.asMap().entries.map((entry) {
-                        final item = entry.value;
-                        final label = item['label'] as String;
-                        
-                        return Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 20),
+            // Pictograph display
+            _buildPictographSection(
+              period: _insightsModel.analyticsFilter,
+              weeklyEarnings: weeklyEarnings,
+              monthlyEarnings: monthlyEarnings,
+              yearlyEarnings: yearlyEarnings,
+              allTimeEarnings: allTimeEarnings,
+              projectedWeekly: projectedWeekly,
+              projectedMonthly: projectedMonthly,
+              projectedYearly: projectedYearly,
+              projectedAllTime: projectedAllTime,
             ),
           ],
         ),
@@ -938,21 +688,236 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  Widget _buildPictographSection({
+    required String period,
+    required double weeklyEarnings,
+    required double monthlyEarnings,
+    required double yearlyEarnings,
+    required double allTimeEarnings,
+    required double projectedWeekly,
+    required double projectedMonthly,
+    required double projectedYearly,
+    required double projectedAllTime,
+  }) {
+    double earnings;
+    double projected;
+    String periodLabel;
+    
+    switch (period) {
+      case 'past week':
+        earnings = weeklyEarnings;
+        projected = projectedWeekly;
+        periodLabel = 'Weekly';
+        break;
+      case 'past month':
+        earnings = monthlyEarnings;
+        projected = projectedMonthly;
+        periodLabel = 'Monthly';
+        break;
+      case 'past year':
+        earnings = yearlyEarnings;
+        projected = projectedYearly;
+        periodLabel = 'Yearly';
+        break;
+      case 'all time':
+        earnings = allTimeEarnings;
+        projected = projectedAllTime;
+        periodLabel = 'All Time';
+        break;
+      default:
+        earnings = weeklyEarnings;
+        projected = projectedWeekly;
+        periodLabel = 'Weekly';
+    }
+
+    // Use projected earnings for the pictograph (how much they can earn if cycling)
+    final displayEarnings = projected > 0 ? projected : earnings;
+    
+    // Each battery represents ₱50
+    const double batteryValue = 50.0;
+    final numBatteries = (displayEarnings / batteryValue).ceil();
+    final maxBatteriesToShow = 20; // Limit display to prevent overflow
+    final batteriesToShow = numBatteries > maxBatteriesToShow ? maxBatteriesToShow : numBatteries;
+    final hasMore = numBatteries > maxBatteriesToShow;
+
+    if (displayEarnings == 0 && _insightsModel.totalSessions == 0) {
+      return Container(
+        height: 200,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.battery_charging_full,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No earnings data yet',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start cycling to see your potential earnings!',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Earnings summary
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF317263).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$periodLabel Earnings',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₱${displayEarnings.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF317263),
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Batteries',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    hasMore ? '$maxBatteriesToShow+' : '$numBatteries',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF317263),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Battery pictograph
+        Container(
+          height: 200,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Wrap(
+              direction: Axis.horizontal,
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(batteriesToShow, (index) {
+                return Container(
+                  width: 40,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF317263),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFF317263).withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.battery_charging_full,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+        if (hasMore) ...[
+          const SizedBox(height: 8),
+          Text(
+            '+ ${numBatteries - maxBatteriesToShow} more batteries (₱${((numBatteries - maxBatteriesToShow) * batteryValue).toStringAsFixed(2)})',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        Text(
+          'Each battery = ₱${batteryValue.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[500],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+
 
   Widget _buildMotivationCard() {
-    final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
+    final monthlyEarnings = _calculateMonthlyEarnings();
+    final yearlyEarnings = _calculateYearlyEarnings();
     String motivationText = '';
     String tipText = '';
 
-    if (increase > 0) {
-      motivationText = 'By increasing to ${_insightsModel.sessionsPerWeek} sessions per week, you could earn an additional ₱${increase.toStringAsFixed(2)} per month!';
-      tipText = '💡 Tip: Consistency is key! Even small increases in frequency can lead to significant earnings over time.';
-    } else if (_insightsModel.totalSessions == 0) {
-      motivationText = 'Start your first session to begin earning! Every ride counts towards your monthly projection.';
-      tipText = '💡 Tip: Begin with 1-2 sessions per week and gradually increase as you build your routine.';
-    } else {
-      motivationText = 'Keep up the great work! Maintain your current activity level to reach your monthly goal.';
+    if (_insightsModel.totalSessions == 0) {
+      motivationText = 'Start your first session to begin earning! Every ride counts towards your potential earnings.';
+      tipText = '💡 Tip: Begin cycling regularly to see your earnings grow! Each session contributes to your total.';
+    } else if (yearlyEarnings > 0) {
+      final projectedYearly = _insightsModel.averageEarningsPerSession > 0 
+          ? _insightsModel.averageEarningsPerSession * 365 
+          : 0.0;
+      motivationText = 'Great progress! If you cycle daily, you could earn ₱${projectedYearly.toStringAsFixed(2)} per year!';
+      tipText = '💡 Tip: Consistency is key! Regular cycling sessions help maximize your earnings potential.';
+    } else if (monthlyEarnings > 0) {
+      motivationText = 'Keep up the great work! Your cycling activity is generating earnings.';
       tipText = '💡 Tip: Try to maintain a consistent schedule. Regular biking sessions help build momentum!';
+    } else {
+      motivationText = 'Keep cycling to see your earnings grow! Every session counts.';
+      tipText = '💡 Tip: Regular cycling sessions will help you maximize your energy generation and earnings!';
     }
 
     return Card(
@@ -1008,130 +973,3 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 }
 
-// Professional line chart painter with proper axes and grid lines
-class ProfessionalLineChartPainter extends CustomPainter {
-  final List<double> data;
-  final double minValue;
-  final double maxValue;
-  final Color color;
-
-  ProfessionalLineChartPainter({
-    required this.data,
-    required this.minValue,
-    required this.maxValue,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (data.isEmpty || maxValue <= minValue) return;
-
-    final chartWidth = size.width;
-    final chartHeight = size.height;
-    final valueRange = maxValue - minValue;
-    
-    // Draw horizontal grid lines (Y-axis grid)
-    final gridPaint = Paint()
-      ..color = Colors.grey[300]!
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-    
-    // Calculate number of grid lines (typically 4-6 for readability)
-    final numGridLines = 5;
-    for (int i = 0; i <= numGridLines; i++) {
-      final y = (chartHeight / numGridLines) * i;
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(chartWidth, y),
-        gridPaint,
-      );
-    }
-
-    // Draw vertical grid lines at data points (X-axis grid)
-    final stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0.0;
-    for (int i = 0; i < data.length; i++) {
-      final x = (i * stepX).toDouble();
-      canvas.drawLine(
-        Offset(x, 0.0),
-        Offset(x, chartHeight),
-        gridPaint,
-      );
-    }
-
-    // Draw axes (X and Y axis lines)
-    final axisPaint = Paint()
-      ..color = Colors.grey[600]!
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-    
-    // X-axis (bottom)
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(chartWidth, 0),
-      axisPaint,
-    );
-    
-    // Y-axis (left)
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(0, chartHeight),
-      axisPaint,
-    );
-
-    // Line paint for the data line
-    final linePaint = Paint()
-      ..color = color
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    // Point paint with outline
-    final pointPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    
-    final pointOutlinePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    // Calculate data points
-    final points = <Offset>[];
-    for (int i = 0; i < data.length; i++) {
-      final x = (i * stepX).toDouble();
-      // Normalize value to chart height (inverted Y-axis: 0 at bottom, max at top)
-      final normalizedValue = (data[i] - minValue) / valueRange;
-      final y = (chartHeight - (normalizedValue * chartHeight)).toDouble();
-      points.add(Offset(x, y));
-    }
-
-    // Draw the data line with smooth curve (optional: can use quadratic bezier for smoother curves)
-    if (points.length > 1) {
-      final path = Path();
-      path.moveTo(points[0].dx, points[0].dy);
-      
-      // Use straight lines (industry standard for time series)
-      for (int i = 1; i < points.length; i++) {
-        path.lineTo(points[i].dx, points[i].dy);
-      }
-      
-      canvas.drawPath(path, linePaint);
-    }
-
-    // Draw data points with white outline for better visibility
-    for (final point in points) {
-      // Draw white outline circle
-      canvas.drawCircle(point, 6.0, pointOutlinePaint);
-      // Draw colored point
-      canvas.drawCircle(point, 4.0, pointPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(ProfessionalLineChartPainter oldDelegate) {
-    return oldDelegate.data != data || 
-           oldDelegate.minValue != minValue ||
-           oldDelegate.maxValue != maxValue || 
-           oldDelegate.color != color;
-  }
-}

@@ -454,8 +454,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final double buttonWidth = (MediaQuery.of(context).size.width - 40 - 40 - 20) / 2;
 
     final totalGenerated = (_homeData?['totalGenerated'] as num?)?.toDouble() ?? 0.0;
-    final totalRedeems = _homeData?['totalRedeems'] ?? 0;
-    final batteriesExchanged = _homeData?['batteriesExchanged'] ?? 0;
+    final totalRedeems = (_homeData?['totalRedeems'] as num?)?.toDouble() ?? 0.0;
+    final batteriesExchanged = (_homeData?['batteriesExchanged'] as num?)?.toInt() ?? 0;
+    
+    // Check if user has no data at all
+    final hasNoData = !_isLoading && 
+                      totalGenerated == 0.0 && 
+                      totalRedeems == 0.0 && 
+                      batteriesExchanged == 0;
 
     return Container(
       padding: const EdgeInsets.all(20.0),
@@ -465,6 +471,32 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
+          // Show empty state message if no data
+          if (hasNoData) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white.withOpacity(0.8), size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'No data yet. Start biking to generate energy and earn rewards!',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          
           // Total Generated & Total Redeems Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -473,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _ActionButton(
                 icon: Icons.flash_on,
                 title: 'Total Generated',
-                value: _isLoading ? '...' : formatEnergy((totalGenerated as num).toDouble()),
+                value: _isLoading ? '...' : formatEnergy(totalGenerated),
                 color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
                 onViewHistory: () {
@@ -485,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _ActionButton(
                 icon: Icons.account_balance_wallet,
                 title: 'Total Redeems',
-                value: _isLoading ? '...' : '₱ ${(totalRedeems as num).toInt()}',
+                value: _isLoading ? '...' : '₱ ${totalRedeems.toInt()}',
                 color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
                 isCurrency: true,
@@ -503,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.battery_charging_full,
             title: _isLoading 
                 ? 'Loading...' 
-                : '${(batteriesExchanged as num).toInt()} Batteries Exchanged',
+                : '$batteriesExchanged Batteries Exchanged',
             value: '', // No value displayed below the title
             color: AppColors.homePrimary, // Dark Green
             width: double.infinity,
