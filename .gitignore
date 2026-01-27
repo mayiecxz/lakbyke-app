@@ -48,3 +48,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android/Gradle
+android/.gradle/
+android/.gradle/**
+*.lock
+.gradle/
+build/
+local.properties
