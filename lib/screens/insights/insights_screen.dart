@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-// import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/models/insights/insights_model.dart';
+import 'package:lakbyke_mobile/utils/colors.dart';
+import 'package:lakbyke_mobile/utils/dimensions.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -41,34 +43,35 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: const Header(),
-      // floatingActionButton: const ChatFAB(), // Hidden for now
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildLoadingState()
           : RefreshIndicator(
               onRefresh: _loadInsightsData,
+              color: AppColors.homePrimary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const ScreenTitle(title: 'INSIGHTS'),
                     Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimensions.paddingMedium,
+                        AppDimensions.paddingLarge,
+                        AppDimensions.paddingMedium,
+                        AppDimensions.paddingXLarge,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Current Activity Summary
                           _buildCurrentActivityCard(),
-                          const SizedBox(height: 16),
-                          
-                          // Monthly Projection Card
+                          const SizedBox(height: AppDimensions.paddingLarge),
                           _buildProjectionCard(),
-                          const SizedBox(height: 16),
-                          
-                          // Battery Pictograph Chart
+                          const SizedBox(height: AppDimensions.paddingLarge),
                           _buildBatteryPictograph(),
-                          const SizedBox(height: 16),
-                          
-                          // Tips and Motivation
+                          const SizedBox(height: AppDimensions.paddingLarge),
                           _buildMotivationCard(),
                         ],
                       ),
@@ -80,46 +83,83 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.homePrimary),
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingMedium),
+          Text(
+            'Loading your insights...',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCurrentActivityCard() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.analytics, color: const Color(0xFF317263)),
-                const SizedBox(width: 8),
-                const Text(
-                  'Your Activity Summary',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF317263),
-                  ),
-                ),
-              ],
+            Text(
+              'ACTIVITY SUMMARY',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                letterSpacing: 1.2,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppDimensions.paddingMedium),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Expanded(
                   child: _buildStatItem(
                     'Total Sessions',
                     '${_insightsModel.totalSessions}',
-                    Icons.directions_bike,
+                    Icons.directions_bike_rounded,
                   ),
+                ),
+                Container(
+                  width: 1,
+                  height: 44,
+                  color: AppColors.textTertiary.withValues(alpha: 0.35),
                 ),
                 Expanded(
                   child: _buildStatItem(
                     'Active Days',
                     '${_insightsModel.daysWithActivity}',
-                    Icons.calendar_today,
+                    Icons.calendar_today_rounded,
                   ),
+                ),
+                Container(
+                  width: 1,
+                  height: 44,
+                  color: AppColors.textTertiary.withValues(alpha: 0.35),
                 ),
                 Expanded(
                   child: _buildStatItemWithPeso(
@@ -130,22 +170,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
               ],
             ),
             if (_insightsModel.weeklyAverageEarnings > 0) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Weekly Average:',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                   ),
                   Text(
                     '₱${_insightsModel.weeklyAverageEarnings.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
+                      color: AppColors.homePrimary,
                     ),
                   ),
                 ],
@@ -155,104 +195,53 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Weekly Distance:',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                     ),
                     Text(
                       '${_insightsModel.weeklyAverageDistance.toStringAsFixed(1)} km',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF317263),
+                        color: AppColors.homePrimary,
                       ),
                     ),
                   ],
                 ),
               ],
             ] else if (_insightsModel.totalSessions == 0) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No activity recorded yet. Complete a session to start tracking your earnings!',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.orange[900],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
+              _buildInfoBanner(
+                icon: Icons.info_outline_rounded,
+                message: 'No activity recorded yet. Complete a session to start tracking your earnings!',
+                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
+                iconColor: AppColors.warning,
+                textColor: const Color(0xFFE65100),
               ),
             ] else if (!_insightsModel.hasActivityInPastWeek() && !_insightsModel.hasActivityInPastMonth()) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No activity in the past week or month. Start a new session to see recent earnings!',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.orange[900],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
+              _buildInfoBanner(
+                icon: Icons.info_outline_rounded,
+                message: 'No activity in the past week or month. Start a new session to see recent earnings!',
+                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
+                iconColor: AppColors.warning,
+                textColor: const Color(0xFFE65100),
               ),
             ] else if (!_insightsModel.hasActivityInPastWeek()) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No activity in the past week. Your weekly average will update once you complete a session.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blue[900],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
+              _buildInfoBanner(
+                icon: Icons.info_outline_rounded,
+                message: 'No activity in the past week. Your weekly average will update once you complete a session.',
+                backgroundColor: AppColors.info.withValues(alpha: 0.12),
+                iconColor: AppColors.info,
+                textColor: const Color(0xFF1565C0),
               ),
             ],
           ],
@@ -261,23 +250,66 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  Widget _buildInfoBanner({
+    required IconData icon,
+    required String message,
+    required Color backgroundColor,
+    required Color iconColor,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingMedium,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: iconColor.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor,
+                height: 1.4,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: const Color(0xFF317263), size: 24),
-        const SizedBox(height: 4),
+        Icon(icon, color: AppColors.homePrimary, size: 20),
+        const SizedBox(height: 6),
         Text(
           value,
           style: const TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w400,
           ),
           textAlign: TextAlign.center,
         ),
@@ -289,26 +321,23 @@ class _InsightsScreenState extends State<InsightsScreen> {
     return Column(
       children: [
         Text(
-          '₱',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF317263),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
           value,
           style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.homePrimary,
           ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
+        const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w400,
           ),
           textAlign: TextAlign.center,
         ),
@@ -325,52 +354,59 @@ class _InsightsScreenState extends State<InsightsScreen> {
     
     final hasNoData = _insightsModel.totalSessions == 0;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF317263),
-              const Color(0xFF317263).withOpacity(0.8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.homePrimary,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(
+          color: AppColors.homePrimary.withValues(alpha: 0.9),
+          width: 1,
         ),
-        padding: const EdgeInsets.all(20.0),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Monthly Earnings Projection',
+            Text(
+              'MONTHLY EARNINGS PROJECTION',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.85),
+                letterSpacing: 1.4,
               ),
             ),
             if (hasNoData) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppDimensions.paddingMedium),
               Container(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.paddingMedium,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8.0),
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.white.withOpacity(0.9), size: 18),
-                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Complete your first session to see earnings projections based on your activity.',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
@@ -378,46 +414,38 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Projected',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Text(
-                      '₱${_insightsModel.projectedMonthlyEarnings.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+                Text(
+                  '₱${_insightsModel.projectedMonthlyEarnings.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 if (increase > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.trending_up, color: Colors.white, size: 16),
+                        const Icon(Icons.trending_up_rounded, color: Colors.white, size: 14),
                         const SizedBox(width: 4),
                         Text(
                           '+${increasePercent.toStringAsFixed(1)}%',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -425,85 +453,59 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Divider(color: Colors.white30),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            Container(
+              height: 1,
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Based on current activity',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Text(
-                      '₱${_insightsModel.currentMonthlyProjection.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                _buildProjectionMetric(
+                  'Current activity',
+                  '₱${_insightsModel.currentMonthlyProjection.toStringAsFixed(2)}',
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text(
-                      'Energy Generated',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Text(
-                      '${(_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                _buildProjectionMetric(
+                  'Energy',
+                  '${(_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
                 ),
+                if (_insightsModel.projectedMonthlyDistance > 0)
+                  _buildProjectionMetric(
+                    'Distance',
+                    '${_insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
+                  ),
               ],
             ),
-            if (_insightsModel.projectedMonthlyDistance > 0) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Distance',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white70,
-                        ),
-                      ),
-                      Text(
-                        '${_insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProjectionMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white.withValues(alpha: 0.75),
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
@@ -599,77 +601,88 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ? allTimeEarnings + (avgPerSession * 365)
         : allTimeEarnings;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.battery_charging_full, color: const Color(0xFF317263)),
-                const SizedBox(width: 8),
-                const Text(
-                  'Energy Earnings Pictograph',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF317263),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'How much you can earn if cycling',
+            Text(
+              'ENERGY EARNINGS',
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                letterSpacing: 1.2,
               ),
             ),
-            const SizedBox(height: 16),
-            // Filter chips
+            const SizedBox(height: 4),
+            Text(
+              'Potential earnings if cycling regularly',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            // Underline-style tabs
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                {'key': 'weekly', 'label': 'Week', 'filter': 'past week'},
-                {'key': 'monthly', 'label': 'Month', 'filter': 'past month'},
-                {'key': 'yearly', 'label': 'Year', 'filter': 'past year'},
-                {'key': 'all time', 'label': 'All Time', 'filter': 'all time'},
-              ].map((period) {
-                final selected = _insightsModel.analyticsFilter == period['filter'];
-                
+                'past week',
+                'past month',
+                'past year',
+                'all time',
+              ].map((filter) {
+                final labels = {
+                  'past week': 'Week',
+                  'past month': 'Month',
+                  'past year': 'Year',
+                  'all time': 'All',
+                };
+                final selected = _insightsModel.analyticsFilter == filter;
                 return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ChoiceChip(
-                      label: Text(
-                        period['label']!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _insightsModel.analyticsFilter = filter;
+                      });
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            labels[filter]!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                              color: selected
+                                  ? AppColors.homePrimary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
                         ),
-                      ),
-                      selected: selected,
-                      onSelected: (_) {
-                        setState(() {
-                          _insightsModel.analyticsFilter = period['filter'] as String;
-                        });
-                      },
-                      selectedColor: const Color(0xFF317263),
-                      backgroundColor: Colors.grey[200],
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        Container(
+                          height: 2,
+                          color: selected ? AppColors.homePrimary : Colors.transparent,
+                        ),
+                      ],
                     ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppDimensions.paddingMedium),
             // Pictograph display
             _buildPictographSection(
               period: _insightsModel.analyticsFilter,
@@ -744,29 +757,38 @@ class _InsightsScreenState extends State<InsightsScreen> {
       return Container(
         height: 200,
         alignment: Alignment.center,
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDim,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: AppColors.textTertiary.withValues(alpha: 0.25),
+            width: 1,
+          ),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.battery_charging_full,
-              size: 64,
-              color: Colors.grey[400],
+              Icons.battery_charging_full_rounded,
+              size: 40,
+              color: AppColors.textTertiary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               'No earnings data yet',
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+                fontSize: 14,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
-              'Start cycling to see your potential earnings!',
+              'Complete a session to see potential earnings.',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: AppColors.textTertiary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -778,12 +800,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Earnings summary
+        // Earnings summary — table-like row
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: AppDimensions.paddingMedium,
+          ),
           decoration: BoxDecoration(
-            color: const Color(0xFF317263).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+            color: AppColors.surfaceDim,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: AppColors.textTertiary.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -792,19 +821,20 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$periodLabel Earnings',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                    '$periodLabel',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     '₱${displayEarnings.toStringAsFixed(2)}',
                     style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.homePrimary,
                     ),
                   ),
                 ],
@@ -812,20 +842,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'Batteries',
+                  const Text(
+                    'Units',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     hasMore ? '$maxBatteriesToShow+' : '$numBatteries',
                     style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.homePrimary,
                     ),
                   ),
                 ],
@@ -833,15 +864,18 @@ class _InsightsScreenState extends State<InsightsScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        // Battery pictograph
+        const SizedBox(height: AppDimensions.paddingMedium),
+        // Battery pictograph — flat blocks
         Container(
           height: 200,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppDimensions.paddingMedium),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+            color: AppColors.surfaceDim,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: AppColors.textTertiary.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -852,19 +886,15 @@ class _InsightsScreenState extends State<InsightsScreen> {
               children: List.generate(batteriesToShow, (index) {
                 return Container(
                   width: 40,
-                  height: 60,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF317263),
+                    color: AppColors.homePrimary,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: const Color(0xFF317263).withOpacity(0.3),
-                      width: 1,
-                    ),
                   ),
                   child: const Icon(
-                    Icons.battery_charging_full,
+                    Icons.battery_charging_full_rounded,
                     color: Colors.white,
-                    size: 28,
+                    size: 24,
                   ),
                 );
               }),
@@ -874,21 +904,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
         if (hasMore) ...[
           const SizedBox(height: 8),
           Text(
-            '+ ${numBatteries - maxBatteriesToShow} more batteries (₱${((numBatteries - maxBatteriesToShow) * batteryValue).toStringAsFixed(2)})',
+            '+ ${numBatteries - maxBatteriesToShow} more (₱${((numBatteries - maxBatteriesToShow) * batteryValue).toStringAsFixed(2)})',
             style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic,
+              fontSize: 11,
+              color: AppColors.textTertiary,
             ),
           ),
         ],
         const SizedBox(height: 8),
         Text(
-          'Each battery = ₱${batteryValue.toStringAsFixed(0)}',
+          '1 unit = ₱${batteryValue.toStringAsFixed(0)}',
           style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[500],
-            fontStyle: FontStyle.italic,
+            fontSize: 10,
+            color: AppColors.textTertiary,
           ),
         ),
       ],
@@ -920,23 +948,38 @@ class _InsightsScreenState extends State<InsightsScreen> {
       tipText = '💡 Tip: Regular cycling sessions will help you maximize your energy generation and earnings!';
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.lightbulb, color: Colors.amber[700]),
-                const SizedBox(width: 8),
-                const Text(
-                  'Motivation & Tips',
+                Container(
+                  width: 3,
+                  height: 16,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.homePrimary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'TIPS',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ],
@@ -945,24 +988,33 @@ class _InsightsScreenState extends State<InsightsScreen> {
             Text(
               motivationText,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 height: 1.5,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w400,
               ),
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.paddingMedium,
+                vertical: 10,
+              ),
               decoration: BoxDecoration(
-                color: Colors.amber[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber[200]!),
+                color: AppColors.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.25),
+                  width: 1,
+                ),
               ),
               child: Text(
                 tipText,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.amber[900],
-                  height: 1.4,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF5D4037),
+                  height: 1.45,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ),
