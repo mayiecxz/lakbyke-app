@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-// import 'package:lakbyke_mobile/screens/template/chat_fab.dart';
+import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/models/insights/insights_model.dart';
+import 'package:lakbyke_mobile/utils/colors.dart';
+import 'package:lakbyke_mobile/utils/dimensions.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -41,38 +43,35 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: const Header(),
-      // floatingActionButton: const ChatFAB(), // Hidden for now
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildLoadingState()
           : RefreshIndicator(
               onRefresh: _loadInsightsData,
+              color: AppColors.homePrimary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const ScreenTitle(title: 'INSIGHTS'),
                     Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimensions.paddingMedium,
+                        AppDimensions.paddingLarge,
+                        AppDimensions.paddingMedium,
+                        AppDimensions.paddingXLarge,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Current Activity Summary
                           _buildCurrentActivityCard(),
-                          const SizedBox(height: 16),
-                          
-                          // Frequency Selector
-                          _buildFrequencySelector(),
-                          const SizedBox(height: 16),
-                          
-                          // Monthly Projection Card
+                          const SizedBox(height: AppDimensions.paddingLarge),
                           _buildProjectionCard(),
-                          const SizedBox(height: 16),
-                          
-                          // Comparison Chart
-                          _buildComparisonChart(),
-                          const SizedBox(height: 16),
-                          
-                          // Tips and Motivation
+                          const SizedBox(height: AppDimensions.paddingLarge),
+                          _buildBatteryPictograph(),
+                          const SizedBox(height: AppDimensions.paddingLarge),
                           _buildMotivationCard(),
                         ],
                       ),
@@ -84,46 +83,114 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+            decoration: BoxDecoration(
+              color: AppColors.homePrimary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.homePrimary),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingLarge),
+          Text(
+            'Loading your insights...',
+            style: TextStyle(
+              fontSize: 15,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCurrentActivityCard() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.analytics, color: const Color(0xFF317263)),
-                const SizedBox(width: 8),
-                const Text(
-                  'Your Activity Summary',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF317263),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.homePrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'ACTIVITY SUMMARY',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.homePrimary,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppDimensions.paddingLarge),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Expanded(
                   child: _buildStatItem(
                     'Total Sessions',
                     '${_insightsModel.totalSessions}',
-                    Icons.directions_bike,
+                    Icons.directions_bike_rounded,
                   ),
+                ),
+                Container(
+                  width: 1,
+                  height: 52,
+                  color: AppColors.textTertiary.withValues(alpha: 0.25),
                 ),
                 Expanded(
                   child: _buildStatItem(
                     'Active Days',
                     '${_insightsModel.daysWithActivity}',
-                    Icons.calendar_today,
+                    Icons.calendar_today_rounded,
                   ),
+                ),
+                Container(
+                  width: 1,
+                  height: 52,
+                  color: AppColors.textTertiary.withValues(alpha: 0.25),
                 ),
                 Expanded(
                   child: _buildStatItemWithPeso(
@@ -134,22 +201,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
               ],
             ),
             if (_insightsModel.weeklyAverageEarnings > 0) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Weekly Average:',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                   ),
                   Text(
                     '₱${_insightsModel.weeklyAverageEarnings.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
+                      color: AppColors.homePrimary,
                     ),
                   ),
                 ],
@@ -159,104 +226,53 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Weekly Distance:',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                     ),
                     Text(
                       '${_insightsModel.weeklyAverageDistance.toStringAsFixed(1)} km',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF317263),
+                        color: AppColors.homePrimary,
                       ),
                     ),
                   ],
                 ),
               ],
             ] else if (_insightsModel.totalSessions == 0) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No activity recorded yet. Complete a session to start tracking your earnings!',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.orange[900],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
+              _buildInfoBanner(
+                icon: Icons.info_outline_rounded,
+                message: 'No activity recorded yet. Complete a session to start tracking your earnings!',
+                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
+                iconColor: AppColors.warning,
+                textColor: const Color(0xFFE65100),
               ),
             ] else if (!_insightsModel.hasActivityInPastWeek() && !_insightsModel.hasActivityInPastMonth()) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No activity in the past week or month. Start a new session to see recent earnings!',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.orange[900],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
+              _buildInfoBanner(
+                icon: Icons.info_outline_rounded,
+                message: 'No activity in the past week or month. Start a new session to see recent earnings!',
+                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
+                iconColor: AppColors.warning,
+                textColor: const Color(0xFFE65100),
               ),
             ] else if (!_insightsModel.hasActivityInPastWeek()) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No activity in the past week. Your weekly average will update once you complete a session.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blue[900],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              const SizedBox(height: AppDimensions.paddingSmall),
+              _buildInfoBanner(
+                icon: Icons.info_outline_rounded,
+                message: 'No activity in the past week. Your weekly average will update once you complete a session.',
+                backgroundColor: AppColors.info.withValues(alpha: 0.12),
+                iconColor: AppColors.info,
+                textColor: const Color(0xFF1565C0),
               ),
             ],
           ],
@@ -265,23 +281,87 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  Widget _buildInfoBanner({
+    required IconData icon,
+    required String message,
+    required Color backgroundColor,
+    required Color iconColor,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingMedium,
+        vertical: 14,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(
+          color: iconColor.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                message,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textColor,
+                  height: 1.45,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: const Color(0xFF317263), size: 24),
-        const SizedBox(height: 4),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.homePrimary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.homePrimary, size: 22),
+        ),
+        const SizedBox(height: 10),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.3,
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+            fontSize: 11,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+            height: 1.2,
           ),
           textAlign: TextAlign.center,
         ),
@@ -292,27 +372,36 @@ class _InsightsScreenState extends State<InsightsScreen> {
   Widget _buildStatItemWithPeso(String label, String value) {
     return Column(
       children: [
-        Text(
-          '₱',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF317263),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.homePrimary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(Icons.paid_rounded, color: AppColors.homePrimary, size: 22),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 10),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.homePrimary,
+            letterSpacing: -0.2,
           ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+            fontSize: 11,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+            height: 1.2,
           ),
           textAlign: TextAlign.center,
         ),
@@ -320,145 +409,129 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildFrequencySelector() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.tune, color: const Color(0xFF317263)),
-                const SizedBox(width: 8),
-                const Text(
-                  'Adjust Your Frequency',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF317263),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Sessions per week: ${_insightsModel.sessionsPerWeek}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Slider(
-              value: _insightsModel.sessionsPerWeek.toDouble(),
-              min: 1,
-              max: 7,
-              divisions: 6,
-              label: '${_insightsModel.sessionsPerWeek} sessions/week',
-              activeColor: const Color(0xFF317263),
-              onChanged: (value) {
-                setState(() {
-                  _insightsModel.sessionsPerWeek = value.round();
-                  _insightsModel.calculateProjections();
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '1x/week',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                Text(
-                  'Daily',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildProjectionCard() {
     final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
     final increasePercent = _insightsModel.currentMonthlyProjection > 0
         ? (increase / _insightsModel.currentMonthlyProjection * 100)
         : 0.0;
+    
+    final hasNoData = _insightsModel.totalSessions == 0;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF317263),
-              const Color(0xFF317263).withOpacity(0.8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.homePrimary,
+            AppColors.homeAccent.withValues(alpha: 0.35),
+            AppColors.homePrimary,
+          ],
         ),
-        padding: const EdgeInsets.all(20.0),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.homePrimary.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Monthly Earnings Projection',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Icon(Icons.trending_up_rounded, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+                const SizedBox(width: 6),
+                Text(
+                  'MONTHLY EARNINGS PROJECTION',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            if (hasNoData) ...[
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.paddingMedium,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
                   children: [
-                    const Text(
-                      'Projected',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      size: 16,
                     ),
-                    Text(
-                      '₱${_insightsModel.projectedMonthlyEarnings.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Complete your first session to see earnings projections based on your activity.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '₱${_insightsModel.projectedMonthlyEarnings.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 if (increase > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.trending_up, color: Colors.white, size: 16),
-                        const SizedBox(width: 4),
+                        const Icon(Icons.trending_up_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
                         Text(
                           '+${increasePercent.toStringAsFixed(1)}%',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -466,467 +539,654 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Divider(color: Colors.white30),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            Container(
+              height: 1,
+              color: Colors.white.withValues(alpha: 0.25),
+            ),
+            const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Based on current activity',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Text(
-                      '₱${_insightsModel.currentMonthlyProjection.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                _buildProjectionMetric(
+                  'Current activity',
+                  '₱${_insightsModel.currentMonthlyProjection.toStringAsFixed(2)}',
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text(
-                      'Energy Generated',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Text(
-                      '${(_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                _buildProjectionMetric(
+                  'Energy',
+                  '${(_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
                 ),
+                if (_insightsModel.projectedMonthlyDistance > 0)
+                  _buildProjectionMetric(
+                    'Distance',
+                    '${_insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
+                  ),
               ],
             ),
-            if (_insightsModel.projectedMonthlyDistance > 0) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Distance',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white70,
-                        ),
-                      ),
-                      Text(
-                        '${_insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  /// Get the chart title based on the selected filter
-  String _getChartTitle() {
-    switch (_insightsModel.analyticsFilter) {
-      case 'past week':
-        return 'Earnings for the Past Week';
-      case 'past month':
-        return 'Earnings for the Past Month';
-      case 'past year':
-        return 'Earnings for the Past Year';
-      case 'all time':
-        return 'All Time Earnings';
-      default:
-        return 'Earnings Analytics';
-    }
-  }
-
-  Widget _buildComparisonChart() {
-    final analyticsData = _insightsModel.getAnalyticsData();
-    
-    // Check if we have any data points at all
-    if (analyticsData.isEmpty) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics, color: const Color(0xFF317263)),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Earnings Analytics',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Dynamic title based on filter
-              Text(
-                _getChartTitle(),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF317263),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 250,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.bar_chart,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No data available',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+  Widget _buildProjectionMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white.withValues(alpha: 0.75),
+            fontWeight: FontWeight.w400,
           ),
         ),
-      );
-    }
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
 
-    // Check if there's actual data (non-zero amounts) for the selected period
-    final hasData = _insightsModel.hasDataForCurrentPeriod();
-    if (!hasData) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics, color: const Color(0xFF317263)),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Earnings Analytics',
+  // Calculate earnings for different periods
+  double _calculateWeeklyEarnings() {
+    final now = DateTime.now();
+    final oneWeekAgo = now.subtract(const Duration(days: 7));
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      if (timestamp != null && timestamp.isAfter(oneWeekAgo)) {
+        final amount = transaction['payout'] as double? ??
+            transaction['amount'] as double? ??
+            0.0;
+        total += amount;
+      }
+    }
+    return total;
+  }
+
+  double _calculateMonthlyEarnings() {
+    final now = DateTime.now();
+    final oneMonthAgo = now.subtract(const Duration(days: 30));
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      if (timestamp != null && timestamp.isAfter(oneMonthAgo)) {
+        final amount = transaction['payout'] as double? ??
+            transaction['amount'] as double? ??
+            0.0;
+        total += amount;
+      }
+    }
+    return total;
+  }
+
+  double _calculateYearlyEarnings() {
+    final now = DateTime.now();
+    final oneYearAgo = now.subtract(const Duration(days: 365));
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final timestamp = transaction['timestamp'] as DateTime? ??
+          transaction['timeStamp'] as DateTime?;
+      if (timestamp != null && timestamp.isAfter(oneYearAgo)) {
+        final amount = transaction['payout'] as double? ??
+            transaction['amount'] as double? ??
+            0.0;
+        total += amount;
+      }
+    }
+    return total;
+  }
+
+  double _calculateAllTimeEarnings() {
+    double total = 0.0;
+    
+    for (final transaction in _insightsModel.recentTransactions) {
+      final amount = transaction['payout'] as double? ??
+          transaction['amount'] as double? ??
+          0.0;
+      total += amount;
+    }
+    return total;
+  }
+
+  Widget _buildBatteryPictograph() {
+    final weeklyEarnings = _calculateWeeklyEarnings();
+    final monthlyEarnings = _calculateMonthlyEarnings();
+    final yearlyEarnings = _calculateYearlyEarnings();
+    final allTimeEarnings = _calculateAllTimeEarnings();
+    
+    // Calculate projected earnings if cycling consistently
+    // Use average earnings per session to project potential earnings
+    final avgPerSession = _insightsModel.averageEarningsPerSession;
+    
+    // Project based on current activity patterns
+    // Weekly: if cycling daily (7 sessions)
+    final projectedWeekly = avgPerSession > 0 ? avgPerSession * 7 : 0.0;
+    
+    // Monthly: if cycling daily for a month (30 sessions)
+    final projectedMonthly = avgPerSession > 0 ? avgPerSession * 30 : 0.0;
+    
+    // Yearly: if cycling daily for a year (365 sessions)
+    final projectedYearly = avgPerSession > 0 ? avgPerSession * 365 : 0.0;
+    
+    // All time: show current total + one year projection if cycling daily
+    final projectedAllTime = avgPerSession > 0 
+        ? allTimeEarnings + (avgPerSession * 365)
+        : allTimeEarnings;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.homePrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'ENERGY EARNINGS',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF317263),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.homePrimary,
+                      letterSpacing: 1.2,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Dynamic title based on filter
-              Text(
-                _getChartTitle(),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF317263),
                 ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Potential earnings if cycling regularly',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary,
+                fontWeight: FontWeight.w400,
+                height: 1.3,
               ),
-              const SizedBox(height: 12),
-              // Filter chips
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: ['past week', 'past month', 'past year', 'all time'].map((filter) {
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            // Underline-style tabs
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceDim.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: Row(
+                children: [
+                  'past week',
+                  'past month',
+                  'past year',
+                  'all time',
+                ].map((filter) {
+                  final labels = {
+                    'past week': 'Week',
+                    'past month': 'Month',
+                    'past year': 'Year',
+                    'all time': 'All',
+                  };
                   final selected = _insightsModel.analyticsFilter == filter;
-                  String displayLabel;
-                  switch (filter) {
-                    case 'past week':
-                      displayLabel = 'Week';
-                      break;
-                    case 'past month':
-                      displayLabel = 'Month';
-                      break;
-                    case 'past year':
-                      displayLabel = 'Year';
-                      break;
-                    case 'all time':
-                      displayLabel = 'All Time';
-                      break;
-                    default:
-                      displayLabel = filter;
-                  }
-                  
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: ChoiceChip(
-                      label: Text(
-                        displayLabel,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                  return Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _insightsModel.analyticsFilter = filter;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.surface : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: selected
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.textPrimary.withValues(alpha: 0.06),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Text(
+                            labels[filter]!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                              color: selected
+                                  ? AppColors.homePrimary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
                         ),
                       ),
-                      selected: selected,
-                      onSelected: (_) {
-                        setState(() {
-                          _insightsModel.analyticsFilter = filter;
-                        });
-                      },
-                      selectedColor: const Color(0xFF317263),
-                      backgroundColor: Colors.grey[200],
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
-              Container(
-                height: 250,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inbox_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _insightsModel.getNoDataMessage(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your earnings will appear here once you complete a session.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            // Pictograph display
+            _buildPictographSection(
+              period: _insightsModel.analyticsFilter,
+              weeklyEarnings: weeklyEarnings,
+              monthlyEarnings: monthlyEarnings,
+              yearlyEarnings: yearlyEarnings,
+              allTimeEarnings: allTimeEarnings,
+              projectedWeekly: projectedWeekly,
+              projectedMonthly: projectedMonthly,
+              projectedYearly: projectedYearly,
+              projectedAllTime: projectedAllTime,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPictographSection({
+    required String period,
+    required double weeklyEarnings,
+    required double monthlyEarnings,
+    required double yearlyEarnings,
+    required double allTimeEarnings,
+    required double projectedWeekly,
+    required double projectedMonthly,
+    required double projectedYearly,
+    required double projectedAllTime,
+  }) {
+    double earnings;
+    double projected;
+    String periodLabel;
+    
+    switch (period) {
+      case 'past week':
+        earnings = weeklyEarnings;
+        projected = projectedWeekly;
+        periodLabel = 'Weekly';
+        break;
+      case 'past month':
+        earnings = monthlyEarnings;
+        projected = projectedMonthly;
+        periodLabel = 'Monthly';
+        break;
+      case 'past year':
+        earnings = yearlyEarnings;
+        projected = projectedYearly;
+        periodLabel = 'Yearly';
+        break;
+      case 'all time':
+        earnings = allTimeEarnings;
+        projected = projectedAllTime;
+        periodLabel = 'All Time';
+        break;
+      default:
+        earnings = weeklyEarnings;
+        projected = projectedWeekly;
+        periodLabel = 'Weekly';
+    }
+
+    // Use projected earnings for the pictograph (how much they can earn if cycling)
+    final displayEarnings = projected > 0 ? projected : earnings;
+    
+    // Each battery represents ₱50
+    const double batteryValue = 50.0;
+    final numBatteries = (displayEarnings / batteryValue).ceil();
+    final maxBatteriesToShow = 20; // Limit display to prevent overflow
+    final batteriesToShow = numBatteries > maxBatteriesToShow ? maxBatteriesToShow : numBatteries;
+    final hasMore = numBatteries > maxBatteriesToShow;
+
+    if (displayEarnings == 0 && _insightsModel.totalSessions == 0) {
+      return Container(
+        height: 200,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDim,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+          border: Border.all(
+            color: AppColors.textTertiary.withValues(alpha: 0.2),
+            width: 1,
           ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.homePrimary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.battery_charging_full_rounded,
+                size: 36,
+                color: AppColors.homePrimary.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'No earnings data yet',
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Complete a session to see potential earnings.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary,
+                height: 1.3,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
     }
 
-    // Calculate max and min values (handle case where all values might be 0)
-    final amounts = analyticsData.map((e) => e['amount'] as double).toList();
-    final maxValue = amounts.isNotEmpty ? amounts.reduce((a, b) => a > b ? a : b) : 1.0;
-    final minValue = amounts.isNotEmpty ? amounts.reduce((a, b) => a < b ? a : b) : 0.0;
-    final chartHeight = 250.0;
-    final leftPadding = 50.0; // Space for Y-axis labels
-    final bottomPadding = 40.0; // Space for X-axis labels
-    final topPadding = 20.0;
-    final rightPadding = 20.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Earnings summary — table-like row
+        Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: AppDimensions.paddingMedium,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.homePrimary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+            border: Border.all(
+              color: AppColors.homePrimary.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$periodLabel',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '₱${displayEarnings.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.homePrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    'Units',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasMore ? '$maxBatteriesToShow+' : '$numBatteries',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.homePrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        // Battery pictograph — flat blocks
+        Container(
+          height: 200,
+          padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceDim,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+            border: Border.all(
+              color: AppColors.textTertiary.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Wrap(
+              direction: Axis.horizontal,
+              spacing: 10,
+              runSpacing: 10,
+              children: List.generate(batteriesToShow, (index) {
+                return Container(
+                  width: 42,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.homePrimary,
+                        AppColors.homePrimary.withValues(alpha: 0.85),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.homePrimary.withValues(alpha: 0.25),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.battery_charging_full_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+        if (hasMore) ...[
+          const SizedBox(height: 8),
+          Text(
+            '+ ${numBatteries - maxBatteriesToShow} more (₱${((numBatteries - maxBatteriesToShow) * batteryValue).toStringAsFixed(2)})',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        Text(
+          '1 unit = ₱${batteryValue.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: 10,
+            color: AppColors.textTertiary,
+          ),
+        ),
+      ],
+    );
+  }
 
-    // Calculate nice rounded Y-axis values (industry standard)
-    final range = maxValue - minValue;
-    final niceRange = InsightsModel.niceNumber(range, true);
-    final niceMin = (minValue / niceRange).floor() * niceRange;
-    final niceMax = (maxValue / niceRange).ceil() * niceRange;
-    final niceStep = InsightsModel.niceNumber((niceMax - niceMin) / 5, false);
-    final yAxisSteps = ((niceMax - niceMin) / niceStep).ceil();
-    final actualMax = niceMin + (yAxisSteps * niceStep);
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+  Widget _buildMotivationCard() {
+    final monthlyEarnings = _calculateMonthlyEarnings();
+    final yearlyEarnings = _calculateYearlyEarnings();
+    String motivationText = '';
+    String tipText = '';
+
+    if (_insightsModel.totalSessions == 0) {
+      motivationText = 'Start your first session to begin earning! Every ride counts towards your potential earnings.';
+      tipText = '💡 Tip: Begin cycling regularly to see your earnings grow! Each session contributes to your total.';
+    } else if (yearlyEarnings > 0) {
+      final projectedYearly = _insightsModel.averageEarningsPerSession > 0 
+          ? _insightsModel.averageEarningsPerSession * 365 
+          : 0.0;
+      motivationText = 'Great progress! If you cycle daily, you could earn ₱${projectedYearly.toStringAsFixed(2)} per year!';
+      tipText = '💡 Tip: Consistency is key! Regular cycling sessions help maximize your earnings potential.';
+    } else if (monthlyEarnings > 0) {
+      motivationText = 'Keep up the great work! Your cycling activity is generating earnings.';
+      tipText = '💡 Tip: Try to maintain a consistent schedule. Regular biking sessions help build momentum!';
+    } else {
+      motivationText = 'Keep cycling to see your earnings grow! Every session counts.';
+      tipText = '💡 Tip: Regular cycling sessions will help you maximize your energy generation and earnings!';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.analytics, color: const Color(0xFF317263)),
-                const SizedBox(width: 8),
-                const Text(
-                  'Earnings Analytics',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF317263),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.homePrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lightbulb_outline_rounded, size: 14, color: AppColors.homePrimary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'TIPS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.homePrimary,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Dynamic title based on filter
+            const SizedBox(height: 14),
             Text(
-              _getChartTitle(),
+              motivationText,
               style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF317263),
+                fontSize: 14,
+                height: 1.55,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 12),
-            // Filter chips
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: ['past week', 'past month', 'past year', 'all time'].map((filter) {
-                final selected = _insightsModel.analyticsFilter == filter;
-                String displayLabel;
-                switch (filter) {
-                  case 'past week':
-                    displayLabel = 'Week';
-                    break;
-                  case 'past month':
-                    displayLabel = 'Month';
-                    break;
-                  case 'past year':
-                    displayLabel = 'Year';
-                    break;
-                  case 'all time':
-                    displayLabel = 'All Time';
-                    break;
-                  default:
-                    displayLabel = filter;
-                }
-                
-                return Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: ChoiceChip(
-                    label: Text(
-                      displayLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        _insightsModel.analyticsFilter = filter;
-                      });
-                    },
-                    selectedColor: const Color(0xFF317263),
-                    backgroundColor: Colors.grey[200],
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            // Proper line graph with axes
-            SizedBox(
-              height: chartHeight,
-              child: Stack(
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.paddingMedium,
+                vertical: 14,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.homeAccent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                border: Border.all(
+                  color: AppColors.homePrimary.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Y-axis labels (vertical axis on the left)
-                  Positioned(
-                    left: 0,
-                    top: topPadding,
-                    bottom: bottomPadding,
-                    width: leftPadding - 10,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: List.generate(yAxisSteps + 1, (index) {
-                        final value = actualMax - (index * niceStep);
-                        return Text(
-                          '₱${value.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.right,
-                        );
-                      }).reversed.toList(),
-                    ),
-                  ),
-                  // Chart area with proper line graph
-                  Positioned(
-                    left: leftPadding,
-                    right: rightPadding,
-                    top: topPadding,
-                    bottom: bottomPadding,
-                    child: CustomPaint(
-                      painter: ProfessionalLineChartPainter(
-                        data: analyticsData.map((e) => e['amount'] as double).toList(),
-                        minValue: niceMin,
-                        maxValue: actualMax,
-                        color: const Color(0xFF317263),
+                  Icon(Icons.tips_and_updates_rounded, size: 20, color: AppColors.homePrimary.withValues(alpha: 0.9)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      tipText.replaceFirst('💡 Tip: ', ''),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textPrimary.withValues(alpha: 0.9),
+                        height: 1.5,
+                        fontWeight: FontWeight.w400,
                       ),
-                    ),
-                  ),
-                  // X-axis labels (horizontal axis at the bottom)
-                  Positioned(
-                    left: leftPadding,
-                    right: rightPadding,
-                    bottom: 0,
-                    height: bottomPadding,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: analyticsData.asMap().entries.map((entry) {
-                        final item = entry.value;
-                        final label = item['label'] as String;
-                        
-                        return Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
                     ),
                   ),
                 ],
@@ -937,201 +1197,5 @@ class _InsightsScreenState extends State<InsightsScreen> {
       ),
     );
   }
-
-
-  Widget _buildMotivationCard() {
-    final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
-    String motivationText = '';
-    String tipText = '';
-
-    if (increase > 0) {
-      motivationText = 'By increasing to ${_insightsModel.sessionsPerWeek} sessions per week, you could earn an additional ₱${increase.toStringAsFixed(2)} per month!';
-      tipText = '💡 Tip: Consistency is key! Even small increases in frequency can lead to significant earnings over time.';
-    } else if (_insightsModel.totalSessions == 0) {
-      motivationText = 'Start your first session to begin earning! Every ride counts towards your monthly projection.';
-      tipText = '💡 Tip: Begin with 1-2 sessions per week and gradually increase as you build your routine.';
-    } else {
-      motivationText = 'Keep up the great work! Maintain your current activity level to reach your monthly goal.';
-      tipText = '💡 Tip: Try to maintain a consistent schedule. Regular biking sessions help build momentum!';
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.lightbulb, color: Colors.amber[700]),
-                const SizedBox(width: 8),
-                const Text(
-                  'Motivation & Tips',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              motivationText,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber[200]!),
-              ),
-              child: Text(
-                tipText,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.amber[900],
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-// Professional line chart painter with proper axes and grid lines
-class ProfessionalLineChartPainter extends CustomPainter {
-  final List<double> data;
-  final double minValue;
-  final double maxValue;
-  final Color color;
-
-  ProfessionalLineChartPainter({
-    required this.data,
-    required this.minValue,
-    required this.maxValue,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (data.isEmpty || maxValue <= minValue) return;
-
-    final chartWidth = size.width;
-    final chartHeight = size.height;
-    final valueRange = maxValue - minValue;
-    
-    // Draw horizontal grid lines (Y-axis grid)
-    final gridPaint = Paint()
-      ..color = Colors.grey[300]!
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-    
-    // Calculate number of grid lines (typically 4-6 for readability)
-    final numGridLines = 5;
-    for (int i = 0; i <= numGridLines; i++) {
-      final y = (chartHeight / numGridLines) * i;
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(chartWidth, y),
-        gridPaint,
-      );
-    }
-
-    // Draw vertical grid lines at data points (X-axis grid)
-    final stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0.0;
-    for (int i = 0; i < data.length; i++) {
-      final x = (i * stepX).toDouble();
-      canvas.drawLine(
-        Offset(x, 0.0),
-        Offset(x, chartHeight),
-        gridPaint,
-      );
-    }
-
-    // Draw axes (X and Y axis lines)
-    final axisPaint = Paint()
-      ..color = Colors.grey[600]!
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-    
-    // X-axis (bottom)
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(chartWidth, 0),
-      axisPaint,
-    );
-    
-    // Y-axis (left)
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(0, chartHeight),
-      axisPaint,
-    );
-
-    // Line paint for the data line
-    final linePaint = Paint()
-      ..color = color
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    // Point paint with outline
-    final pointPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    
-    final pointOutlinePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    // Calculate data points
-    final points = <Offset>[];
-    for (int i = 0; i < data.length; i++) {
-      final x = (i * stepX).toDouble();
-      // Normalize value to chart height (inverted Y-axis: 0 at bottom, max at top)
-      final normalizedValue = (data[i] - minValue) / valueRange;
-      final y = (chartHeight - (normalizedValue * chartHeight)).toDouble();
-      points.add(Offset(x, y));
-    }
-
-    // Draw the data line with smooth curve (optional: can use quadratic bezier for smoother curves)
-    if (points.length > 1) {
-      final path = Path();
-      path.moveTo(points[0].dx, points[0].dy);
-      
-      // Use straight lines (industry standard for time series)
-      for (int i = 1; i < points.length; i++) {
-        path.lineTo(points[i].dx, points[i].dy);
-      }
-      
-      canvas.drawPath(path, linePaint);
-    }
-
-    // Draw data points with white outline for better visibility
-    for (final point in points) {
-      // Draw white outline circle
-      canvas.drawCircle(point, 6.0, pointOutlinePaint);
-      // Draw colored point
-      canvas.drawCircle(point, 4.0, pointPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(ProfessionalLineChartPainter oldDelegate) {
-    return oldDelegate.data != data || 
-           oldDelegate.minValue != minValue ||
-           oldDelegate.maxValue != maxValue || 
-           oldDelegate.color != color;
-  }
-}

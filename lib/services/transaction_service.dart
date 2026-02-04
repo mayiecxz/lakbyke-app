@@ -10,6 +10,24 @@ class TransactionService {
     return _auth.currentUser?.uid;
   }
 
+  // Get user's service tag
+  Future<String?> getServiceTag() async {
+    try {
+      final userId = getCurrentUserId();
+      if (userId == null) return null;
+
+      final snapshot = await _database.child('userTable/$userId/serviceTag').get();
+      
+      if (snapshot.exists) {
+        return snapshot.value as String?;
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Parse timestamp (ISO 8601 string or int) to DateTime
   DateTime? _parseTimestamp(dynamic timestamp) {
     try {
@@ -52,10 +70,20 @@ class TransactionService {
     }
   }
 
-  // Get all transactions from Firebase
+  // Get all transactions from Firebase for the current user
   // New structure: transactions/STN0001/{transaction_id}/[fields]
+  // Filters by current user's service tag (mntTag)
   Future<List<Map<String, dynamic>>> getAllTransactions() async {
     try {
+      // Get current user's service tag
+      final serviceTag = await getServiceTag();
+      if (serviceTag == null || serviceTag.isEmpty) {
+        return []; // No service tag means no transactions
+      }
+
+      // Clean service tag for comparison
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+
       // Fetch all records from transactions node
       final snapshot = await _database.child('transactions').get();
       
@@ -79,10 +107,18 @@ class TransactionService {
                   transactionData.map((key, value) => MapEntry(key.toString(), value)),
                 );
                 
+                // Filter by current user's service tag (mntTag)
+                final mntTag = transaction['mntTag'] as String? ?? '';
+                final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+                
+                // Only include transactions that match the current user's service tag
+                if (cleanMntTag != cleanServiceTag) {
+                  return; // Skip this transaction
+                }
+                
                 // Extract all fields from the transaction (updated field names)
                 final payout = transaction['payout']; // Changed from 'amount'
                 final mntBattPercentage = transaction['mntBattPercentage'];
-                final mntTag = transaction['mntTag'];
                 final powerSubmittedAh = transaction['powerSubmitted_Ah']; // Changed from 'powerSubmitted'
                 final stnBattPercentage = transaction['stnBattPercentage'];
                 final timestamp = transaction['timestamp']; // Changed from 'timeStamp'
@@ -97,7 +133,7 @@ class TransactionService {
                   'payout': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0),
                   'amount': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0), // Keep 'amount' for backward compatibility
                   'mntBattPercentage': mntBattPercentage is num ? mntBattPercentage.toInt() : (mntBattPercentage is String ? int.tryParse(mntBattPercentage) ?? 0 : 0),
-                  'mntTag': mntTag?.toString() ?? '',
+                  'mntTag': mntTag,
                   'powerSubmitted_Ah': powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0),
                   'powerSubmitted': powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0), // Keep for backward compatibility
                   'stnBattPercentage': stnBattPercentage is num ? stnBattPercentage.toInt() : (stnBattPercentage is String ? int.tryParse(stnBattPercentage) ?? 0 : 0),
@@ -328,21 +364,13 @@ class TransactionService {
   }
 
   // Get battery exchange count (transactions with battery exchange)
+  // Already filtered by current user's service tag via getAllTransactions()
   Future<int> getBatteryExchangeCount() async {
     try {
       final transactions = await getAllTransactions();
-      // You can filter based on specific criteria if needed
-      // For now, we'll count transactions that have battery-related data
-      int count = 0;
-      for (final transaction in transactions) {
-        final mntBattPercentage = transaction['mntBattPercentage'] as int? ?? 0;
-        final stnBattPercentage = transaction['stnBattPercentage'] as int? ?? 0;
-        // If either battery percentage is present, consider it a battery exchange
-        if (mntBattPercentage > 0 || stnBattPercentage > 0) {
-          count++;
-        }
-      }
-      return count;
+      // All transactions are already filtered by service tag, so count all of them
+      // All transactions with matching mntTag are considered battery exchanges
+      return transactions.length;
     } catch (e) {
       return 0;
     }

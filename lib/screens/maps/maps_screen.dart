@@ -25,10 +25,10 @@ class _MapsScreenState extends State<MapsScreen> {
   String? _errorMessage;
   
   // Directions
-  final TextEditingController _destinationController = TextEditingController();
   Set<Polyline> _polylines = {};
   Set<Marker> _markers = {};
   LatLng? _destination;
+  LakbykeStation? _selectedStation;
   bool _isLoadingDirections = false;
   String? _routeDistance = '';
   String? _routeDuration = '';
@@ -60,7 +60,6 @@ class _MapsScreenState extends State<MapsScreen> {
   void dispose() {
     _stopNavigation();
     _mapController?.dispose();
-    _destinationController.dispose();
     super.dispose();
   }
 
@@ -122,138 +121,15 @@ class _MapsScreenState extends State<MapsScreen> {
     }
   }
 
-  Future<void> _getDirections(String destination) async {
-    if (destination.isEmpty) return;
-    
+  Future<void> _getDirectionsToStation(LakbykeStation station) async {
     setState(() {
       _isLoadingDirections = true;
+      _selectedStation = station;
+      _destination = station.location;
     });
 
     try {
-      // Use Google Geocoding API to get destination coordinates
-      // Add region parameter to bias results (PH for Philippines)
-      final geocodeUrl = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(destination)}&region=ph&key=$_googleMapsApiKey',
-      );
-      
-      http.Response geocodeResponse;
-      try {
-        geocodeResponse = await http.get(
-          geocodeUrl,
-          headers: {
-            'Accept': 'application/json',
-          },
-        ).timeout(
-          const Duration(seconds: 30),
-          onTimeout: () {
-            throw TimeoutException('Geocoding request timed out');
-          },
-        );
-      } catch (e) {
-        setState(() {
-          _isLoadingDirections = false;
-        });
-        if (mounted) {
-          String errorMessage = 'Failed to search location';
-          final errorString = e.toString().toLowerCase();
-          
-          if (errorString.contains('failed to fetch') || 
-              errorString.contains('cors') || 
-              errorString.contains('network') ||
-              errorString.contains('clientexception')) {
-            errorMessage = 'Network error: Check API key restrictions. Ensure Geocoding API is enabled.';
-          } else if (e is TimeoutException) {
-            errorMessage = 'Request timed out. Please try again.';
-          } else {
-            errorMessage = 'Error: ${e.toString()}';
-          }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
-        return;
-      }
-      
-      if (geocodeResponse.statusCode != 200) {
-        setState(() {
-          _isLoadingDirections = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('HTTP Error ${geocodeResponse.statusCode}: Could not search location'),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
-        return;
-      }
-
-      final geocodeData = json.decode(geocodeResponse.body);
-      
-      // Check for API errors
-      if (geocodeData['status'] != null && geocodeData['status'] != 'OK') {
-        final status = geocodeData['status'] as String;
-        final errorMessage = geocodeData['error_message'] as String? ?? 'Unknown error';
-        
-        setState(() {
-          _isLoadingDirections = false;
-        });
-        
-        if (mounted) {
-          String userMessage = 'Could not find the location';
-          
-          if (status == 'REQUEST_DENIED') {
-            userMessage = 'Geocoding API not enabled or API key invalid. Please enable Geocoding API in Google Cloud Console.';
-          } else if (status == 'OVER_QUERY_LIMIT') {
-            userMessage = 'API quota exceeded. Please check your billing.';
-          } else if (status == 'ZERO_RESULTS') {
-            userMessage = 'No results found for "$destination". Please try a different location.';
-          } else if (status == 'INVALID_REQUEST') {
-            userMessage = 'Invalid search query. Please enter a valid address or place name.';
-          } else {
-            userMessage = 'Error: $status - $errorMessage';
-          }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(userMessage),
-              duration: const Duration(seconds: 6),
-            ),
-          );
-        }
-        
-        return;
-      }
-      
-      if (geocodeData['results'] == null || geocodeData['results'].isEmpty) {
-        setState(() {
-          _isLoadingDirections = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No results found for "$destination". Please try a different location.'),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
-        return;
-      }
-
-      final location = geocodeData['results'][0]['geometry']['location'];
-      final destLatLng = LatLng(
-        location['lat'] as double,
-        location['lng'] as double,
-      );
-      
-      setState(() {
-        _destination = destLatLng;
-      });
+      final destLatLng = station.location;
 
       // Get directions using Google Directions API
       final directionsUrl = Uri.parse(
@@ -469,6 +345,7 @@ class _MapsScreenState extends State<MapsScreen> {
     setState(() {
       _polylines.clear();
       _destination = null;
+      _selectedStation = null;
       _routeDistance = '';
       _routeDuration = '';
       _directionsSteps.clear();
@@ -629,70 +506,228 @@ class _MapsScreenState extends State<MapsScreen> {
       // floatingActionButton: const ChatFAB(), // Hidden for now
       body: Column(
         children: [
-          // Destination search bar
+          // Lakbyke Stations List
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
             child: Column(
               children: [
+                // Header
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _destinationController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter destination address...',
-                          prefixIcon: const Icon(Icons.location_on),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                        onSubmitted: (value) {
-                          if (value.isNotEmpty) {
-                            _getDirections(value);
-                          }
-                        },
+                    const Text(
+                      'Lakbyke Stations',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF317263),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     if (_destination != null)
                       IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: _clearDirections,
                         tooltip: 'Clear route',
+                        color: const Color(0xFF317263),
                       ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _isLoadingDirections
-                          ? null
-                          : () {
-                              if (_destinationController.text.isNotEmpty) {
-                                _getDirections(_destinationController.text);
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF317263),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoadingDirections
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Icon(Icons.directions),
-                    ),
                   ],
                 ),
-                // Nearest Lakbyke Station Recommendation
+                const SizedBox(height: 12),
+                // Stations List
+                if (_lakbykeStations.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Loading stations...',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _lakbykeStations.length,
+                      itemBuilder: (context, index) {
+                        final station = _lakbykeStations[index];
+                        final isSelected = _selectedStation?.placeId == station.placeId;
+                        final isNearest = station.placeId == _nearestStation?.placeId;
+                        
+                        return Container(
+                          width: 280,
+                          margin: const EdgeInsets.only(right: 12),
+                          child: Card(
+                            elevation: isSelected ? 4 : 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: isSelected 
+                                    ? const Color(0xFF317263) 
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                _getDirectionsToStation(station);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: isNearest
+                                      ? LinearGradient(
+                                          colors: [
+                                            const Color(0xFF317263).withOpacity(0.9),
+                                            const Color(0xFF317263),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : null,
+                                  color: isNearest ? null : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: isNearest
+                                                ? Colors.white.withOpacity(0.2)
+                                                : const Color(0xFF317263).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            Icons.ev_station,
+                                            color: isNearest
+                                                ? Colors.white
+                                                : const Color(0xFF317263),
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              if (isNearest)
+                                                Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.star,
+                                                      color: Colors.amber,
+                                                      size: 14,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      'Nearest',
+                                                      style: TextStyle(
+                                                        color: Colors.white.withOpacity(0.9),
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              Text(
+                                                station.name,
+                                                style: TextStyle(
+                                                  color: isNearest ? Colors.white : Colors.black87,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_isLoadingDirections && isSelected)
+                                          const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        else
+                                          Icon(
+                                            Icons.directions,
+                                            color: isNearest ? Colors.white : const Color(0xFF317263),
+                                            size: 20,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.location_on,
+                                          size: 14,
+                                          color: isNearest
+                                              ? Colors.white.withOpacity(0.9)
+                                              : Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            station.address,
+                                            style: TextStyle(
+                                              color: isNearest
+                                                  ? Colors.white.withOpacity(0.9)
+                                                  : Colors.grey[700],
+                                              fontSize: 11,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.straighten,
+                                          size: 14,
+                                          color: isNearest
+                                              ? Colors.white.withOpacity(0.9)
+                                              : Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          station.getFormattedDistance(),
+                                          style: TextStyle(
+                                            color: isNearest
+                                                ? Colors.white.withOpacity(0.9)
+                                                : Colors.grey[700],
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                // Nearest Lakbyke Station Recommendation (keep for backward compatibility)
                 if (_nearestStation != null && _destination == null)
                   Container(
                     margin: const EdgeInsets.only(top: 12),
@@ -813,10 +848,11 @@ class _MapsScreenState extends State<MapsScreen> {
                         const SizedBox(width: 8),
                         // Directions button
                         ElevatedButton.icon(
-                          onPressed: () {
-                            _destinationController.text = _nearestStation!.name;
-                            _getDirections(_nearestStation!.name);
-                          },
+                          onPressed: _isLoadingDirections
+                              ? null
+                              : () {
+                                  _getDirectionsToStation(_nearestStation!);
+                                },
                           icon: const Icon(Icons.directions, size: 18),
                           label: const Text('Go'),
                           style: ElevatedButton.styleFrom(

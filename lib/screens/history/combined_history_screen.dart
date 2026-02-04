@@ -212,6 +212,8 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   }
 
   Widget _buildKwhTopCard() {
+    final hasNoData = !_kwhLoading && _totalGenerated == 0.0 && _totalDistance == 0.0;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
       child: Container(
@@ -237,7 +239,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
                   ],
                 ),
                 Text(
-                  formatEnergy(_totalGenerated),
+                  _kwhLoading ? '...' : formatEnergy(_totalGenerated),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -261,7 +263,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
                   ],
                 ),
                 Text(
-                  '${_totalDistance.toStringAsFixed(1)} km',
+                  _kwhLoading ? '...' : '${_totalDistance.toStringAsFixed(1)} km',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -270,6 +272,32 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
                 ),
               ],
             ),
+            if (hasNoData) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.white.withOpacity(0.9), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No energy data recorded yet. Start biking to generate energy!',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -277,6 +305,8 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   }
 
   Widget _buildTransactionTopCard() {
+    final hasNoData = !_transactionLoading && _totalRedeemed == 0.0 && _batteryExchangeCount == 0;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
       child: Container(
@@ -302,7 +332,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
                   ],
                 ),
                 Text(
-                  '₱ ${_totalRedeemed.toStringAsFixed(0)}',
+                  _transactionLoading ? '...' : '₱ ${_totalRedeemed.toStringAsFixed(0)}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -326,7 +356,7 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
                   ],
                 ),
                 Text(
-                  '$_batteryExchangeCount',
+                  _transactionLoading ? '...' : '$_batteryExchangeCount',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -335,6 +365,32 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
                 ),
               ],
             ),
+            if (hasNoData) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.white.withOpacity(0.9), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No transactions recorded yet. Redeem your energy to see transaction history!',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -422,9 +478,38 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
 
     if (_kwhData.isEmpty) {
       return Center(
-        child: Text(
-          'No energy data for $_kwhFilter',
-          style: const TextStyle(color: Colors.grey),
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.bolt_outlined,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No Energy Data',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _kwhFilter == 'daily'
+                    ? 'No energy data available for the selected period. Start biking to generate energy!'
+                    : 'No energy data for $_kwhFilter period. Your energy history will appear here once you start generating power.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -485,9 +570,38 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
 
     if (_transactionData.isEmpty) {
       return Center(
-        child: Text(
-          'No transactions for $_transactionFilter',
-          style: const TextStyle(color: Colors.grey),
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No Transactions',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _transactionFilter == 'daily'
+                    ? 'No transactions available for the selected period. Complete a battery exchange to see your transaction history!'
+                    : 'No transactions for $_transactionFilter period. Your transaction history will appear here once you redeem your energy.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
