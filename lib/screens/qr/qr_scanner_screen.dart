@@ -121,51 +121,48 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
-    
-    // Calculate responsive overlay dimensions
-    // Use 70% of the smaller dimension for cutout size
-    final cutOutSize = (screenWidth < screenHeight ? screenWidth : screenHeight) * 0.7;
-    // Responsive border length (proportional to screen width)
-    final borderLength = (screenWidth * 0.08).clamp(25.0, 40.0);
-    // Responsive border width (proportional to screen width)
-    final borderWidth = (screenWidth * 0.01).clamp(3.0, 5.0);
-    // Responsive border radius (proportional to screen width)
-    final borderRadius = (screenWidth * 0.04).clamp(12.0, 20.0);
-    
-    // Responsive spacing and sizes
-    final topPadding = (screenHeight * 0.025).clamp(15.0, 25.0);
-    final bottomPadding = (screenHeight * 0.05).clamp(30.0, 50.0);
-    final instructionPadding = EdgeInsets.symmetric(
-      horizontal: (screenWidth * 0.05).clamp(16.0, 24.0),
-      vertical: (screenHeight * 0.02).clamp(12.0, 18.0),
-    );
-    final instructionMargin = EdgeInsets.symmetric(
-      horizontal: (screenWidth * 0.05).clamp(16.0, 24.0),
-    );
-    final instructionBorderRadius = (screenWidth * 0.03).clamp(10.0, 14.0);
-    final iconSize = (screenWidth * 0.08).clamp(28.0, 36.0);
-    final titleFontSize = (screenWidth * 0.04).clamp(14.0, 18.0);
-    final subtitleFontSize = (screenWidth * 0.03).clamp(10.0, 14.0);
-    
+    final mediaQuery = MediaQuery.of(context);
+    final padding = mediaQuery.padding;
+
     return Scaffold(
       appBar: const Header(),
-      // floatingActionButton: const ChatFAB(), // Hidden for now
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                // Camera view
-                MobileScanner(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          final shorterSide = w < h ? w : h;
+
+          // Overlay: responsive to actual body size
+          final cutOutSize = shorterSide * 0.78;
+          final borderLength = (w * 0.08).clamp(25.0, 40.0);
+          final borderWidth = (w * 0.01).clamp(3.0, 5.0);
+          final borderRadius = (w * 0.04).clamp(12.0, 20.0);
+
+          final instructionPadding = EdgeInsets.symmetric(
+            horizontal: (w * 0.05).clamp(16.0, 24.0),
+            vertical: (h * 0.012).clamp(8.0, 14.0),
+          );
+          final instructionMargin = EdgeInsets.symmetric(horizontal: (w * 0.05).clamp(16.0, 24.0));
+          final instructionBorderRadius = (w * 0.03).clamp(10.0, 14.0);
+          final iconSize = (w * 0.065).clamp(22.0, 30.0);
+          final titleFontSize = (w * 0.036).clamp(12.0, 16.0);
+          final subtitleFontSize = (w * 0.028).clamp(10.0, 12.0);
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // Camera fills entire body; cover so no letterboxing
+              Positioned.fill(
+                child: MobileScanner(
                   controller: _controller,
                   onDetect: _handleBarcode,
+                  fit: BoxFit.cover,
                 ),
-                
-                // Overlay with scanning area
-                Container(
+              ),
+
+              // Overlay with scanning area
+              Positioned.fill(
+                child: Container(
                   decoration: ShapeDecoration(
                     shape: QrScannerOverlayShape(
                       borderColor: const Color(0xFF317263),
@@ -176,50 +173,51 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     ),
                   ),
                 ),
-                
-                // Top controls
-                Positioned(
-                  top: topPadding,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.flash_on, color: Colors.white),
-                        onPressed: _toggleFlash,
-                        tooltip: 'Toggle Flash',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
-                        onPressed: _switchCamera,
-                        tooltip: 'Switch Camera',
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Bottom instructions
-                Positioned(
-                  bottom: bottomPadding,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: instructionPadding,
-                    margin: instructionMargin,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(instructionBorderRadius),
+              ),
+
+              // Top controls
+              Positioned(
+                top: (padding.top * 0.3).clamp(4.0, 16.0),
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.flash_on, color: Colors.white),
+                      onPressed: _toggleFlash,
+                      tooltip: 'Toggle Flash',
                     ),
-                    child: Column(
+                    IconButton(
+                      icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+                      onPressed: _switchCamera,
+                      tooltip: 'Switch Camera',
+                    ),
+                  ],
+                ),
+              ),
+
+              // Bottom instructions: bar extends to bottom; safe area as inner padding so no white gap
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  margin: instructionMargin,
+                  padding: instructionPadding.copyWith(
+                    bottom: instructionPadding.bottom + padding.bottom.clamp(0.0, 24.0),
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(instructionBorderRadius),
+                    ),
+                  ),
+                  child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white,
-                          size: iconSize,
-                        ),
-                        SizedBox(height: screenHeight * 0.01),
+                        Icon(Icons.qr_code_scanner, color: Colors.white, size: iconSize),
+                        SizedBox(height: (h * 0.006).clamp(4.0, 8.0)),
                         Text(
                           _hasScanned ? 'Scan Complete!' : 'Position QR code within the frame',
                           style: TextStyle(
@@ -230,7 +228,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                           textAlign: TextAlign.center,
                         ),
                         if (!_hasScanned) ...[
-                          SizedBox(height: screenHeight * 0.005),
+                          SizedBox(height: (h * 0.003).clamp(2.0, 4.0)),
                           Text(
                             'The code will be scanned automatically',
                             style: TextStyle(
@@ -244,10 +242,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
