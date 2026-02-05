@@ -1,4 +1,4 @@
-/// User model representing account information
+/// User model representing account information (aligned with userTable schema)
 class UserModel {
   final String uid;
   final String email;
@@ -9,6 +9,8 @@ class UserModel {
   final String? userRole;
   final String serviceTag;
   final int? createdAt;
+  final String? accountStatus;
+  final String? dateUpdated;
 
   UserModel({
     required this.uid,
@@ -20,9 +22,11 @@ class UserModel {
     this.userRole,
     required this.serviceTag,
     this.createdAt,
+    this.accountStatus,
+    this.dateUpdated,
   });
 
-  /// Create UserModel from Firebase Realtime Database snapshot
+  /// Create UserModel from Firebase Realtime Database snapshot (userTable)
   factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
     return UserModel(
       uid: uid,
@@ -33,7 +37,11 @@ class UserModel {
       role: data['role'] ?? data['userRole'] ?? '',
       userRole: data['userRole'],
       serviceTag: data['serviceTag'] ?? '',
-      createdAt: data['createdAt'],
+      createdAt: data['createdAt'] is int
+          ? data['createdAt'] as int
+          : (data['createdAt'] is num ? (data['createdAt'] as num).toInt() : null),
+      accountStatus: data['accountStatus'] as String?,
+      dateUpdated: data['dateUpdated'] as String?,
     );
   }
 
@@ -49,6 +57,8 @@ class UserModel {
       if (userRole != null) 'userRole': userRole,
       'serviceTag': serviceTag,
       if (createdAt != null) 'createdAt': createdAt,
+      if (accountStatus != null) 'accountStatus': accountStatus,
+      if (dateUpdated != null) 'dateUpdated': dateUpdated,
     };
   }
 
@@ -80,6 +90,8 @@ class UserModel {
     String? userRole,
     String? serviceTag,
     int? createdAt,
+    String? accountStatus,
+    String? dateUpdated,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -91,6 +103,8 @@ class UserModel {
       userRole: userRole ?? this.userRole,
       serviceTag: serviceTag ?? this.serviceTag,
       createdAt: createdAt ?? this.createdAt,
+      accountStatus: accountStatus ?? this.accountStatus,
+      dateUpdated: dateUpdated ?? this.dateUpdated,
     );
   }
 }

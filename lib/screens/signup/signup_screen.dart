@@ -88,7 +88,9 @@ class _SignupScreenState extends State<SignupScreen> {
         'email': _emailController.text.trim(),
         'serviceTag': _serviceTagController.text.trim(),
         'createdAt': ServerValue.timestamp,
-        'userRole': 'cyclist', 
+        'role': 'cyclist',
+        'userRole': 'cyclist',
+        'accountStatus': 'active',
       });
 
       // 5. SEND EMAIL VERIFICATION

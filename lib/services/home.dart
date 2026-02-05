@@ -7,7 +7,7 @@ class HomeService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Get current user ID
-  String? getCurrentuserTable() {
+  String? getCurrentUserId() {
     return _auth.currentUser?.uid;
   }
 
@@ -41,7 +41,7 @@ class HomeService {
   // Returns: {yesterdayDistance: double, yesterdayWh: double}
   Future<Map<String, dynamic>> getYesterdayData() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) {
         return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
       }
@@ -119,7 +119,7 @@ class HomeService {
   // Returns: {todayDistance: double, todayWh: double}
   Future<Map<String, dynamic>> getTodayData() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) {
         return {'todayDistance': 0.0, 'todayWh': 0.0};
       }
@@ -197,7 +197,7 @@ class HomeService {
   // Returns: {effort: double, timestamp: DateTime}
   Future<Map<String, dynamic>?> getLatestEffort() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) return null;
 
       // First, get the user's service tag
@@ -265,7 +265,7 @@ class HomeService {
   // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
   Future<Map<String, dynamic>?> getHomeData() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) {
         return null;
       }
@@ -393,7 +393,7 @@ class HomeService {
   // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
   // Includes live effort with timestamp and today's aggregated data
   Stream<Map<String, dynamic>?> getHomeDataStream() {
-    final userId = getCurrentuserTable();
+    final userId = getCurrentUserId();
     if (userId == null) {
       return Stream.value(null);
     }
@@ -520,7 +520,7 @@ class HomeService {
   // New structure: deviceEnergyData/MNT0001/{document_id}/[fields]
   Future<Map<String, dynamic>?> getTodayMetrics() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) return null;
 
       // First, get the user's service tag
@@ -589,7 +589,7 @@ class HomeService {
   // Get user's service tag (MNT-A001)
   Future<String?> getServiceTag() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) return null;
 
       final snapshot = await _database.child('userTable/$userId/serviceTag').get();
@@ -609,7 +609,7 @@ class HomeService {
   // New structure: transactions/STN0001/{transaction_id}/[fields]
   Future<double> getTotalRedeems() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) return 0.0;
 
       // First, get the user's service tag
@@ -675,7 +675,7 @@ class HomeService {
   // Note: powerSubmitted_Ah is in Ampere-hours, convert to Wh using voltage
   Future<double> getTotalGenerated() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) return 0.0;
 
       // First, get the user's service tag
@@ -715,9 +715,8 @@ class HomeService {
               if (mntTag != null) {
                 final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
                 if (cleanMntTag == cleanServiceTag) {
-                  // Get powerSubmitted_Ah (changed from 'powerSubmitted')
-                  // powerSubmitted_Ah is in Ampere-hours, convert to kWh using voltage
-                  final powerSubmittedAh = transaction['powerSubmitted_Ah'];
+                  // Get power (schema: powerSubmittedAh; support powerSubmitted_Ah from normalized map)
+                  final powerSubmittedAh = transaction['powerSubmittedAh'] ?? transaction['powerSubmitted_Ah'];
                   final voltage = transaction['voltage'];
                   
                   if (powerSubmittedAh != null && voltage != null) {
@@ -751,7 +750,7 @@ class HomeService {
   // New structure: transactions/STN0001/{transaction_id}/[fields]
   Future<int> getBatteriesExchanged() async {
     try {
-      final userId = getCurrentuserTable();
+      final userId = getCurrentUserId();
       if (userId == null) return 0;
 
       // First, get the user's service tag

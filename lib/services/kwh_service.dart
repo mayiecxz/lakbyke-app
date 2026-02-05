@@ -145,9 +145,9 @@ class KwhService {
               'mountBatteryPercentage': parseInteger(record['mountBatteryPercentage']),
               'mountVoltage': parseNumeric(record['mountVoltage']),
               
-              // Power and speed fields
+              // Power and speed fields (schema: speedKmh as float)
               'powerGeneratedInWatts': parseNumeric(record['powerGeneratedInWatts']) ?? 0.0,
-              'speedKmh': parseInteger(record['speedKmh']) ?? 0,
+              'speedKmh': parseNumeric(record['speedKmh']) ?? 0.0,
               
               // Additional fields
               'mAh': parseInteger(record['mAh']) ?? 0,

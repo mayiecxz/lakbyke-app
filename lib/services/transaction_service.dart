@@ -196,10 +196,11 @@ class TransactionService {
                   return; // Skip this transaction
                 }
                 
-                // Extract all fields from the transaction (updated field names)
+                // Extract all fields from the transaction (aligned with DB: powerSubmittedAh, mntBattPercentage, stnBattPercentage, etc.)
                 final payout = transaction['payout']; // Changed from 'amount'
                 final mntBattPercentage = transaction['mntBattPercentage'];
-                final powerSubmittedAh = transaction['powerSubmitted_Ah']; // Changed from 'powerSubmitted'
+                // Schema uses powerSubmittedAh (camelCase); support powerSubmitted_Ah for backward compatibility
+                final powerSubmittedAh = transaction['powerSubmittedAh'] ?? transaction['powerSubmitted_Ah'];
                 final stnBattPercentage = transaction['stnBattPercentage'];
                 final timestamp = transaction['timestamp']; // Changed from 'timeStamp'
                 final voltage = transaction['voltage'];
@@ -207,6 +208,7 @@ class TransactionService {
                 // Parse timestamp to DateTime (now ISO 8601 string)
                 final dateTime = _parseTimestamp(timestamp);
                 
+                final ahValue = powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0);
                 transactions.add({
                   'transactionId': transactionId.toString(),
                   'stationId': stationId.toString(),
@@ -214,8 +216,8 @@ class TransactionService {
                   'amount': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0), // Keep 'amount' for backward compatibility
                   'mntBattPercentage': mntBattPercentage is num ? mntBattPercentage.toInt() : (mntBattPercentage is String ? int.tryParse(mntBattPercentage) ?? 0 : 0),
                   'mntTag': mntTag,
-                  'powerSubmitted_Ah': powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0),
-                  'powerSubmitted': powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0), // Keep for backward compatibility
+                  'powerSubmitted_Ah': ahValue,
+                  'powerSubmitted': ahValue, // Keep for backward compatibility
                   'stnBattPercentage': stnBattPercentage is num ? stnBattPercentage.toInt() : (stnBattPercentage is String ? int.tryParse(stnBattPercentage) ?? 0 : 0),
                   'timestamp': dateTime,
                   'timeStamp': dateTime, // Keep for backward compatibility
@@ -425,10 +427,10 @@ class TransactionService {
           }
         }
         
-        // Get powerSubmitted_Ah (changed from 'powerSubmitted')
+        // Get power (schema: powerSubmittedAh; internal: powerSubmitted_Ah / powerSubmitted)
         // Convert Ah to Wh: Wh = Ah * V
-        final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ?? 
-                                 transaction['powerSubmitted'] as double? ?? 0.0;
+        final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ??
+            transaction['powerSubmitted'] as double? ?? 0.0;
         final voltage = transaction['voltage'] as double? ?? 0.0;
         
         if (voltage > 0 && powerSubmittedAh > 0) {
