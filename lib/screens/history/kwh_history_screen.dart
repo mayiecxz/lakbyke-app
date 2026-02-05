@@ -103,10 +103,18 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
   }
 
   Widget _buildTopCard() {
+    final w = MediaQuery.of(context).size.width;
+    final hPad = (w * 0.05).clamp(8.0, 20.0);
+    final cardPad = (w * 0.045).clamp(12.0, 18.0);
+    final iconMain = (w * 0.07).clamp(20.0, 28.0);
+    final iconSec = (w * 0.06).clamp(18.0, 24.0);
+    final fontSizeMain = (w * 0.07).clamp(18.0, 28.0);
+    final fontSizeSec = (w * 0.06).clamp(16.0, 24.0);
+    final labelFontSize = (w * 0.032).clamp(11.0, 14.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12.0),
       child: Container(
-        padding: const EdgeInsets.all(18.0),
+        padding: EdgeInsets.all(cardPad),
         decoration: BoxDecoration(
           color: AppColors.homeAccent,
           borderRadius: BorderRadius.circular(16.0),
@@ -118,45 +126,53 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.battery_full, color: Colors.white, size: 28),
-                    SizedBox(width: 12),
+                  children: [
+                    Icon(Icons.battery_full, color: Colors.white, size: iconMain),
+                    SizedBox(width: (w * 0.03).clamp(8.0, 12.0)),
                     Text(
                       'TOTAL Wh Generated',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: labelFontSize),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ],
                 ),
-                Text(
-                  _totalGenerated.toStringAsFixed(2),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _totalGenerated >= 1000000 ? '${formatCompactNumber(_totalGenerated / 1000)} kWh' : formatEnergy(_totalGenerated),
+                      style: TextStyle(color: Colors.white, fontSize: fontSizeMain, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: (w * 0.02).clamp(8.0, 12.0)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.directions_bike, color: Colors.white, size: 24),
-                    SizedBox(width: 12),
+                  children: [
+                    Icon(Icons.directions_bike, color: Colors.white, size: iconSec),
+                    SizedBox(width: (w * 0.03).clamp(8.0, 12.0)),
                     Text(
                       'TOTAL km Travelled',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: labelFontSize),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ],
                 ),
-                Text(
-                  _totalDistance.toStringAsFixed(2),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _totalDistance.abs() >= 1000 ? formatCompactNumber(_totalDistance, 1) : _totalDistance.toStringAsFixed(2),
+                      style: TextStyle(color: Colors.white, fontSize: fontSizeSec, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -170,10 +186,10 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
   Widget _buildFilterChips() {
     const choices = ['daily', 'weekly', 'monthly', 'yearly'];
     final screenWidth = MediaQuery.of(context).size.width;
-    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0); // Responsive font size
-    
+    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0);
+    final hPad = (screenWidth * 0.05).clamp(8.0, 20.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: EdgeInsets.symmetric(horizontal: hPad),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: choices.map((c) {
@@ -237,8 +253,12 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     }
 
     final items = _paginatedData(context);
+    final w = MediaQuery.of(context).size.width;
+    final listPadH = (w * 0.05).clamp(8.0, 20.0);
+    final rowPadH = (w * 0.04).clamp(12.0, 16.0);
+    final rowPadV = (w * 0.03).clamp(10.0, 14.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+      padding: EdgeInsets.symmetric(horizontal: listPadH, vertical: 12.0),
       child: Column(
         children: [
           // Paginated list (non-scrollable)
@@ -263,7 +283,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                             onTap: () => _showEnergyDetailModal(context, item),
                             borderRadius: BorderRadius.circular(12.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                              padding: EdgeInsets.symmetric(horizontal: rowPadH, vertical: rowPadV),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceDim,
                                 borderRadius: BorderRadius.circular(12.0),
@@ -274,27 +294,53 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
                                   Expanded(
                                     child: Row(
                                       children: [
-                                        Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        Flexible(
+                                          child: Text(
+                                            item['label'] as String,
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
                                         const SizedBox(width: 8),
-                                        Text(
-                                          '${(item['distance'] as double? ?? 0.0).toStringAsFixed(2)} km',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey[600],
-                                            fontSize: 12,
+                                        Flexible(
+                                          child: Text(
+                                            () {
+                                              final d = (item['distance'] as double? ?? 0.0);
+                                              return '${d.abs() >= 1000 ? formatCompactNumber(d, 1) : d.toStringAsFixed(2)} km';
+                                            }(),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.grey[600],
+                                              fontSize: 12,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(formatEnergy(item['value'] as double), style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      const SizedBox(width: 8),
-                                      Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-                                    ],
+                                  Flexible(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            () {
+                                              final wh = item['value'] as double;
+                                              return wh >= 1000000 ? '${formatCompactNumber(wh / 1000)} kWh' : formatEnergy(wh);
+                                            }(),
+                                            style: const TextStyle(fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(Icons.chevron_right, color: Colors.grey[400], size: (w * 0.05).clamp(16.0, 20.0)),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),

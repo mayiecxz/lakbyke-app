@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lakbyke_mobile/utils/formatting.dart';
 
 /// Modal dialog showing detailed transaction information for a specific period
 class TransactionDetailModal extends StatelessWidget {
@@ -190,7 +191,7 @@ class TransactionDetailModal extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              '₱${totalAmount.toStringAsFixed(2)}',
+              formatCompactCurrency(totalAmount),
               style: const TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
@@ -269,10 +270,10 @@ class TransactionDetailModal extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildDetailRow('Total Transactions', transactionCount.toString()),
-        if (batteryExchanges > 0) _buildDetailRow('Battery Exchanges', batteryExchanges.toString()),
-        if (avgAmount > 0) _buildDetailRow('Avg Payout', '₱${avgAmount.toStringAsFixed(2)}'),
-        if (maxAmount > 0) _buildDetailRow('Max Payout', '₱${maxAmount.toStringAsFixed(2)}'),
+        _buildDetailRow('Total Transactions', transactionCount >= 1000 ? formatCompactNumber(transactionCount, 0) : transactionCount.toString()),
+        if (batteryExchanges > 0) _buildDetailRow('Battery Exchanges', batteryExchanges >= 1000 ? formatCompactNumber(batteryExchanges, 0) : batteryExchanges.toString()),
+        if (avgAmount > 0) _buildDetailRow('Avg Payout', formatCompactCurrency(avgAmount)),
+        if (maxAmount > 0) _buildDetailRow('Max Payout', formatCompactCurrency(maxAmount)),
         
         // Energy Statistics
         if (totalPowerSubmitted > 0 || totalEnergyWh > 0) ...[
@@ -286,8 +287,8 @@ class TransactionDetailModal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          if (totalPowerSubmitted > 0) _buildDetailRow('Total Power Submitted', '${totalPowerSubmitted.toStringAsFixed(2)} Ah'),
-          if (totalEnergyWh > 0) _buildDetailRow('Total Energy Generated', '${totalEnergyWh.toStringAsFixed(2)} Wh'),
+          if (totalPowerSubmitted > 0) _buildDetailRow('Total Power Submitted', '${totalPowerSubmitted.abs() >= 1000 ? formatCompactNumber(totalPowerSubmitted, 1) : totalPowerSubmitted.toStringAsFixed(2)} Ah'),
+          if (totalEnergyWh > 0) _buildDetailRow('Total Energy Generated', totalEnergyWh >= 1000000 ? '${formatCompactNumber(totalEnergyWh / 1000)} kWh' : '${totalEnergyWh.toStringAsFixed(2)} Wh'),
           if (avgVoltage > 0) _buildDetailRow('Avg Voltage', '${avgVoltage.toStringAsFixed(1)} V'),
         ],
         

@@ -28,16 +28,17 @@ class WelcomeModal extends StatelessWidget {
     // (22 kg CO2/year ÷ 0.21 kg CO2/km ≈ 105 km, rounded to 110 km for clarity)
     final treeEquivalent = distanceKm / 110.0;
     
+    final distStr = distanceKm.abs() >= 1000 ? formatCompactNumber(distanceKm, 1) : distanceKm.toStringAsFixed(1);
+    final co2Str = co2Saved.abs() >= 1000 ? formatCompactNumber(co2Saved, 1) : co2Saved.toStringAsFixed(2);
     if (distanceKm >= 1.0) {
       if (treeEquivalent >= 1.0) {
         final trees = treeEquivalent.toStringAsFixed(1);
-        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday—that avoids as much CO₂ as ${trees} tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
+        return 'You pedaled $distStr km yesterday—that avoids as much CO₂ as ${trees} tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
       } else if (treeEquivalent >= 0.1) {
-        // Show as fraction of a tree
         final treePercent = (treeEquivalent * 100).toStringAsFixed(0);
-        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday—avoiding CO₂ equivalent to ${treePercent}% of a tree\'s annual absorption!';
+        return 'You pedaled $distStr km yesterday—avoiding CO₂ equivalent to ${treePercent}% of a tree\'s annual absorption!';
       } else {
-        return 'You pedaled ${distanceKm.toStringAsFixed(1)} km yesterday, saving ${co2Saved.toStringAsFixed(2)} kg of CO₂!';
+        return 'You pedaled $distStr km yesterday, saving $co2Str kg of CO₂!';
       }
     } else {
       return 'You pedaled ${distanceKm.toStringAsFixed(2)} km yesterday—every pedal counts!';
@@ -53,17 +54,17 @@ class WelcomeModal extends StatelessWidget {
     // Real-world phone charge: ~16 Wh (accounting for charging efficiency losses)
     final phoneCharges = wh / 16.0;
     
+    final energyStr = wh >= 1000000 ? '${formatCompactNumber(wh / 1000)} kWh' : formatEnergy(wh);
     if (wh >= 16) {
       if (phoneCharges >= 1.0) {
-        final charges = phoneCharges.toStringAsFixed(1);
-      return 'You generated ${formatEnergy(wh)} yesterday—that\'s enough to charge a smartphone ${charges} time${charges == '1.0' ? '' : 's'}! 📱';
+        final charges = phoneCharges >= 1000 ? formatCompactNumber(phoneCharges, 1) : phoneCharges.toStringAsFixed(1);
+        return 'You generated $energyStr yesterday—that\'s enough to charge a smartphone $charges time${charges == '1.0' ? '' : 's'}! 📱';
       } else {
-        // Less than 1 charge but significant
         final percent = (phoneCharges * 100).toStringAsFixed(0);
-        return 'You generated ${formatEnergy(wh)} yesterday—that\'s ${percent}% of a smartphone charge!';
+        return 'You generated $energyStr yesterday—that\'s ${percent}% of a smartphone charge!';
       }
     } else if (wh > 0) {
-      return 'You generated ${formatEnergy(wh)} yesterday—powering towards a greener future!';
+      return 'You generated $energyStr yesterday—powering towards a greener future!';
     } else {
       return '';
     }
@@ -83,15 +84,13 @@ class WelcomeModal extends StatelessWidget {
     
     if (distanceKm >= 1.0) {
       if (minMoneySaved >= 15.0) {
-        // Show range for transparency
         if (maxMoneySaved - minMoneySaved < 10) {
-          // Small range, show single value
-          return 'You saved at least ₱${minMoneySaved.toStringAsFixed(0)} yesterday by pedaling instead of taking public transport! 💰';
+          return 'You saved at least ${formatCompactCurrency(minMoneySaved)} yesterday by pedaling instead of taking public transport! 💰';
         } else {
-          return 'You saved ₱${minMoneySaved.toStringAsFixed(0)}-₱${maxMoneySaved.toStringAsFixed(0)} yesterday by pedaling instead of taking public transport! 💰';
+          return 'You saved ${formatCompactCurrency(minMoneySaved)}-${formatCompactCurrency(maxMoneySaved)} yesterday by pedaling instead of taking public transport! 💰';
         }
       } else {
-        return 'You saved at least ₱${minMoneySaved.toStringAsFixed(0)} yesterday—every peso counts! 💵';
+        return 'You saved at least ${formatCompactCurrency(minMoneySaved)} yesterday—every peso counts! 💵';
       }
     } else {
       return '';
@@ -108,15 +107,13 @@ class WelcomeModal extends StatelessWidget {
     final caloriesBurned = distanceKm * 27.5;
     
     if (distanceKm >= 1.0) {
+      final calories = caloriesBurned >= 1000 ? formatCompactNumber(caloriesBurned, 0) : caloriesBurned.toStringAsFixed(0);
       if (caloriesBurned >= 100) {
-        final calories = caloriesBurned.toStringAsFixed(0);
-        return 'You burned ~${calories} calories yesterday—that\'s a solid workout! 💪';
+        return 'You burned ~$calories calories yesterday—that\'s a solid workout! 💪';
       } else if (caloriesBurned >= 50) {
-        final calories = caloriesBurned.toStringAsFixed(0);
-        return 'You burned ~${calories} calories yesterday—great start! 🏃';
+        return 'You burned ~$calories calories yesterday—great start! 🏃';
       } else {
-        final calories = caloriesBurned.toStringAsFixed(0);
-        return 'You burned ~${calories} calories yesterday—every bit helps! ⚡';
+        return 'You burned ~$calories calories yesterday—every bit helps! ⚡';
       }
     } else {
       return '';

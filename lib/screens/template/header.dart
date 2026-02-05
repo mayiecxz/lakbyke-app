@@ -5,11 +5,17 @@ import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
 // import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart';
 
+/// Height used for header overlay (dashboard-style screens).
+const double kHeaderOverlayHeight = 64.0;
+
+/// Top padding for content when using header overlay (slightly less than full height).
+const double kHeaderContentTopPadding = 60.0;
+
 class Header extends StatelessWidget implements PreferredSizeWidget {
   const Header({super.key});
 
   @override
-  Size get preferredSize => const Size.fromHeight(64); // Increased from 56 to 64 for extra padding
+  Size get preferredSize => const Size.fromHeight(kHeaderOverlayHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +41,58 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
             ),
             // Account button (right side)
             const _AccountButton(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Header bar with back button for sub-screens (e.g. Account Settings).
+/// Use as overlay in the same dashboard container layout.
+class HeaderWithBack extends StatelessWidget {
+  final String? title;
+
+  const HeaderWithBack({super.key, this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: kHeaderOverlayHeight,
+      child: Container(
+        color: Colors.black,
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+              style: IconButton.styleFrom(
+                minimumSize: const Size(48, 48),
+              ),
+            ),
+            Expanded(
+              child: title != null && title!.isNotEmpty
+                  ? Center(
+                      child: Text(
+                        title!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  : Center(
+                      child: Image.asset(
+                        'assets/images/lakbike_logo4.png',
+                        height: 40,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 48), // Balance leading
           ],
         ),
       ),

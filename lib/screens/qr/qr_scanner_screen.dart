@@ -14,6 +14,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
     facing: CameraFacing.back,
+    autoStart: false,
   );
   
   bool _isScanning = true;
@@ -22,9 +23,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   void initState() {
     super.initState();
-    // Start scanner when screen is accessed
-    // mobile_scanner will automatically request camera permission when needed
-    _controller.start();
+    // Start scanner after first frame so the native camera view is ready (fixes issues on physical devices)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.start();
+    });
   }
 
   @override
@@ -125,11 +127,21 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     final padding = mediaQuery.padding;
 
     return Scaffold(
-      appBar: const Header(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
-          final h = constraints.maxHeight;
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // 1. Full-screen dark background (for the sides)
+            Container(color: Colors.black),
+            // 2. Main content area (white) with camera
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final w = constraints.maxWidth;
+                      final h = constraints.maxHeight;
           final shorterSide = w < h ? w : h;
 
           // Overlay: responsive to actual body size
@@ -244,7 +256,15 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 ),
             ],
           );
-        },
+                    },
+                  ),
+                ),
+              ),
+            ),
+            // 3. Fixed Header overlay
+            const Header(),
+          ],
+        ),
       ),
     );
   }

@@ -417,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _MetricItem(
             icon: Icons.directions_bike,
-            value: _isLoading ? '...' : '${distance.toStringAsFixed(1)}km',
+            value: _isLoading ? '...' : (distance.abs() >= 1000 ? '${formatCompactNumber(distance, 1)}km' : '${distance.toStringAsFixed(1)}km'),
             label: 'Distance',
             subtitle: 'Today',
           ),
@@ -430,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _MetricItem(
             icon: Icons.check_box,
-            value: _isLoading ? '...' : formatEnergy(generated),
+            value: _isLoading ? '...' : (generated >= 1000000 ? '${formatCompactNumber(generated / 1000)} kWh' : formatEnergy(generated)),
             label: 'Generated',
             subtitle: 'Today',
           ),
@@ -505,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _ActionButton(
                 icon: Icons.flash_on,
                 title: 'Total Generated',
-                value: _isLoading ? '...' : formatEnergy(totalGenerated),
+                value: _isLoading ? '...' : (totalGenerated >= 1000000 ? '${formatCompactNumber(totalGenerated / 1000)} kWh' : formatEnergy(totalGenerated)),
                 color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
                 onViewHistory: () {
@@ -517,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _ActionButton(
                 icon: Icons.account_balance_wallet,
                 title: 'Total Redeems',
-                value: _isLoading ? '...' : '₱ ${totalRedeems.toInt()}',
+                value: _isLoading ? '...' : formatCompactCurrency(totalRedeems),
                 color: AppColors.homePrimary, // Dark Green
                 width: buttonWidth,
                 isCurrency: true,
@@ -535,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.battery_charging_full,
             title: _isLoading 
                 ? 'Loading...' 
-                : '$batteriesExchanged Batteries Exchanged',
+                : '${batteriesExchanged >= 1000 ? formatCompactNumber(batteriesExchanged, 0) : batteriesExchanged} Batteries Exchanged',
             value: '', // No value displayed below the title
             color: AppColors.homePrimary, // Dark Green
             width: double.infinity,

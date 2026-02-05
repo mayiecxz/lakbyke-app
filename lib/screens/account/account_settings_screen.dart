@@ -3,6 +3,7 @@ import 'package:lakbyke_mobile/services/user_service.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/screens/account/otp_verification_dialog.dart';
+import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/models/user/user_model.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
@@ -209,50 +210,37 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Image.asset(
-          'assets/images/lakbike_logo4.png',
-          height: 40,
-          fit: BoxFit.contain,
-        ),
-        centerTitle: true,
-      ),
-      body: Container(
-        color: Colors.black,
-        child: SafeArea(
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppDimensions.paddingLarge),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        const Text(
-                          'Account Settings',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: AppDimensions.paddingLarge),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // 1. Full-screen dark background (for the sides)
+            Container(color: Colors.black),
+            // 2. Main content area (white)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Title
+                              const Text(
+                                'Account Settings',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: AppDimensions.paddingLarge),
 
-                        // Account Information Card
-                        _AccountInfoCard(
+                              // Account Information Card
+                              _AccountInfoCard(
                           displayName: _user?.displayName ?? 'Loading...',
                           email: _user?.email ?? 'Loading...',
                           serviceTag: _user?.serviceTag ?? 'Loading...',
@@ -279,10 +267,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                             ),
                           ],
                         ),
-                      ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-          ),
+            const HeaderWithBack(title: 'Account Settings'),
+          ],
         ),
       ),
     );

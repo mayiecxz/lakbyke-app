@@ -502,11 +502,20 @@ class _MapsScreenState extends State<MapsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const Header(),
-      // floatingActionButton: const ChatFAB(), // Hidden for now
-      body: Column(
-        children: [
-          // Lakbyke Stations List
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // 1. Full-screen dark background (for the sides)
+            Container(color: Colors.black),
+            // 2. Main content area (white)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white),
+                  child: Column(
+                    children: [
+                      // Lakbyke Stations List
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
             child: Column(
@@ -1263,8 +1272,16 @@ class _MapsScreenState extends State<MapsScreen> {
                             ),
                         ],
                       ),
-          ),
-        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 3. Fixed Header overlay
+            const Header(),
+          ],
+        ),
       ),
     );
   }

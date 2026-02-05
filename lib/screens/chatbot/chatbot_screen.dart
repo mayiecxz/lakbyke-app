@@ -203,12 +203,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     _buildStat("Battery", "${bikeData.batteryLevel}%", Icons.battery_charging_full),
                   _buildStat(
                     "Total Generated", 
-                    _isLoadingStats ? "..." : formatEnergy(_totalGenerated), 
+                    _isLoadingStats ? "..." : (_totalGenerated >= 1000000 ? '${formatCompactNumber(_totalGenerated / 1000)} kWh' : formatEnergy(_totalGenerated)), 
                     Icons.bolt
                   ),
                     _buildStat(
                       "Total Redeemed", 
-                      _isLoadingStats ? "..." : "₱${_totalRedeemed.toStringAsFixed(2)}", 
+                      _isLoadingStats ? "..." : formatCompactCurrency(_totalRedeemed), 
                       Icons.account_balance_wallet
                     ),
                   ],

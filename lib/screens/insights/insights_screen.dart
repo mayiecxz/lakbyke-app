@@ -4,6 +4,7 @@ import 'package:lakbyke_mobile/screens/template/screen_title.dart';
 import 'package:lakbyke_mobile/models/insights/insights_model.dart';
 import 'package:lakbyke_mobile/utils/colors.dart';
 import 'package:lakbyke_mobile/utils/dimensions.dart';
+import 'package:lakbyke_mobile/utils/formatting.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -43,43 +44,60 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const Header(),
-      body: _isLoading
-          ? _buildLoadingState()
-          : RefreshIndicator(
-              onRefresh: _loadInsightsData,
-              color: AppColors.homePrimary,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const ScreenTitle(title: 'INSIGHTS'),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppDimensions.paddingMedium,
-                        AppDimensions.paddingLarge,
-                        AppDimensions.paddingMedium,
-                        AppDimensions.paddingXLarge,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildCurrentActivityCard(),
-                          const SizedBox(height: AppDimensions.paddingLarge),
-                          _buildProjectionCard(),
-                          const SizedBox(height: AppDimensions.paddingLarge),
-                          _buildBatteryPictograph(),
-                          const SizedBox(height: AppDimensions.paddingLarge),
-                          _buildMotivationCard(),
-                        ],
-                      ),
-                    ),
-                  ],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // 1. Full-screen dark background (for the sides)
+            Container(color: Colors.black),
+            // 2. Main content area (white)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white),
+                  child: _isLoading
+                      ? _buildLoadingState()
+                      : RefreshIndicator(
+                          onRefresh: _loadInsightsData,
+                          color: AppColors.homePrimary,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const ScreenTitle(title: 'INSIGHTS'),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    AppDimensions.paddingMedium,
+                                    AppDimensions.paddingLarge,
+                                    AppDimensions.paddingMedium,
+                                    AppDimensions.paddingXLarge,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildCurrentActivityCard(),
+                                      const SizedBox(height: AppDimensions.paddingLarge),
+                                      _buildProjectionCard(),
+                                      const SizedBox(height: AppDimensions.paddingLarge),
+                                      _buildBatteryPictograph(),
+                                      const SizedBox(height: AppDimensions.paddingLarge),
+                                      _buildMotivationCard(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
+            // 3. Fixed Header overlay
+            const Header(),
+          ],
+        ),
+      ),
     );
   }
 
@@ -195,7 +213,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 Expanded(
                   child: _buildStatItemWithPeso(
                     'Avg/Session',
-                    '₱${_insightsModel.averageEarningsPerSession.toStringAsFixed(2)}',
+                    formatCompactCurrency(_insightsModel.averageEarningsPerSession),
                   ),
                 ),
               ],
@@ -212,7 +230,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                   ),
                   Text(
-                    '₱${_insightsModel.weeklyAverageEarnings.toStringAsFixed(2)}',
+                    formatCompactCurrency(_insightsModel.weeklyAverageEarnings),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -231,7 +249,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                     ),
                     Text(
-                      '${_insightsModel.weeklyAverageDistance.toStringAsFixed(1)} km',
+                      '${_insightsModel.weeklyAverageDistance.abs() >= 1000 ? formatCompactNumber(_insightsModel.weeklyAverageDistance, 1) : _insightsModel.weeklyAverageDistance.toStringAsFixed(1)} km',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -425,7 +443,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           end: Alignment.bottomRight,
           colors: [
             AppColors.homePrimary,
-            AppColors.homeAccent.withValues(alpha: 0.35),
+            AppColors.homeAccent.withValues(alpha: 0.55),
             AppColors.homePrimary,
           ],
         ),
@@ -450,14 +468,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.trending_up_rounded, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+                Icon(Icons.trending_up_rounded, size: 16, color: Colors.white.withValues(alpha: 0.95)),
                 const SizedBox(width: 6),
                 Text(
                   'MONTHLY EARNINGS PROJECTION',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Colors.white.withValues(alpha: 0.95),
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -471,10 +489,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -482,7 +500,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   children: [
                     Icon(
                       Icons.info_outline_rounded,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withValues(alpha: 0.95),
                       size: 16,
                     ),
                     const SizedBox(width: 10),
@@ -490,7 +508,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       child: Text(
                         'Complete your first session to see earnings projections based on your activity.',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withValues(alpha: 0.95),
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
                         ),
@@ -506,12 +524,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '₱${_insightsModel.projectedMonthlyEarnings.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  formatCompactCurrency(_insightsModel.projectedMonthlyEarnings),
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: -0.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        offset: const Offset(0, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
                 ),
                 if (increase > 0)
@@ -542,7 +567,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             const SizedBox(height: AppDimensions.paddingMedium),
             Container(
               height: 1,
-              color: Colors.white.withValues(alpha: 0.25),
+              color: Colors.white.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 14),
             Row(
@@ -550,16 +575,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
               children: [
                 _buildProjectionMetric(
                   'Current activity',
-                  '₱${_insightsModel.currentMonthlyProjection.toStringAsFixed(2)}',
+                  formatCompactCurrency(_insightsModel.currentMonthlyProjection),
                 ),
                 _buildProjectionMetric(
                   'Energy',
-                  '${(_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
+                  '${(_insightsModel.projectedMonthlyEnergy / 1000).abs() >= 1000 ? formatCompactNumber(_insightsModel.projectedMonthlyEnergy / 1000, 1) : (_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
                 ),
                 if (_insightsModel.projectedMonthlyDistance > 0)
                   _buildProjectionMetric(
                     'Distance',
-                    '${_insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
+                    '${_insightsModel.projectedMonthlyDistance.abs() >= 1000 ? formatCompactNumber(_insightsModel.projectedMonthlyDistance, 1) : _insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
                   ),
               ],
             ),
@@ -578,17 +603,24 @@ class _InsightsScreenState extends State<InsightsScreen> {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.75),
+            color: Colors.white.withValues(alpha: 0.95),
             fontWeight: FontWeight.w400,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: Colors.white,
             fontWeight: FontWeight.w600,
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                offset: const Offset(0, 1),
+                blurRadius: 1,
+              ),
+            ],
           ),
         ),
       ],
@@ -964,7 +996,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '₱${displayEarnings.toStringAsFixed(2)}',
+                    formatCompactCurrency(displayEarnings),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -1052,7 +1084,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         if (hasMore) ...[
           const SizedBox(height: 8),
           Text(
-            '+ ${numBatteries - maxBatteriesToShow} more (₱${((numBatteries - maxBatteriesToShow) * batteryValue).toStringAsFixed(2)})',
+            '+ ${numBatteries - maxBatteriesToShow} more (${formatCompactCurrency((numBatteries - maxBatteriesToShow) * batteryValue)})',
             style: TextStyle(
               fontSize: 11,
               color: AppColors.textTertiary,
@@ -1061,7 +1093,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ],
         const SizedBox(height: 8),
         Text(
-          '1 unit = ₱${batteryValue.toStringAsFixed(0)}',
+          '1 unit = ${formatCompactCurrency(batteryValue)}',
           style: TextStyle(
             fontSize: 10,
             color: AppColors.textTertiary,
@@ -1086,7 +1118,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
       final projectedYearly = _insightsModel.averageEarningsPerSession > 0 
           ? _insightsModel.averageEarningsPerSession * 365 
           : 0.0;
-      motivationText = 'Great progress! If you cycle daily, you could earn ₱${projectedYearly.toStringAsFixed(2)} per year!';
+      motivationText = 'Great progress! If you cycle daily, you could earn ${formatCompactCurrency(projectedYearly)} per year!';
       tipText = '💡 Tip: Consistency is key! Regular cycling sessions help maximize your earnings potential.';
     } else if (monthlyEarnings > 0) {
       motivationText = 'Keep up the great work! Your cycling activity is generating earnings.';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
+import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
@@ -72,11 +73,19 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       builder: (context, snapshot) {
         final totalRedeemed = snapshot.data?['totalRedeemed'] ?? 0.0;
         final batteryExchangeCount = snapshot.data?['batteryExchangeCount'] ?? 0;
-
+        final w = MediaQuery.of(context).size.width;
+        final hPad = (w * 0.05).clamp(8.0, 20.0);
+        final cardPad = (w * 0.045).clamp(12.0, 18.0);
+        final iconMain = (w * 0.07).clamp(20.0, 28.0);
+        final iconSec = (w * 0.06).clamp(18.0, 24.0);
+        final fontSizeMain = (w * 0.07).clamp(18.0, 28.0);
+        final fontSizeSec = (w * 0.06).clamp(16.0, 24.0);
+        final labelFontSize = (w * 0.032).clamp(11.0, 14.0);
+        final batteryStr = batteryExchangeCount >= 1000 ? formatCompactNumber(batteryExchangeCount, 0) : '$batteryExchangeCount';
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12.0),
           child: Container(
-            padding: const EdgeInsets.all(18.0),
+            padding: EdgeInsets.all(cardPad),
             decoration: BoxDecoration(
               color: AppColors.homeAccent,
               borderRadius: BorderRadius.circular(16.0),
@@ -88,45 +97,53 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
-                      children: const [
-                        Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
-                        SizedBox(width: 12),
+                      children: [
+                        Icon(Icons.account_balance_wallet, color: Colors.white, size: iconMain),
+                        SizedBox(width: (w * 0.03).clamp(8.0, 12.0)),
                         Text(
                           'TOTAL Redeemed',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: labelFontSize),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ],
                     ),
-                    Text(
-                      '₱ ${totalRedeemed.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          formatCompactCurrency(totalRedeemed),
+                          style: TextStyle(color: Colors.white, fontSize: fontSizeMain, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: (w * 0.02).clamp(8.0, 12.0)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
-                      children: const [
-                        Icon(Icons.battery_charging_full, color: Colors.white, size: 24),
-                        SizedBox(width: 12),
+                      children: [
+                        Icon(Icons.battery_charging_full, color: Colors.white, size: iconSec),
+                        SizedBox(width: (w * 0.03).clamp(8.0, 12.0)),
                         Text(
                           'Batteries Exchanged',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: labelFontSize),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ],
                     ),
-                    Text(
-                      '$batteryExchangeCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          batteryStr,
+                          style: TextStyle(color: Colors.white, fontSize: fontSizeSec, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
@@ -142,10 +159,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget _buildFilterChips() {
     const choices = ['daily', 'weekly', 'monthly', 'yearly'];
     final screenWidth = MediaQuery.of(context).size.width;
-    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0); // Responsive font size
-    
+    final fontSize = (screenWidth * 0.032).clamp(10.0, 14.0);
+    final hPad = (screenWidth * 0.05).clamp(8.0, 20.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: EdgeInsets.symmetric(horizontal: hPad),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: choices.map((c) {
@@ -201,9 +218,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
         final aggregatedData = snapshot.data ?? [];
         final items = _paginatedData(aggregatedData, context);
-
+        final w = MediaQuery.of(context).size.width;
+        final listPadH = (w * 0.05).clamp(8.0, 20.0);
+        final rowPadH = (w * 0.04).clamp(12.0, 16.0);
+        final rowPadV = (w * 0.03).clamp(10.0, 14.0);
+        final chevronSize = (w * 0.05).clamp(16.0, 20.0);
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+          padding: EdgeInsets.symmetric(horizontal: listPadH, vertical: 12.0),
           child: Column(
             children: [
               // Paginated list (non-scrollable)
@@ -228,7 +249,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                 onTap: () => _showTransactionDetailModal(context, item, aggregatedData),
                                 borderRadius: BorderRadius.circular(12.0),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                                  padding: EdgeInsets.symmetric(horizontal: rowPadH, vertical: rowPadV),
                                   decoration: BoxDecoration(
                                     color: AppColors.surfaceDim,
                                     borderRadius: BorderRadius.circular(12.0),
@@ -237,16 +258,30 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
-                                        child: Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        child: Text(
+                                          item['label'] as String,
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text('₱ ${(item['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                          const SizedBox(width: 8),
-                                          Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-                                        ],
+                                      SizedBox(width: (w * 0.02).clamp(8.0, 12.0)),
+                                      Flexible(
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                formatCompactCurrency(item['amount'] as double),
+                                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                            SizedBox(width: (w * 0.02).clamp(6.0, 8.0)),
+                                            Icon(Icons.chevron_right, color: Colors.grey[400], size: chevronSize),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),

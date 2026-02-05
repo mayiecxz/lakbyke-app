@@ -93,7 +93,7 @@ class EnergyDetailModal extends StatelessWidget {
                               child: _buildStatCard(
                                 icon: Icons.bolt,
                                 label: 'Energy Generated',
-                                value: formatEnergy(totalEnergy),
+                                value: totalEnergy >= 1000000 ? '${formatCompactNumber(totalEnergy / 1000)} kWh' : formatEnergy(totalEnergy),
                                 color: Colors.amber[700]!,
                               ),
                             ),
@@ -102,7 +102,7 @@ class EnergyDetailModal extends StatelessWidget {
                               child: _buildStatCard(
                                 icon: Icons.straighten,
                                 label: 'Distance',
-                                value: '${totalDistance.toStringAsFixed(2)} km',
+                                value: '${totalDistance.abs() >= 1000 ? formatCompactNumber(totalDistance, 1) : totalDistance.toStringAsFixed(2)} km',
                                 color: Colors.blue[700]!,
                               ),
                             ),
@@ -262,11 +262,11 @@ class EnergyDetailModal extends StatelessWidget {
 
     return Column(
       children: [
-        _buildDetailRow('Records', recordCount.toString()),
-        if (avgPower > 0) _buildDetailRow('Avg Power', '${avgPower.toStringAsFixed(2)} W'),
-        if (maxPower > 0) _buildDetailRow('Max Power', '${maxPower.toStringAsFixed(2)} W'),
-        if (avgSpeed > 0) _buildDetailRow('Avg Speed', '${avgSpeed.toStringAsFixed(1)} km/h'),
-        if (maxSpeed > 0) _buildDetailRow('Max Speed', '${maxSpeed.toStringAsFixed(1)} km/h'),
+        _buildDetailRow('Records', recordCount >= 1000 ? formatCompactNumber(recordCount, 0) : recordCount.toString()),
+        if (avgPower > 0) _buildDetailRow('Avg Power', '${avgPower.abs() >= 1000 ? formatCompactNumber(avgPower, 1) : avgPower.toStringAsFixed(2)} W'),
+        if (maxPower > 0) _buildDetailRow('Max Power', '${maxPower.abs() >= 1000 ? formatCompactNumber(maxPower, 1) : maxPower.toStringAsFixed(2)} W'),
+        if (avgSpeed > 0) _buildDetailRow('Avg Speed', '${avgSpeed.abs() >= 1000 ? formatCompactNumber(avgSpeed, 1) : avgSpeed.toStringAsFixed(1)} km/h'),
+        if (maxSpeed > 0) _buildDetailRow('Max Speed', '${maxSpeed.abs() >= 1000 ? formatCompactNumber(maxSpeed, 1) : maxSpeed.toStringAsFixed(1)} km/h'),
       ],
     );
   }
