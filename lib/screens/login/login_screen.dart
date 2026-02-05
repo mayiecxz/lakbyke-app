@@ -23,6 +23,7 @@ class _LoginModalState extends State<LoginModal> {
   final AuthService _authService = AuthService();
   bool _rememberMe = false;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _isSendingResetEmail = false; 
 
   // Updated Login Function with Email Verification Check
@@ -85,9 +86,14 @@ class _LoginModalState extends State<LoginModal> {
 
   // Google Login Function - uses Firebase UID to check userTable
   Future<void> _loginWithGoogle() async {
+    if (_isGoogleLoading) return;
+    setState(() => _isGoogleLoading = true);
+
     final result = await _authService.signInWithGoogle();
 
     if (!mounted) return;
+    setState(() => _isGoogleLoading = false);
+
     switch (result) {
       case GoogleSignInSuccess(:final user):
         await _checkUserByUIDAndNavigate(user);
@@ -105,6 +111,7 @@ class _LoginModalState extends State<LoginModal> {
           SnackBar(
             content: Text(message),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
         break;
@@ -648,20 +655,32 @@ class _LoginModalState extends State<LoginModal> {
                     // Google Login Button
                     Center(
                       child: GestureDetector(
-                        onTap: _loginWithGoogle,
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade300, width: 1),
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/images/google.png',
-                              width: 24,
-                              height: 24,
-                              fit: BoxFit.contain,
+                        onTap: _isGoogleLoading ? null : _loginWithGoogle,
+                        child: Opacity(
+                          opacity: _isGoogleLoading ? 0.6 : 1,
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey.shade300, width: 1),
+                            ),
+                            child: Center(
+                              child: _isGoogleLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF70D2C8)),
+                                      ),
+                                    )
+                                  : Image.asset(
+                                      'assets/images/google.png',
+                                      width: 24,
+                                      height: 24,
+                                      fit: BoxFit.contain,
+                                    ),
                             ),
                           ),
                         ),

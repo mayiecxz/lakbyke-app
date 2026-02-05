@@ -27,22 +27,27 @@ class AuthService {
 
   AuthService() {
     // Initialize GoogleSignIn with the appropriate client ID based on platform.
-    // For Android: also set serverClientId (web client ID) so Firebase can verify the ID token.
-    // Ensure Android app SHA-1 (debug + release/upload) is added in Firebase Console >
+    // For Android: serverClientId (web client ID) is required so Firebase gets an idToken.
+    // Ensure Android app SHA-1 (debug + release) is added in Firebase Console >
     // Project Settings > Your apps, and Google sign-in is enabled in Authentication.
+    const String webClientId =
+        '837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com';
     String? clientId;
     String? serverClientId;
 
     if (kIsWeb) {
-      // Web client ID (client_type: 3)
-      clientId = '837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com';
+      clientId = webClientId;
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      // Android client ID; serverClientId = web client ID for Firebase token verification
+      // Android: serverClientId must be the web client ID to get idToken for Firebase.
+      serverClientId = webClientId;
       clientId = '837322519755-g798gc3hu4rd15p5dglbavsj9lg77alr.apps.googleusercontent.com';
-      serverClientId = '837322519755-g9o0lmbp2h6lrbf6nkli9ln2e92nlqrf.apps.googleusercontent.com';
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      // iOS client ID
       clientId = '837322519755-is4v2srtssi2ufhbddr33m7h2o5su625.apps.googleusercontent.com';
+      serverClientId = webClientId;
+    } else {
+      // Desktop (Windows, macOS, Linux): use web client ID so sign-in is configured.
+      clientId = webClientId;
+      serverClientId = webClientId;
     }
 
     _googleSignIn = GoogleSignIn(
@@ -73,7 +78,7 @@ class AuthService {
         final UserCredential result = await _auth.signInWithPopup(googleProvider);
         return GoogleSignInSuccess(result.user!);
       } else {
-        // For mobile platforms (Android/iOS), use google_sign_in package
+        // For mobile/desktop: use google_sign_in package
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
         if (googleUser == null) {
@@ -81,6 +86,16 @@ class AuthService {
         }
 
         final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+        // Firebase Auth requires idToken for Google credential. If null, config is wrong
+        // (e.g. Android: add SHA-1 in Firebase Console, or serverClientId must be web client ID).
+        if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
+          return GoogleSignInFailure(
+            'Google Sign-In configuration error. '
+            'On Android: add your app SHA-1 in Firebase Console > Project settings > Your apps.',
+          );
+        }
+
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
@@ -89,12 +104,19 @@ class AuthService {
         return GoogleSignInSuccess(result.user!);
       }
     } on FirebaseAuthException catch (e) {
-      return GoogleSignInFailure(e.message ?? 'Google sign-in failed. Please try again.');
-    } catch (e) {
+      final msg = e.message ?? e.code;
       return GoogleSignInFailure(
-        e.toString().contains('cancel') || e.toString().contains('dismissed')
-            ? 'Sign-in was canceled.'
-            : 'Google login failed. Please check your connection and try again.',
+        msg.contains('network') || msg.contains('INTERNAL')
+            ? 'Network error. Check your connection and try again.'
+            : (e.message ?? 'Google sign-in failed. Please try again.'),
+      );
+    } catch (e) {
+      final s = e.toString().toLowerCase();
+      if (s.contains('cancel') || s.contains('dismissed') || s.contains('sign_in_canceled')) {
+        return GoogleSignInCanceled();
+      }
+      return GoogleSignInFailure(
+        'Google login failed. Please check your connection and try again.',
       );
     }
   }
@@ -167,6 +189,43 @@ class AuthService {
   void disposeAuthListener() {
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
+  }
+
+  /// Change password using current password (no email/OTP). Returns null on success.
+  /// Only works for email/password accounts. Use [currentUser] email + [currentPassword] to reauth, then set [newPassword].
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return 'Not signed in.';
+      final email = user.email;
+      if (email == null || email.isEmpty) return 'No email linked to this account.';
+
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        return 'Current password is incorrect.';
+      }
+      if (e.code == 'weak-password') return 'New password is too weak.';
+      return e.message ?? 'Failed to change password.';
+    } catch (e) {
+      return 'Failed to change password. Please try again.';
+    }
+  }
+
+  /// True if the current user can change password (has email/password provider).
+  bool get canChangePassword {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    return user.providerData.any((p) => p.providerId == 'password');
   }
 
   // Send password reset email

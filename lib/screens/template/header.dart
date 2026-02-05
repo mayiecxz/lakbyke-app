@@ -4,7 +4,7 @@ import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/screens/chatbot/chatbot_screen.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
-// import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart';
+import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart';
 
 /// Height used for header overlay (dashboard-style screens).
 const double kHeaderOverlayHeight = 64.0;
@@ -150,23 +150,23 @@ class _AccountButtonState extends State<_AccountButton> with SingleTickerProvide
       ),
       elevation: 8,
       items: <PopupMenuEntry<String>>[
-        // PopupMenuItem<String>(
-        //   value: 'settings',
-        //   child: _AccountMenuItem(
-        //     icon: Icons.settings,
-        //     title: 'Account Settings',
-        //     isDestructive: false,
-        //     onTap: () {
-        //       Navigator.pop(context);
-        //       Navigator.push(
-        //         context,
-        //         MaterialPageRoute(
-        //           builder: (context) => const AccountSettingsScreen(),
-        //         ),
-        //       );
-        //     },
-        //   ),
-        // ),
+        PopupMenuItem<String>(
+          value: 'change_password',
+          child: _AccountMenuItem(
+            icon: Icons.lock_outline,
+            title: 'Change password',
+            isDestructive: false,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AccountSettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ),
         PopupMenuItem<String>(
           value: 'need_help',
           child: _AccountMenuItem(
