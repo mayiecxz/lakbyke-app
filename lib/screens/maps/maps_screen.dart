@@ -69,7 +69,9 @@ class _MapsScreenState extends State<MapsScreen> {
 
   @override
   void dispose() {
-    _stopNavigation();
+    // Only cancel subscription; do not call _stopNavigation() (it calls setState).
+    _positionStreamSubscription?.cancel();
+    _positionStreamSubscription = null;
     _mapController?.dispose();
     super.dispose();
   }
@@ -528,6 +530,32 @@ class _MapsScreenState extends State<MapsScreen> {
                     children: [
                       // When no station chosen: show station picker. When chosen: only directions + map.
                       if (_destination == null) ...[
+                        // Loading route indicator (uses _isLoadingDirections and _selectedStation)
+                        if (_isLoadingDirections && _selectedStation != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                            child: Row(
+                              children: [
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Loading route to ${_selectedStation!.name}...',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         // Lakbyke Stations list (only when no route)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
