@@ -436,7 +436,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     
     final hasNoData = _insightsModel.totalSessions == 0;
 
-    // Gold gradient for contrast; all text and icons remain white
+    // Primary (green) to gold/amber gradient; no white. Text and icons unchanged.
     const Color darkGold = Color(0xFFB8860B);
     const Color goldenrod = Color(0xFFDAA520);
 
@@ -446,15 +446,15 @@ class _InsightsScreenState extends State<InsightsScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
+            AppColors.homePrimary,
             darkGold,
             goldenrod,
-            darkGold,
           ],
         ),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         boxShadow: [
           BoxShadow(
-            color: darkGold.withValues(alpha: 0.35),
+            color: AppColors.homePrimary.withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),

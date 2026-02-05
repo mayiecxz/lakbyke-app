@@ -12,7 +12,10 @@ import 'package:lakbyke_mobile/models/maps/lakbyke_station.dart';
 import 'package:lakbyke_mobile/services/lakbyke_stations_service.dart';
 
 class MapsScreen extends StatefulWidget {
-  const MapsScreen({super.key});
+  const MapsScreen({super.key, this.isActive = true});
+
+  /// When false, location is not requested (request only when Maps tab is opened).
+  final bool isActive;
 
   @override
   State<MapsScreen> createState() => _MapsScreenState();
@@ -50,12 +53,20 @@ class _MapsScreenState extends State<MapsScreen> {
   @override
   void initState() {
     super.initState();
-    // Request location permission when screen is accessed
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _getCurrentLocation();
-    });
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _getCurrentLocation());
+    }
   }
-  
+
+  @override
+  void didUpdateWidget(covariant MapsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive == widget.isActive) return;
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _getCurrentLocation());
+    }
+  }
+
   @override
   void dispose() {
     _stopNavigation();

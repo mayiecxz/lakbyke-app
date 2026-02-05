@@ -33,10 +33,10 @@ class _MainNavigationState extends State<MainNavigation> {
   // Store history tab index to pass to CombinedHistoryScreen
   int _historyInitialTabIndex = 0;
   
-  // Screens: QR scanner receives isActive so camera is only used when that tab is selected
+  // Screens: QR scanner and Maps receive isActive so permission/usage only when tab is selected
   List<Widget> get _screens => [
     const HomeScreen(),
-    const MapsScreen(),
+    MapsScreen(isActive: _currentIndex == 1),
     QrScannerScreen(isActive: _currentIndex == 2),
     const InsightsScreen(),
     CombinedHistoryScreen(initialTabIndex: _historyInitialTabIndex),
