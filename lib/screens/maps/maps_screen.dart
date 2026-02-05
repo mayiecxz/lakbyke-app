@@ -526,10 +526,11 @@ class _MapsScreenState extends State<MapsScreen> {
                   decoration: const BoxDecoration(color: Colors.white),
                   child: Column(
                     children: [
-                      // Lakbyke Stations List
+                      // Lakbyke Stations List (compact)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Header
                 Row(
@@ -538,39 +539,41 @@ class _MapsScreenState extends State<MapsScreen> {
                     const Text(
                       'Lakbyke Stations',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF317263),
                       ),
                     ),
                     if (_destination != null)
                       IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, size: 20),
                         onPressed: _clearDirections,
                         tooltip: 'Clear route',
                         color: const Color(0xFF317263),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 // Stations List
                 if (_lakbykeStations.isEmpty)
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Center(
                       child: Text(
                         'Loading stations...',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ),
                   )
                 else
                   SizedBox(
-                    height: 120,
+                    height: 64,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: _lakbykeStations.length,
@@ -580,12 +583,12 @@ class _MapsScreenState extends State<MapsScreen> {
                         final isNearest = station.placeId == _nearestStation?.placeId;
                         
                         return Container(
-                          width: 280,
-                          margin: const EdgeInsets.only(right: 12),
+                          width: 200,
+                          margin: const EdgeInsets.only(right: 8),
                           child: Card(
                             elevation: isSelected ? 4 : 2,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(10),
                               side: BorderSide(
                                 color: isSelected 
                                     ? const Color(0xFF317263) 
@@ -597,9 +600,9 @@ class _MapsScreenState extends State<MapsScreen> {
                               onTap: () {
                                 _getDirectionsToStation(station);
                               },
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(10),
                               child: Container(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   gradient: isNearest
                                       ? LinearGradient(
@@ -612,132 +615,74 @@ class _MapsScreenState extends State<MapsScreen> {
                                         )
                                       : null,
                                   color: isNearest ? null : Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: isNearest
-                                                ? Colors.white.withOpacity(0.2)
-                                                : const Color(0xFF317263).withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(
-                                            Icons.ev_station,
-                                            color: isNearest
-                                                ? Colors.white
-                                                : const Color(0xFF317263),
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              if (isNearest)
-                                                Row(
-                                                  children: [
-                                                    const Icon(
-                                                      Icons.star,
-                                                      color: Colors.amber,
-                                                      size: 14,
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      'Nearest',
-                                                      style: TextStyle(
-                                                        color: Colors.white.withOpacity(0.9),
-                                                        fontSize: 11,
-                                                        fontWeight: FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              Text(
-                                                station.name,
-                                                style: TextStyle(
-                                                  color: isNearest ? Colors.white : Colors.black87,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (_isLoadingDirections && isSelected)
-                                          const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                            ),
-                                          )
-                                        else
-                                          Icon(
-                                            Icons.directions,
-                                            color: isNearest ? Colors.white : const Color(0xFF317263),
-                                            size: 20,
-                                          ),
-                                      ],
+                                    Icon(
+                                      Icons.ev_station,
+                                      color: isNearest ? Colors.white : const Color(0xFF317263),
+                                      size: 18,
                                     ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on,
-                                          size: 14,
-                                          color: isNearest
-                                              ? Colors.white.withOpacity(0.9)
-                                              : Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            station.address,
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (isNearest)
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.star, color: Colors.amber, size: 10),
+                                                const SizedBox(width: 2),
+                                                Text(
+                                                  'Nearest',
+                                                  style: TextStyle(
+                                                    color: Colors.white.withOpacity(0.9),
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          Text(
+                                            station.name,
                                             style: TextStyle(
-                                              color: isNearest
-                                                  ? Colors.white.withOpacity(0.9)
-                                                  : Colors.grey[700],
-                                              fontSize: 11,
+                                              color: isNearest ? Colors.white : Colors.black87,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.straighten,
-                                          size: 14,
-                                          color: isNearest
-                                              ? Colors.white.withOpacity(0.9)
-                                              : Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          station.getFormattedDistance(),
-                                          style: TextStyle(
-                                            color: isNearest
-                                                ? Colors.white.withOpacity(0.9)
-                                                : Colors.grey[700],
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
+                                          Text(
+                                            station.getFormattedDistance(),
+                                            style: TextStyle(
+                                              color: isNearest
+                                                  ? Colors.white.withOpacity(0.9)
+                                                  : Colors.grey[600],
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
+                                    if (_isLoadingDirections && isSelected)
+                                      const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    else
+                                      Icon(
+                                        Icons.directions,
+                                        color: isNearest ? Colors.white : const Color(0xFF317263),
+                                        size: 18,
+                                      ),
                                   ],
                                 ),
                               ),
@@ -747,156 +692,14 @@ class _MapsScreenState extends State<MapsScreen> {
                       },
                     ),
                   ),
-                // Nearest Lakbyke Station Recommendation (keep for backward compatibility)
-                if (_nearestStation != null && _destination == null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF317263).withOpacity(0.9),
-                          const Color(0xFF317263),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // Station icon
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.ev_station,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Station info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    color: Colors.amber,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'Nearest Station',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _nearestStation!.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    color: Colors.white.withOpacity(0.9),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      _nearestStation!.address,
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.9),
-                                        fontSize: 12,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.straighten,
-                                    color: Colors.white.withOpacity(0.9),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _nearestStation!.getFormattedDistance(),
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Directions button
-                        ElevatedButton.icon(
-                          onPressed: _isLoadingDirections
-                              ? null
-                              : () {
-                                  _getDirectionsToStation(_nearestStation!);
-                                },
-                          icon: const Icon(Icons.directions, size: 18),
-                          label: const Text('Go'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF317263),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 // Route information
                 if (_routeDistance != null && _routeDistance!.isNotEmpty)
                   Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: const Color(0xFF317263).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -939,7 +742,7 @@ class _MapsScreenState extends State<MapsScreen> {
                       // Directions toggle button
                       if (_directionsSteps.isNotEmpty)
                         Container(
-                          margin: const EdgeInsets.only(top: 8),
+                          margin: const EdgeInsets.only(top: 4),
                           child: ElevatedButton.icon(
                             onPressed: () {
                               setState(() {
