@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
+import 'package:lakbyke_mobile/screens/chatbot/chatbot_screen.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
 // import 'package:lakbyke_mobile/screens/account/account_settings_screen.dart';
@@ -167,6 +168,21 @@ class _AccountButtonState extends State<_AccountButton> with SingleTickerProvide
         //   ),
         // ),
         PopupMenuItem<String>(
+          value: 'need_help',
+          child: _AccountMenuItem(
+            icon: Icons.help_outline,
+            title: 'Need help?',
+            isDestructive: false,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+              );
+            },
+          ),
+        ),
+        PopupMenuItem<String>(
           value: 'logout',
           child: _AccountMenuItem(
             icon: Icons.logout,
@@ -239,10 +255,10 @@ class _AccountButtonState extends State<_AccountButton> with SingleTickerProvide
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               width: 1.5,
             ),
           ),

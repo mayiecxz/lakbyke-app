@@ -85,34 +85,29 @@ class _LoginModalState extends State<LoginModal> {
 
   // Google Login Function - uses Firebase UID to check userTable
   Future<void> _loginWithGoogle() async {
-    try {
-      // 1. Sign In with Google using Firebase Auth
-      User? user = await _authService.signInWithGoogle();
+    final result = await _authService.signInWithGoogle();
 
-      if (user != null) {
-        // Google accounts are automatically verified
-        // 2. Use Firebase UID to check user in userTable database
+    if (!mounted) return;
+    switch (result) {
+      case GoogleSignInSuccess(:final user):
         await _checkUserByUIDAndNavigate(user);
-      } else {
-        // User canceled or sign-in failed
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Google login was canceled or failed."),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+        break;
+      case GoogleSignInCanceled():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign-in was canceled.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        break;
+      case GoogleSignInFailure(:final message):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Google login error: $e"),
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );
-      }
+        break;
     }
   }
 
@@ -364,6 +359,7 @@ class _LoginModalState extends State<LoginModal> {
       return;
     }
 
+    if (!mounted) return;
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -411,37 +407,37 @@ class _LoginModalState extends State<LoginModal> {
       ),
     );
 
-    if (confirmed == true) {
-      setState(() {
-        _isSendingResetEmail = true;
-      });
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _isSendingResetEmail = true;
+    });
 
-      final error = await _authService.sendPasswordResetEmail(email);
+    final error = await _authService.sendPasswordResetEmail(email);
 
-      setState(() {
-        _isSendingResetEmail = false;
-      });
+    if (!mounted) return;
+    setState(() {
+      _isSendingResetEmail = false;
+    });
 
-      if (mounted) {
-        if (error == null) {
-          // Success
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Password reset email sent to $email! Please check your inbox.'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        } else {
-          // Error
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
+    if (mounted) {
+      if (error == null) {
+        // Success
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password reset email sent to $email! Please check your inbox.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        // Error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     }
   }

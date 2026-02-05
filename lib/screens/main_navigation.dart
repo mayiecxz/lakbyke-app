@@ -33,16 +33,12 @@ class _MainNavigationState extends State<MainNavigation> {
   // Store history tab index to pass to CombinedHistoryScreen
   int _historyInitialTabIndex = 0;
   
-  // Cache static screens to avoid rebuilding
-  static final List<Widget> _staticScreens = [
+  // Screens: QR scanner receives isActive so camera is only used when that tab is selected
+  List<Widget> get _screens => [
     const HomeScreen(),
     const MapsScreen(),
-    const QrScannerScreen(),
+    QrScannerScreen(isActive: _currentIndex == 2),
     const InsightsScreen(),
-  ];
-  
-  List<Widget> get _screens => [
-    ..._staticScreens,
     CombinedHistoryScreen(initialTabIndex: _historyInitialTabIndex),
   ];
 

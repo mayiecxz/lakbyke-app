@@ -227,7 +227,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           padding: EdgeInsets.symmetric(horizontal: listPadH, vertical: 12.0),
           child: Column(
             children: [
-              // Paginated list (non-scrollable)
+              // Scrollable list to avoid overflow on small screens
               Expanded(
                 child: items.isEmpty
                     ? Center(
@@ -236,11 +236,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           style: const TextStyle(color: Colors.grey),
                         ),
                       )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: items.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final item = entry.value;
+                    : ListView.builder(
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
                           return Padding(
                             padding: EdgeInsets.only(bottom: index < items.length - 1 ? 12 : 0),
                             child: Material(
@@ -289,7 +288,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               ),
                             ),
                           );
-                        }).toList(),
+                        },
                       ),
               ),
               // Modern pagination controls (only when rows exceed visible area)

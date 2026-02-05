@@ -94,8 +94,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     final history = await _chatbotService.loadChatHistory();
     
     if (history.isEmpty) {
-      // If no history, add welcome message
-      _addMessage("Hello! I'm your LakByke assistant, si Kleta. Start pedaling and ask me anything about your energy stats!", false);
+      // If no history, add welcome message (support-focused)
+      _addMessage("Hi! I'm your LakByke support assistant. Ask about LakByke or get help with the app—energy tracking, stations, QR, history, and more.", false);
     } else {
       // Restore chat history
       setState(() {
@@ -239,7 +239,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -286,7 +286,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
@@ -300,7 +300,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _sendMessage(),
                       decoration: InputDecoration(
-                        hintText: "Ask about your energy status...",
+                        hintText: "Ask about LakByke or get help with the app...",
                         hintStyle: TextStyle(color: Colors.grey.shade500),
                         filled: true,
                         fillColor: const Color(0xFFF6F7F9),

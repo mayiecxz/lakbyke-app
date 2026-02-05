@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 // assets are re-exported from `constants.dart`; avoid duplicate import
 import 'package:lakbyke_mobile/widgets/index.dart';
+import 'package:lakbyke_mobile/screens/chatbot/chatbot_screen.dart';
 import 'package:lakbyke_mobile/screens/main_navigation.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/widgets/validation_dialog.dart';
@@ -84,8 +85,8 @@ class _SidebarPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.black,
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.6),
+BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
                       blurRadius: 10,
                       offset: const Offset(2, 0),
                     ),
@@ -135,17 +136,23 @@ class _SidebarPanel extends StatelessWidget {
                       Navigator.of(context).pop();
                     }),
                     const Divider(color: Colors.white12, height: 1),
+                    _menuItem(context, Icons.help_outline, 'Need help?', onTap: () {
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      navigator.push(
+                        MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+                      );
+                    }),
+                    const Divider(color: Colors.white12, height: 1),
                     _menuItem(context, Icons.logout, 'Logout', onTap: () {
                       final navigator = Navigator.of(context);
                       // Close sidebar first then show confirmation dialog
                       navigator.pop();
-                      // Use the NavigatorState's context so we don't reference a
-                      // potentially deactivated sidebar widget's context.
-                      final activeCtx = navigator.context;
                       // Delay slightly so the sidebar closing animation finishes
                       Future.delayed(const Duration(milliseconds: 200), () {
+                        if (!navigator.mounted) return;
                         ValidationDialog.show(
-                          activeCtx,
+                          navigator.context,
                           title: 'Confirm Logout',
                           content: const Text('Are you sure you want to logout?'),
                           confirmLabel: 'Logout',

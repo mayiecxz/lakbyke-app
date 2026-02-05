@@ -134,7 +134,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     
     if (history.isEmpty) {
       // If no history, add welcome message
-      _addMessage("Hello! I'm your LakByke assistant, si Kleta. Start pedaling and ask me anything about your energy stats!", false);
+      _addMessage("Hi! I'm your LakByke support assistant. Ask about LakByke or get help with the app—energy tracking, stations, QR, history, and more.", false);
     } else {
       // Restore chat history
       setState(() {
@@ -234,7 +234,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bikeData = Provider.of<BikeData>(context); // Listen to changes
+    Provider.of<BikeData>(context); // Listen to changes so this widget rebuilds when BikeData updates
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomSheetHeight = screenHeight * 0.85;
     return Container(
@@ -268,7 +268,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -280,7 +280,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.eco, color: Colors.white),
@@ -316,7 +316,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                   "Battery", 
                   _isLoadingStats 
                       ? "..." 
-                      : (_batteryPercentage != null ? "${_batteryPercentage}%" : "N/A"), 
+                      : (_batteryPercentage != null ? '$_batteryPercentage%' : "N/A"), 
                   Icons.battery_charging_full
                 ),
                 _buildStat(
@@ -356,7 +356,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -403,7 +403,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -417,7 +417,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _sendMessage(),
                     decoration: InputDecoration(
-                      hintText: "Ask about your energy status...",
+                      hintText: "Ask about LakByke or get help with the app...",
                       hintStyle: TextStyle(color: Colors.grey.shade500),
                       filled: true,
                       fillColor: const Color(0xFFF6F7F9),
