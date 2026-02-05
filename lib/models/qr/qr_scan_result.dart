@@ -1,4 +1,5 @@
 /// Result of a single QR/barcode scan for use in UI and services.
+/// When scanning a transaction QR, [rawValue] / [transactionUid] is the transaction UID.
 class QrScanResult {
   QrScanResult({
     required this.rawValue,
@@ -7,6 +8,8 @@ class QrScanResult {
   }) : _scannedAt = scannedAt ?? DateTime.now();
 
   final String rawValue;
+  /// For transaction QR scans, this is the transaction UID used to update the record.
+  String get transactionUid => rawValue.trim();
   /// Barcode format label (e.g. "qrCode", "code128") when available.
   final String? format;
   final DateTime _scannedAt;

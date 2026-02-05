@@ -10,6 +10,86 @@ class TransactionService {
     return _auth.currentUser?.uid;
   }
 
+  /// Updates the transaction identified by [transactionUid] (scanned from QR):
+  /// sets mntTag to the logged-in user's service tag and status to 'qr_scanned'.
+  /// Returns a map with 'success' (bool) and 'message' or 'error'.
+  /// Supports both structures:
+  /// - Flat: transactions/{transactionId}/[fields]
+  /// - Nested: transactions/{stationId}/{transactionId}/[fields]
+  Future<Map<String, dynamic>> updateTransactionForQrScan(String transactionUid) async {
+    try {
+      final uid = transactionUid.trim();
+      if (uid.isEmpty) {
+        return {'success': false, 'error': 'Invalid transaction ID'};
+      }
+
+      final mntTag = await getServiceTag();
+      if (mntTag == null || mntTag.trim().isEmpty) {
+        return {'success': false, 'error': 'User service tag not found. Please complete your profile.'};
+      }
+
+      final snapshot = await _database.child('transactions').get();
+      if (!snapshot.exists) {
+        return {'success': false, 'error': 'Transaction not found'};
+      }
+
+      final data = snapshot.value;
+      if (data is! Map<Object?, Object?>) {
+        return {'success': false, 'error': 'Transaction not found'};
+      }
+
+      // 1) Flat structure: transactions/{transactionId}/[fields]
+      if (data.containsKey(uid)) {
+        final value = data[uid];
+        if (value is Map<Object?, Object?>) {
+          await _database.child('transactions').child(uid).update({
+            'mntTag': mntTag.trim(),
+            'status': 'qr_scanned',
+          });
+          return {
+            'success': true,
+            'message': 'Transaction updated successfully',
+          };
+        }
+      }
+
+      // 2) Nested structure: transactions/{stationId}/{transactionId}/[fields]
+      String? foundStationId;
+      for (final entry in data.entries) {
+        final stationId = entry.key.toString();
+        final stationData = entry.value;
+        if (stationData is Map<Object?, Object?> &&
+            stationData.containsKey(uid)) {
+          foundStationId = stationId;
+          break;
+        }
+      }
+
+      if (foundStationId == null) {
+        return {'success': false, 'error': 'Transaction not found'};
+      }
+
+      await _database
+          .child('transactions')
+          .child(foundStationId)
+          .child(uid)
+          .update({
+        'mntTag': mntTag.trim(),
+        'status': 'qr_scanned',
+      });
+
+      return {
+        'success': true,
+        'message': 'Transaction updated successfully',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Failed to update transaction: $e',
+      };
+    }
+  }
+
   // Get user's service tag
   Future<String?> getServiceTag() async {
     try {
