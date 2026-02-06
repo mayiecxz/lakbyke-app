@@ -4,6 +4,7 @@ import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/models/user/user_model.dart';
+import 'package:lakbyke_mobile/widgets/index.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -193,7 +194,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const AppLoadingOverlay(message: 'Loading account...')
                       : SingleChildScrollView(
                           padding: const EdgeInsets.all(AppDimensions.paddingLarge),
                           child: Column(

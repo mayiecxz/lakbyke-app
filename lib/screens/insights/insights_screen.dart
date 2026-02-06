@@ -5,6 +5,7 @@ import 'package:lakbyke_mobile/models/insights/insights_model.dart';
 import 'package:lakbyke_mobile/utils/colors.dart';
 import 'package:lakbyke_mobile/utils/dimensions.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
+import 'package:lakbyke_mobile/widgets/index.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -56,7 +57,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: _isLoading
-                      ? _buildLoadingState()
+                      ? const AppLoadingOverlay(message: 'Loading your insights...')
                       : RefreshIndicator(
                           onRefresh: _loadInsightsData,
                           color: AppColors.homePrimary,
@@ -97,41 +98,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
             const Header(),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-            decoration: BoxDecoration(
-              color: AppColors.homePrimary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.homePrimary),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimensions.paddingLarge),
-          Text(
-            'Loading your insights...',
-            style: TextStyle(
-              fontSize: 15,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
       ),
     );
   }

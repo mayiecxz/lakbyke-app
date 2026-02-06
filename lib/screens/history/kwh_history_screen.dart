@@ -3,6 +3,7 @@ import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
+import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/widgets/energy_detail_modal.dart';
 
 class KwhHistoryScreen extends StatefulWidget {
@@ -219,12 +220,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
 
   Widget _buildHistoryList(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const AppLoadingOverlay(message: 'Loading energy history...');
     }
 
     if (_errorMessage != null) {
