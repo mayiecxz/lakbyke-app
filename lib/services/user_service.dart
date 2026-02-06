@@ -3,6 +3,30 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lakbyke_mobile/models/user/user_model.dart';
 import 'package:lakbyke_mobile/services/otp_service.dart';
 
+/// Creates a user document in Realtime Database userTable (e.g. after signup with verified serviceTag).
+Future<void> createUserInUserTable({
+  required String uid,
+  required String email,
+  required String firstName,
+  required String lastName,
+  required String middleName,
+  required String serviceTag,
+}) async {
+  final ref = FirebaseDatabase.instance.ref('userTable/$uid');
+  await ref.set({
+    'uid': uid,
+    'email': email,
+    'firstName': firstName,
+    'lastName': lastName,
+    'middleName': middleName,
+    'serviceTag': serviceTag,
+    'role': 'cyclist',
+    'userRole': 'cyclist',
+    'accountStatus': 'active',
+  });
+  // createdAt is set on first login when email is verified (see login_screen).
+}
+
 class UserService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;

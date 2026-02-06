@@ -134,6 +134,18 @@ class AuthService {
     }
   }
 
+  /// Creates a Firebase Auth user and returns [UserCredential] for use in signup flow
+  /// (e.g. send email verification, then write to userTable).
+  Future<UserCredential> createUserWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    return await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
+
   // Sign out
   Future<void> signOut() async {
     try {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/login/login_screen.dart';
-import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
+import 'package:lakbyke_mobile/screens/signup/signup_qr_screen.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 
 // ============================================================================
@@ -214,10 +214,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
 
-  /// Handles signup button press. Navigate to signup screen.
+  /// Handles signup button press. Navigate to unit QR scanner, then to signup with serviceTag.
   void _handleSignupPressed() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SignupScreen()),
+      MaterialPageRoute(builder: (context) => const SignupQrScreen()),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/main_navigation.dart';
-import 'package:lakbyke_mobile/screens/signup/signup_screen.dart';
+import 'package:lakbyke_mobile/screens/signup/signup_qr_screen.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -136,6 +136,11 @@ class _LoginModalState extends State<LoginModal> {
         String? role = userData['userRole'] as String?;
 
         if (role == 'cyclist') {
+          // Set createdAt on first login (email already verified for Google)
+          final hasCreatedAt = userData['createdAt'] != null;
+          if (!hasCreatedAt) {
+            await userRef.update({'createdAt': ServerValue.timestamp});
+          }
           // --- SUCCESS: UID found + Role is Cyclist ---
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -199,6 +204,11 @@ class _LoginModalState extends State<LoginModal> {
         String? role = userData['userRole'] as String?;
 
         if (role == 'cyclist') {
+          // Set createdAt on first login (email already verified at this point)
+          final hasCreatedAt = userData['createdAt'] != null;
+          if (!hasCreatedAt) {
+            await userRef.update({'createdAt': ServerValue.timestamp});
+          }
           // --- SUCCESS: Valid Credentials + Role is Cyclist ---
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -699,7 +709,7 @@ class _LoginModalState extends State<LoginModal> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const SignupScreen(),
+                                builder: (context) => const SignupQrScreen(),
                               ),
                             );
                           },
