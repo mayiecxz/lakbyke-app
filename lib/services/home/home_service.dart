@@ -50,6 +50,63 @@ class HomeService {
         timestamp.day == now.day;
   }
 
+  /// Get the latest battery percentage from deviceEnergyData for the current user's mntTag.
+  /// Returns mountBatteryPercentage from the device doc with the most recent timestamp.
+  Future<int?> getLatestBatteryPercentage() async {
+    try {
+      final userId = getCurrentUserId();
+      if (userId == null) return null;
+
+      final serviceTagSnapshot = await _database.child('userTable/$userId/serviceTag').get();
+      if (!serviceTagSnapshot.exists) return null;
+
+      final serviceTag = serviceTagSnapshot.value as String?;
+      if (serviceTag == null || serviceTag.isEmpty) return null;
+
+      final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      final snapshot = await _database.child('deviceEnergyData').get();
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.value;
+      if (data == null || data is! Map<Object?, Object?>) return null;
+
+      Map<String, dynamic>? latestDocument;
+      DateTime? latestTimestamp;
+
+      data.forEach((deviceId, deviceData) {
+        if (deviceData is Map<Object?, Object?>) {
+          final document = Map<String, dynamic>.from(
+            deviceData.map((key, value) => MapEntry(key.toString(), value)),
+          );
+          final mntTag = (document['mntTag'] as String?) ?? '';
+          final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+          if (cleanMntTag != cleanServiceTag) return;
+
+          final timestampStr = document['timestamp'] as String?;
+          final timestamp = _parseIsoTimestamp(timestampStr);
+          if (timestamp != null) {
+            if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
+              latestTimestamp = timestamp;
+              latestDocument = document;
+            }
+          } else if (latestDocument == null) {
+            latestDocument = document;
+          }
+        }
+      });
+
+      if (latestDocument == null) return null;
+      final batt = latestDocument!['mountBatteryPercentage'];
+      if (batt == null) return null;
+      if (batt is int) return batt;
+      if (batt is num) return batt.toInt();
+      if (batt is String) return int.tryParse(batt);
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Get latest effort (powerGeneratedInWatts) with timestamp for live indicator
   Future<Map<String, dynamic>?> getLatestEffort() async {
     try {
@@ -197,6 +254,12 @@ class HomeService {
         homeData['liveEffortTimestamp'] = latestEffort['timestamp'];
       }
 
+      // Ensure battery percentage is the latest from deviceEnergyData (by mntTag)
+      final latestBattery = await getLatestBatteryPercentage();
+      if (latestBattery != null) {
+        homeData['mountBatteryPercentage'] = latestBattery;
+      }
+
       return homeData;
     } catch (e) {
       return null;
@@ -274,6 +337,7 @@ class HomeService {
           }
 
           if (latestDocument != null) {
+            // result includes all fields from latest doc (by mntTag), including mountBatteryPercentage
             final result = Map<String, dynamic>.from(latestDocument!);
 
             final powerWatts = result['powerGeneratedInWatts'];

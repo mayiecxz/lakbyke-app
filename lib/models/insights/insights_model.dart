@@ -31,13 +31,15 @@ class InsightsModel {
   // Analytics chart filter
   String analyticsFilter = 'past week';
 
-  /// Load all insights data from Firebase
+  /// Load all insights data from Firebase.
+  /// Transactions: from "transactions" table, filtered by current user's mntTag (service tag).
+  /// KWH history: from "deviceEnergyData" table, filtered by mntTag.
   Future<void> loadInsightsData() async {
     try {
-      // Load transactions from Firebase
+      // Load transactions from Firebase (filtered by user's service tag / mntTag)
       recentTransactions = await _transactionService.getAllTransactions();
 
-      // Load KWH history from Firebase
+      // Load KWH history from Firebase deviceEnergyData (filtered by mntTag)
       try {
         kwhHistory = await _kwhService.getHistoryData();
       } catch (e) {

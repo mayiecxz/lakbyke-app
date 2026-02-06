@@ -176,56 +176,57 @@ class TransactionService {
 
       List<Map<String, dynamic>> transactions = [];
 
-      // Handle nested structure: iterate through station IDs first
+      void addTransaction(String transactionId, String stationId, Map<String, dynamic> transaction) {
+        final mntTag = transaction['mntTag'] as String? ?? '';
+        final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+        if (cleanMntTag != cleanServiceTag) return;
+
+        final payout = transaction['payout'];
+        final mntBattPercentage = transaction['mntBattPercentage'];
+        final powerSubmittedAh = transaction['powerSubmittedAh'] ?? transaction['powerSubmitted_Ah'];
+        final stnBattPercentage = transaction['stnBattPercentage'];
+        final timestamp = transaction['timestamp'];
+        final voltage = transaction['voltage'];
+        final dateTime = _parseTimestamp(timestamp);
+        final ahValue = powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0);
+
+        transactions.add({
+          'transactionId': transactionId,
+          'stationId': stationId,
+          'payout': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0),
+          'amount': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0),
+          'mntBattPercentage': mntBattPercentage is num ? mntBattPercentage.toInt() : (mntBattPercentage is String ? int.tryParse(mntBattPercentage) ?? 0 : 0),
+          'mntTag': mntTag,
+          'powerSubmitted_Ah': ahValue,
+          'powerSubmitted': ahValue,
+          'stnBattPercentage': stnBattPercentage is num ? stnBattPercentage.toInt() : (stnBattPercentage is String ? int.tryParse(stnBattPercentage) ?? 0 : 0),
+          'timestamp': dateTime,
+          'timeStamp': dateTime,
+          'voltage': voltage is num ? voltage.toDouble() : (voltage is String ? double.tryParse(voltage) ?? 0.0 : 0.0),
+        });
+      }
+
+      // Support both: flat (transactions/{transactionId}) and nested (transactions/{stationId}/{transactionId})
       if (data is Map<Object?, Object?>) {
-        data.forEach((stationId, stationData) {
-          if (stationData is Map<Object?, Object?>) {
-            // Iterate through transaction IDs under each station
-            stationData.forEach((transactionId, transactionData) {
-              if (transactionData is Map<Object?, Object?>) {
-                final transaction = Map<String, dynamic>.from(
-                  transactionData.map((key, value) => MapEntry(key.toString(), value)),
-                );
-                
-                // Filter by current user's service tag (mntTag)
-                final mntTag = transaction['mntTag'] as String? ?? '';
-                final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-                
-                // Only include transactions that match the current user's service tag
-                if (cleanMntTag != cleanServiceTag) {
-                  return; // Skip this transaction
-                }
-                
-                // Extract all fields from the transaction (aligned with DB: powerSubmittedAh, mntBattPercentage, stnBattPercentage, etc.)
-                final payout = transaction['payout']; // Changed from 'amount'
-                final mntBattPercentage = transaction['mntBattPercentage'];
-                // Schema uses powerSubmittedAh (camelCase); support powerSubmitted_Ah for backward compatibility
-                final powerSubmittedAh = transaction['powerSubmittedAh'] ?? transaction['powerSubmitted_Ah'];
-                final stnBattPercentage = transaction['stnBattPercentage'];
-                final timestamp = transaction['timestamp']; // Changed from 'timeStamp'
-                final voltage = transaction['voltage'];
-                
-                // Parse timestamp to DateTime (now ISO 8601 string)
-                final dateTime = _parseTimestamp(timestamp);
-                
-                final ahValue = powerSubmittedAh is num ? powerSubmittedAh.toDouble() : (powerSubmittedAh is String ? double.tryParse(powerSubmittedAh) ?? 0.0 : 0.0);
-                transactions.add({
-                  'transactionId': transactionId.toString(),
-                  'stationId': stationId.toString(),
-                  'payout': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0),
-                  'amount': payout is num ? payout.toDouble() : (payout is String ? double.tryParse(payout) ?? 0.0 : 0.0), // Keep 'amount' for backward compatibility
-                  'mntBattPercentage': mntBattPercentage is num ? mntBattPercentage.toInt() : (mntBattPercentage is String ? int.tryParse(mntBattPercentage) ?? 0 : 0),
-                  'mntTag': mntTag,
-                  'powerSubmitted_Ah': ahValue,
-                  'powerSubmitted': ahValue, // Keep for backward compatibility
-                  'stnBattPercentage': stnBattPercentage is num ? stnBattPercentage.toInt() : (stnBattPercentage is String ? int.tryParse(stnBattPercentage) ?? 0 : 0),
-                  'timestamp': dateTime,
-                  'timeStamp': dateTime, // Keep for backward compatibility
-                  'voltage': voltage is num ? voltage.toDouble() : (voltage is String ? double.tryParse(voltage) ?? 0.0 : 0.0),
-                });
-              }
-            });
+        data.forEach((key, value) {
+          if (value is! Map<Object?, Object?>) return;
+          final firstLevel = Map<String, dynamic>.from(
+            value.map((k, v) => MapEntry(k.toString(), v)),
+          );
+          // Flat: value is a transaction (has mntTag)
+          if (firstLevel.containsKey('mntTag')) {
+            addTransaction(key.toString(), '', firstLevel);
+            return;
           }
+          // Nested: value is station data (map of transactionId -> transaction)
+          value.forEach((transactionId, transactionData) {
+            if (transactionData is Map<Object?, Object?>) {
+              final transaction = Map<String, dynamic>.from(
+                transactionData.map((k, v) => MapEntry(k.toString(), v)),
+              );
+              addTransaction(transactionId.toString(), key.toString(), transaction);
+            }
+          });
         });
       }
 

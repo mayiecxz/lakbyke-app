@@ -1001,73 +1001,129 @@ class _InsightsScreenState extends State<InsightsScreen> {
           ),
         ),
         const SizedBox(height: AppDimensions.paddingMedium),
-        // Battery pictograph — flat blocks
+        // Battery pictograph — modern grid
         Container(
-          height: 200,
-          padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.paddingMedium,
+            vertical: 20,
+          ),
           decoration: BoxDecoration(
-            color: AppColors.surfaceDim,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.surfaceDim.withValues(alpha: 0.5),
+                AppColors.surfaceDim,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColors.textTertiary.withValues(alpha: 0.2),
+              color: AppColors.textTertiary.withValues(alpha: 0.12),
               width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.homePrimary.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Wrap(
-              direction: Axis.horizontal,
-              spacing: 10,
-              runSpacing: 10,
-              children: List.generate(batteriesToShow, (index) {
-                return Container(
-                  width: 42,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.homePrimary,
-                        AppColors.homePrimary.withValues(alpha: 0.85),
-                      ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...List.generate(batteriesToShow, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _BatteryUnitTile(
+                      index: index,
+                      total: batteriesToShow,
                     ),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.homePrimary.withValues(alpha: 0.25),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                  );
+                }),
+                if (hasMore)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.homePrimary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.homePrimary.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                       ),
-                    ],
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '+${numBatteries - maxBatteriesToShow}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.homePrimary.withValues(alpha: 0.9),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'more',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            formatCompactCurrency((numBatteries - maxBatteriesToShow) * batteryValue),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.homePrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.battery_charging_full_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                );
-              }),
+              ],
             ),
           ),
         ),
-        if (hasMore) ...[
-          const SizedBox(height: 8),
-          Text(
-            '+ ${numBatteries - maxBatteriesToShow} more (${formatCompactCurrency((numBatteries - maxBatteriesToShow) * batteryValue)})',
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textTertiary,
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.homePrimary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.battery_charging_full_rounded,
+                    size: 14,
+                    color: AppColors.homePrimary.withValues(alpha: 0.8),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '1 unit = ${formatCompactCurrency(batteryValue)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-        const SizedBox(height: 8),
-        Text(
-          '1 unit = ${formatCompactCurrency(batteryValue)}',
-          style: TextStyle(
-            fontSize: 10,
-            color: AppColors.textTertiary,
-          ),
+          ],
         ),
       ],
     );
@@ -1196,6 +1252,78 @@ class _InsightsScreenState extends State<InsightsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A single battery unit tile for the energy earnings pictograph.
+class _BatteryUnitTile extends StatelessWidget {
+  final int index;
+  final int total;
+
+  const _BatteryUnitTile({required this.index, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.homePrimary.withValues(alpha: 0.95),
+            AppColors.homePrimary,
+            AppColors.homePrimary.withValues(alpha: 0.88),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.homePrimary.withValues(alpha: 0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.15),
+            blurRadius: 0,
+            offset: const Offset(0, -1),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Subtle top highlight
+          Positioned(
+            top: 0,
+            left: 8,
+            right: 8,
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(1),
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.transparent,
+                    Colors.white.withValues(alpha: 0.35),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.battery_charging_full_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+        ],
       ),
     );
   }
