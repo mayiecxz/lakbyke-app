@@ -11,30 +11,45 @@ class LakbykeStationsService {
     {
       'placeId': 'lakbyke_station_001',
       'name': 'Lakbyke Station 001',
-      'address': 'Lakbyke Station 001, UCC Camarin, Caloocan, Metro Manila',
+      'address': 'UCC Camarin, Caloocan, Metro Manila',
     },
     {
       'placeId': 'lakbyke_station_002',
       'name': 'Lakbyke Station 002',
-      'address': 'Lakbyke Station 002, 23 Chrysanthemum St',
+      'address': '23 Chrysanthemum St, Caloocan, Metro Manila',
     },
-    // Add more stations here as needed
-    // Example:
-    // {
-    //   'placeId': 'lakbyke_station_003',
-    //   'name': 'Lakbyke Station 003',
-    //   'address': 'Lakbyke Station 003, Your Address Here',
-    // },
+    {
+      'placeId': 'lakbyke_station_003',
+      'name': 'Lakbyke Station 003',
+      'address': 'Q23J+R9M UNIVERSITY OF, Caloocan, Metro Manila',
+    },
   ];
 
-  /// Get all known Lakbyke stations by geocoding their addresses
-  /// This fetches exact coordinates from Google Maps
+  /// Get all known Lakbyke stations (by coordinates or geocoding addresses)
   static Future<List<LakbykeStation>> getAllStations(String apiKey) async {
     List<LakbykeStation> stations = [];
 
     for (var stationData in _stationAddresses) {
       try {
-        // Use Geocoding API to get exact coordinates from Google Maps
+        final latStr = stationData['lat'];
+        final lngStr = stationData['lng'];
+
+        // Use explicit coordinates if provided
+        if (latStr != null && lngStr != null) {
+          final lat = double.tryParse(latStr);
+          final lng = double.tryParse(lngStr);
+          if (lat != null && lng != null) {
+            stations.add(LakbykeStation(
+              placeId: stationData['placeId']!,
+              name: stationData['name']!,
+              address: stationData['address']!,
+              location: LatLng(lat, lng),
+            ));
+            continue;
+          }
+        }
+
+        // Otherwise geocode the address via Google Maps
         final geocodeUrl = Uri.parse(
           'https://maps.googleapis.com/maps/api/geocode/json?'
           'address=${Uri.encodeComponent(stationData['address']!)}&'
@@ -51,14 +66,14 @@ class LakbykeStationsService {
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
-          
-          if (data['status'] == 'OK' && 
-              data['results'] != null && 
+
+          if (data['status'] == 'OK' &&
+              data['results'] != null &&
               data['results'].isNotEmpty) {
             final result = data['results'][0];
             final location = result['geometry']['location'];
-            final formattedAddress = result['formatted_address'] as String? ?? 
-                                    stationData['address']!;
+            final formattedAddress = result['formatted_address'] as String? ??
+                stationData['address']!;
 
             stations.add(LakbykeStation(
               placeId: stationData['placeId']!,
@@ -72,8 +87,6 @@ class LakbykeStationsService {
           }
         }
       } catch (e) {
-        // If geocoding fails, skip this station
-        // In production, you might want to log this
         continue;
       }
     }
