@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.lakbyke_mobile"
+    namespace = "com.lakbyke.cyclist"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -23,8 +23,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.lakbyke_mobile"
+        // Application ID must match the Android app package in Firebase (google-services.json).
+        // For Google Sign-In: add this app in Firebase with SHA-1/SHA-256 and replace google-services.json.
+        // See docs/ANDROID_GOOGLE_SIGNIN_SETUP.md
+        applicationId = "com.lakbyke.cyclist"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

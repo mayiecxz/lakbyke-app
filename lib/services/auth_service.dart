@@ -78,7 +78,9 @@ class AuthService {
         final UserCredential result = await _auth.signInWithPopup(googleProvider);
         return GoogleSignInSuccess(result.user!);
       } else {
-        // For mobile/desktop: use google_sign_in package
+        // For mobile/desktop: use google_sign_in package.
+        // Sign out first so the account chooser is shown every time (user can pick a different account).
+        await _googleSignIn.signOut();
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
         if (googleUser == null) {
@@ -88,11 +90,11 @@ class AuthService {
         final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
         // Firebase Auth requires idToken for Google credential. If null, config is wrong
-        // (e.g. Android: add SHA-1 in Firebase Console, or serverClientId must be web client ID).
+        // (e.g. Android: app package must match Firebase, add SHA-1/SHA-256 in Firebase Console).
         if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
           return GoogleSignInFailure(
             'Google Sign-In configuration error. '
-            'On Android: add your app SHA-1 in Firebase Console > Project settings > Your apps.',
+            'On Android: ensure app package matches Firebase and add SHA-1 in Firebase Console > Project settings > Your apps. See docs/ANDROID_GOOGLE_SIGNIN_SETUP.md',
           );
         }
 
