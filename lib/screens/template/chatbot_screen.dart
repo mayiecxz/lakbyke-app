@@ -153,9 +153,8 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final bottomSheetHeight = screenHeight * 0.88;
-    final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
     final hasKey = ChatbotConfig.isConfigured;
+    final bottomSheetHeight = screenHeight * 0.88;
 
     return Container(
       height: bottomSheetHeight,
@@ -227,7 +226,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
               ),
               child: ListView.builder(
                 controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + keyboardPadding.clamp(0.0, 24.0)),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final msg = _messages[index];
@@ -255,7 +254,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
           if (_isLoading)
             const LinearProgressIndicator(minHeight: 2, color: _userBubbleColor, backgroundColor: Color(0xFFE0F2F1)),
           Container(
-            padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + keyboardPadding),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -274,7 +273,6 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                     controller: _controller,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _sendMessage(),
-                    enabled: hasKey,
                     decoration: InputDecoration(
                       hintText: "Ask about LakByke or get help...",
                       hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
@@ -289,15 +287,21 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Material(
-                  color: hasKey ? _userBubbleColor : Colors.grey,
-                  borderRadius: BorderRadius.circular(24),
-                  child: InkWell(
-                    onTap: hasKey ? _sendMessage : null,
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Material(
+                    color: hasKey ? _userBubbleColor : Colors.grey,
                     borderRadius: BorderRadius.circular(24),
-                    child: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                    child: InkWell(
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _sendMessage();
+                      },
+                      borderRadius: BorderRadius.circular(24),
+                      child: const Center(
+                        child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                      ),
                     ),
                   ),
                 ),

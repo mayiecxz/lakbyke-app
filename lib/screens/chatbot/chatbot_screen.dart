@@ -4,7 +4,7 @@ import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/models/chatbot/chatbot_model.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
-import 'package:lakbyke_mobile/screens/template/header.dart';
+import 'package:lakbyke_mobile/screens/template/header.dart' show Header, kHeaderContentTopPadding;
 import 'package:intl/intl.dart';
 
 // Chat UI constants (modern, responsive)
@@ -133,115 +133,131 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
     final hasKey = ChatbotConfig.isConfigured;
 
     return Scaffold(
-      appBar: const Header(),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_gradientStart, _gradientEnd],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + keyboardPadding.clamp(0.0, 24.0)),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    final dateLabel = _dateLabel(index);
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (dateLabel != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Center(
-                              child: Text(
-                                dateLabel,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                  fontWeight: FontWeight.w500,
+      resizeToAvoidBottomInset: true,
+      backgroundColor: _gradientStart,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Container(color: Colors.black),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [_gradientStart, _gradientEnd],
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = _messages[index];
+                            final dateLabel = _dateLabel(index);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (dateLabel != null)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    child: Center(
+                                      child: Text(
+                                        dateLabel,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                _ChatBubble(
+                                  text: msg.text,
+                                  isUser: msg.isUser,
+                                  time: msg.time,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      if (_isLoading)
+                        const LinearProgressIndicator(
+                          minHeight: 2,
+                          color: _userBubbleColor,
+                          backgroundColor: Color(0xFFE0F2F1),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                textInputAction: TextInputAction.send,
+                                onSubmitted: (_) => _sendMessage(),
+                                decoration: InputDecoration(
+                                  hintText: "Ask about LakByke or get help...",
+                                  hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                                  filled: true,
+                                  fillColor: _inputBg,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 ),
                               ),
                             ),
-                          ),
-                        _ChatBubble(
-                          text: msg.text,
-                          isUser: msg.isUser,
-                          time: msg.time,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              if (_isLoading)
-                const LinearProgressIndicator(
-                  minHeight: 2,
-                  color: _userBubbleColor,
-                  backgroundColor: Color(0xFFE0F2F1),
-                ),
-              Container(
-                padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + keyboardPadding),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _sendMessage(),
-                        enabled: hasKey,
-                        decoration: InputDecoration(
-                          hintText: "Ask about LakByke or get help...",
-                          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-                          filled: true,
-                          fillColor: _inputBg,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Material(
+                                color: hasKey ? _userBubbleColor : Colors.grey,
+                                borderRadius: BorderRadius.circular(24),
+                                child: InkWell(
+                                  onTap: () {
+                                    FocusScope.of(context).unfocus();
+                                    _sendMessage();
+                                  },
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: const Center(
+                                    child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Material(
-                      color: hasKey ? _userBubbleColor : Colors.grey,
-                      borderRadius: BorderRadius.circular(24),
-                      child: InkWell(
-                        onTap: hasKey ? _sendMessage : null,
-                        borderRadius: BorderRadius.circular(24),
-                        child: const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+            const Header(),
+          ],
         ),
       ),
     );
