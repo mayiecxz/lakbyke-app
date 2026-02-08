@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
-// import 'package:lakbyke_mobile/services/chatbot_service.dart'; // Commented out - chatbot disabled
+import 'package:lakbyke_mobile/services/chatbot_service.dart';
 
 /// Result of Google sign-in: success with user, user canceled, or failure with message.
 sealed class GoogleSignInResult {}
@@ -151,10 +151,8 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      // Delete chat history before signing out
-      // final chatbotService = ChatbotService(); // Commented out - chatbot disabled
-      // await chatbotService.deleteChatHistory();
-      
+      final chatbotService = ChatbotService();
+      await chatbotService.deleteChatHistory();
       await _auth.signOut();
       // Only sign out from google_sign_in on mobile platforms
       if (!kIsWeb) {
@@ -187,13 +185,11 @@ class AuthService {
   // Handle session end
   Future<void> _handleSessionEnd() async {
     try {
-      // final chatbotService = ChatbotService(); // Commented out - chatbot disabled
-      // Use the previous user ID before it's cleared
-      // final userId = _previousUser?.uid;
-      // if (userId != null) {
-      //   // Delete chat history for the user whose session ended
-      //   await chatbotService.deleteChatHistoryForUser(userId);
-      // }
+      final chatbotService = ChatbotService();
+      final userId = _previousUser?.uid;
+      if (userId != null) {
+        await chatbotService.deleteChatHistoryForUser(userId);
+      }
     } catch (e) {
       // Error deleting chat history on session end
     }

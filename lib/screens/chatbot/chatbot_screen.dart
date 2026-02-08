@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/models/chatbot/chatbot_model.dart';
 import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:lakbyke_mobile/services/chatbot_prompt_service.dart';
-import 'package:lakbyke_mobile/services/home.dart';
-import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
+// Chat UI constants (modern, responsive)
+const _userBubbleColor = Color(0xFF0F8A8A);
+const _botBubbleColor = Color(0xFFE8F5F5);
+const _gradientStart = Color(0xFFE0F7FA);
+const _gradientEnd = Color(0xFFB2DFDB);
+const _inputBg = Color(0xFFF5F5F5);
+const _bubbleRadius = 18.0;
+const _avatarSize = 32.0;
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -22,322 +29,221 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
   final ChatbotService _chatbotService = ChatbotService();
-  final HomeService _homeService = HomeService();
-  
-  // Total generated and redeemed values
-  double _totalGenerated = 0.0;
-  double _totalRedeemed = 0.0;
-  bool _isLoadingStats = true;
-
-  // TODO: Replace with valid API Key
-  static const apiKey = 'AIzaSyBGLVqi-ZmgooWRgJaa1UqverOqhrZ_sxc'; 
-  late final GenerativeModel _model;
+  GenerativeModel? _model;
 
   @override
   void initState() {
     super.initState();
-    // Initialize the Gemini Model
-    _model = GenerativeModel(model: 'gemma-3-27b-it', apiKey: apiKey);
-    
-    // Load chat history from Firebase
-    _loadChatHistory();
-    
-    // Load total generated and redeemed stats
-    _loadStats();
-  }
-  
-  // Load total generated and redeemed from home service
-  Future<void> _loadStats() async {
-    try {
-      final homeData = await _homeService.getHomeData();
-      if (homeData != null) {
-        setState(() {
-          _totalGenerated = (homeData['totalGenerated'] as num?)?.toDouble() ?? 0.0;
-          _totalRedeemed = (homeData['totalRedeems'] as num?)?.toDouble() ?? 0.0;
-          _isLoadingStats = false;
-        });
-      } else {
-        setState(() {
-          _isLoadingStats = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isLoadingStats = false;
-      });
+    if (ChatbotConfig.isConfigured) {
+      _model = GenerativeModel(
+        model: ChatbotConfig.modelName,
+        apiKey: ChatbotConfig.geminiApiKey,
+      );
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadChatHistory();
+    });
   }
 
-  // Clean text by removing emojis and extra whitespace
   String _cleanText(String text) {
-    // Remove emojis (Unicode ranges for emojis)
     String cleaned = text.replaceAll(
       RegExp(r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]', unicode: true),
       '',
     );
-    
-    // Replace multiple newlines with single space
     cleaned = cleaned.replaceAll(RegExp(r'\n\s*\n+'), ' ');
-    
-    // Replace single newlines with space
     cleaned = cleaned.replaceAll(RegExp(r'\n+'), ' ');
-    
-    // Collapse multiple spaces
     cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
-    
-    // Trim
     return cleaned.trim();
   }
 
-  // Load chat history from Firebase
   Future<void> _loadChatHistory() async {
     final history = await _chatbotService.loadChatHistory();
-    
     if (history.isEmpty) {
-      // If no history, add welcome message (support-focused)
-      _addMessage("Hi! I'm your LakByke support assistant. Ask about LakByke or get help with the app—energy tracking, stations, QR, history, and more.", false);
+      _addMessage("Hi! I'm your LakByke support assistant. Ask about the app—Home, Maps, QR, History, Insights, or Account.", false);
     } else {
-      // Restore chat history
-      setState(() {
-        _messages.addAll(history);
-      });
+      setState(() => _messages.addAll(history));
     }
   }
 
   void _addMessage(String text, bool isUser) {
-    // Clean text for bot messages only (preserve user input as-is)
     final cleanedText = isUser ? text : _cleanText(text);
-    
-    final message = ChatMessage(
-      text: cleanedText, 
-      isUser: isUser, 
-      time: DateTime.now()
-    );
-    
-    setState(() {
-      _messages.add(message);
-    });
-    
-    // Auto-scroll to bottom when new message is added
+    final message = ChatMessage(text: cleanedText, isUser: isUser, time: DateTime.now());
+    setState(() => _messages.add(message));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 150), // Optimized for speed
+          duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
         );
       }
     });
-    
-    // Save message to Firebase (save cleaned text for bot messages)
     _chatbotService.saveMessage(cleanedText, isUser, message.time);
   }
 
   Future<void> _sendMessage() async {
     final userText = _controller.text.trim();
     if (userText.isEmpty) return;
+    if (!ChatbotConfig.isConfigured || _model == null) {
+      _addMessage("Chat is not configured. Add your key to config/secrets.json and run: dart run tool/sync_secrets.dart", false);
+      return;
+    }
 
     _controller.clear();
     _addMessage(userText, true);
     setState(() => _isLoading = true);
 
     try {
-      // 1. Get current real-time data
-      final bikeData = Provider.of<BikeData>(context, listen: false);
-
-      // 2. Get context data (home data) if available
-      Map<String, dynamic>? contextData;
-      try {
-        contextData = await _homeService.getHomeData();
-      } catch (e) {
-        // Continue without context data
-      }
-
-      // 3. Prepare conversation history (last 5 messages)
       final conversationHistory = _messages
-          .map((msg) => {
-                'role': msg.isUser ? 'User' : 'Si Kleta',
-                'text': msg.text,
-              })
+          .map((msg) => {'role': msg.isUser ? 'User' : 'Si Kleta', 'text': msg.text})
           .toList();
-
-      // 4. Build prompt using prompt service
       final prompt = ChatbotPromptService.buildPrompt(
         userQuery: userText,
-        bikeData: bikeData,
-        contextData: contextData,
         conversationHistory: conversationHistory,
       );
-
-      // 5. Send to AI
       final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
-
-      // 6. Display result (text cleaning is handled in _addMessage for bot messages)
-      _addMessage(response.text ?? "I couldn't read the sensors right now.", false);
-
+      final response = await _model!.generateContent(content);
+      final responseText = response.text?.trim();
+      if (responseText != null && responseText.isNotEmpty) {
+        _addMessage(responseText, false);
+      } else {
+        _addMessage("Couldn't generate a reply. Try rephrasing or check your connection.", false);
+      }
     } catch (e) {
-      _addMessage("Error: Check your API Key or internet connection.", false);
+      final msg = e.toString();
+      final isApiError = msg.contains('404') || msg.contains('API key') || msg.contains('invalid') || msg.contains('model');
+      _addMessage(
+        isApiError ? "Chat error: Check API key and model availability." : "Error: Check your connection and try again.",
+        false,
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  String? _dateLabel(int index) {
+    if (index == 0) return DateFormat('EEEE | MMM d, y').format(_messages[index].time);
+    final prev = _messages[index - 1].time;
+    final curr = _messages[index].time;
+    if (prev.year != curr.year || prev.month != curr.month || prev.day != curr.day) {
+      return DateFormat('EEEE | MMM d, y').format(curr);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => BikeData(),
-      child: Scaffold(
-        appBar: const Header(),
-        body: Column(
-          children: [
-            
-            // Home Header (Real-time View)
-            Consumer<BikeData>(
-              builder: (context, bikeData, child) => Container(
-                padding: const EdgeInsets.all(16),
-                color: const Color(0xFFF2FBFB),
+    final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
+    final hasKey = ChatbotConfig.isConfigured;
+
+    return Scaffold(
+      appBar: const Header(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [_gradientStart, _gradientEnd],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + keyboardPadding.clamp(0.0, 24.0)),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = _messages[index];
+                    final dateLabel = _dateLabel(index);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (dateLabel != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Center(
+                              child: Text(
+                                dateLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        _ChatBubble(
+                          text: msg.text,
+                          isUser: msg.isUser,
+                          time: msg.time,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              if (_isLoading)
+                const LinearProgressIndicator(
+                  minHeight: 2,
+                  color: _userBubbleColor,
+                  backgroundColor: Color(0xFFE0F2F1),
+                ),
+              Container(
+                padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + keyboardPadding),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _buildStat("Battery", "${bikeData.batteryLevel}%", Icons.battery_charging_full),
-                  _buildStat(
-                    "Total Generated", 
-                    _isLoadingStats ? "..." : (_totalGenerated >= 1000000 ? '${formatCompactNumber(_totalGenerated / 1000)} kWh' : formatEnergy(_totalGenerated)), 
-                    Icons.bolt
-                  ),
-                    _buildStat(
-                      "Total Redeemed", 
-                      _isLoadingStats ? "..." : formatCompactCurrency(_totalRedeemed), 
-                      Icons.account_balance_wallet
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(),
+                        enabled: hasKey,
+                        decoration: InputDecoration(
+                          hintText: "Ask about LakByke or get help...",
+                          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                          filled: true,
+                          fillColor: _inputBg,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Material(
+                      color: hasKey ? _userBubbleColor : Colors.grey,
+                      borderRadius: BorderRadius.circular(24),
+                      child: InkWell(
+                        onTap: hasKey ? _sendMessage : null,
+                        borderRadius: BorderRadius.circular(24),
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-
-            // Chat Area (Scrollable)
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  return Align(
-                    alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: msg.isUser ? const Color(0xFF0F8A8A) : Colors.grey.shade100,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(16),
-                          topRight: const Radius.circular(16),
-                          bottomLeft: Radius.circular(msg.isUser ? 16 : 4),
-                          bottomRight: Radius.circular(msg.isUser ? 4 : 16),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            msg.text,
-                            style: TextStyle(color: msg.isUser ? Colors.white : Colors.black87),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            DateFormat('hh:mm a').format(msg.time),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: msg.isUser ? Colors.white70 : Colors.black54,
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Input Area (Fixed at bottom)
-            if (_isLoading)
-              const LinearProgressIndicator(
-                minHeight: 2,
-                color: Color(0xFF0F8A8A),
-                backgroundColor: Color(0xFFE0F2F1),
-              ),
-            Container(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                top: 8,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      decoration: InputDecoration(
-                        hintText: "Ask about LakByke or get help with the app...",
-                        hintStyle: TextStyle(color: Colors.grey.shade500),
-                        filled: true,
-                        fillColor: const Color(0xFFF6F7F9),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FloatingActionButton(
-                    onPressed: _sendMessage,
-                    backgroundColor: const Color(0xFF0F8A8A),
-                    mini: true,
-                    child: const Icon(Icons.send, size: 20),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStat(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFF0F8A8A)),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
     );
   }
 
@@ -346,5 +252,93 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  final String text;
+  final bool isUser;
+  final DateTime time;
+
+  const _ChatBubble({required this.text, required this.isUser, required this.time});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser) _buildAvatar(isUser),
+          if (!isUser) const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isUser ? _userBubbleColor : _botBubbleColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(_bubbleRadius),
+                  topRight: const Radius.circular(_bubbleRadius),
+                  bottomLeft: Radius.circular(isUser ? _bubbleRadius : 6),
+                  bottomRight: Radius.circular(isUser ? 6 : _bubbleRadius),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    text,
+                    style: TextStyle(
+                      color: isUser ? Colors.white : Colors.black87,
+                      fontSize: 15,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        DateFormat('HH:mm').format(time),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isUser ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      if (isUser) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.done_all, size: 14, color: Colors.white70),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isUser) const SizedBox(width: 8),
+          if (isUser) _buildAvatar(isUser),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(bool isUser) {
+    return CircleAvatar(
+      radius: _avatarSize / 2,
+      backgroundColor: isUser ? _userBubbleColor.withValues(alpha: 0.9) : _botBubbleColor,
+      child: Icon(
+        isUser ? Icons.person : Icons.smart_toy_rounded,
+        size: 18,
+        color: isUser ? Colors.white : _userBubbleColor,
+      ),
+    );
   }
 }

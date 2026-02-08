@@ -17,10 +17,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Launch config may contain API keys—do not commit
+.vscode/launch.json
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -56,3 +54,14 @@ android/.gradle/**
 .gradle/
 build/
 local.properties
+
+# Firebase / Google Services (download from Firebase Console per app)
+android/app/google-services.json
+android/app/google-services.json
+
+# Local API keys / secrets (never commit real keys)
+lib/config/secrets_local.dart
+.env
+.env.local
+config/secrets.json
+assets/config/secrets.json

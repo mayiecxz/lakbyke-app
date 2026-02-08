@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lakbyke_mobile/config/secrets_loader.dart';
 import 'package:lakbyke_mobile/utils/theme.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:lakbyke_mobile/services/auth_service.dart';
@@ -10,6 +11,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await SecretsLoader.load();
   runApp(const MyApp());
 }
 
