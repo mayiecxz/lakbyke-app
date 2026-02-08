@@ -562,14 +562,6 @@ class _MapsScreenState extends State<MapsScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text(
-                                'Lakbyke Stations',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF317263),
-                                ),
-                              ),
                               const SizedBox(height: 4),
                               if (_lakbykeStations.isEmpty)
                                 Container(
