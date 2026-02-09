@@ -71,27 +71,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Set up periodic check to refresh effort data and detect staleness
   void _setupPeriodicEffortCheck() {
-    // Check every 5 seconds to update stale indicator and reset effort to zero if stale
+    // Check every 5 seconds: if timestamp > 1 min old, effort = 0
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
-          // Check if the same timestamp has been used for 10 seconds
-          if (_lastEffortTimestamp != null && _currentTimestampFirstSeen != null) {
-            final secondsSinceFirstSeen = DateTime.now().difference(_currentTimestampFirstSeen!).inSeconds;
-            if (secondsSinceFirstSeen > 10) {
-              // Same timestamp for more than 10 seconds, set effort to zero
-              if (_homeData != null) {
-                _homeData!['liveEffort'] = 0.0;
-              }
-            }
-          } else {
-            // No timestamp ever received, set effort to zero
-            if (_homeData != null) {
-              _homeData!['liveEffort'] = 0.0;
+          final effortTimestamp = _homeData?['liveEffortTimestamp'];
+          DateTime? effortTime;
+          if (effortTimestamp != null) {
+            if (effortTimestamp is DateTime) {
+              effortTime = effortTimestamp;
+            } else if (effortTimestamp is String) {
+              effortTime = DateTime.tryParse(effortTimestamp);
             }
           }
+          if (_isEffortStale(effortTime) && _homeData != null) {
+            _homeData!['liveEffort'] = 0.0;
+          }
         });
-        _setupPeriodicEffortCheck(); // Schedule next check
+        _setupPeriodicEffortCheck();
       }
     });
   }
@@ -356,20 +353,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Check if effort data is stale (same timestamp for >10 seconds)
+  // Effort = 0 only when timestamp is > 1 min old (or missing).
   bool _isEffortStale(DateTime? timestamp) {
     if (timestamp == null) return true;
-    // Check if this timestamp matches the current one and has been the same for 10 seconds
-    if (_lastEffortTimestamp != null && 
-        _currentTimestampFirstSeen != null) {
-      // Check if the timestamp matches the last one we're tracking
-      if (timestamp.isAtSameMomentAs(_lastEffortTimestamp!)) {
-        final secondsSinceFirstSeen = DateTime.now().difference(_currentTimestampFirstSeen!).inSeconds;
-        return secondsSinceFirstSeen > 10;
-      }
-    }
-    // If timestamp doesn't match or we don't have tracking info, consider it not stale (it might be new)
-    return false;
+    return DateTime.now().difference(timestamp).inSeconds > 60;
   }
 
   // Widget for the Today's Metrics (Distance, Effort, Generated)
@@ -399,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     final isStale = _isEffortStale(effortTime);
-    // If stale (>30 seconds), set effort to zero
+    // If timestamp > 1 min old, effort = 0
     final effort = isStale ? 0.00 : (_convertToDouble(effortValue) ?? 0.00);
 
     return Padding(

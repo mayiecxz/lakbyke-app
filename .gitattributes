@@ -1,0 +1,2 @@
+# Normalize line endings: use CRLF on Windows for this file to avoid Git warnings
+android/local.properties text eol=crlf
