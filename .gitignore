@@ -1,4 +1,6 @@
 # Miscellaneous
+# Windows reserved device name (avoid "failed to insert into database" on git add)
+nul
 *.class
 *.log
 *.pyc

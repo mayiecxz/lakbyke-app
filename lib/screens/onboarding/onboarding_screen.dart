@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
-import 'package:lakbyke_mobile/screens/login/login_screen.dart';
+import 'package:lakbyke_mobile/features/auth/presentation/screens/login/login_screen.dart';
 import 'package:lakbyke_mobile/screens/signup/signup_qr_screen.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 

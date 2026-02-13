@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/services/kwh_service.dart';
-import 'package:lakbyke_mobile/services/transaction_service.dart';
+import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/widgets/energy_detail_modal.dart';
 import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
 
-class CombinedHistoryScreen extends StatefulWidget {
+class CombinedHistoryScreen extends ConsumerStatefulWidget {
   const CombinedHistoryScreen({super.key, this.initialTabIndex = 0});
 
   final int initialTabIndex;
 
   @override
-  State<CombinedHistoryScreen> createState() => _CombinedHistoryScreenState();
+  ConsumerState<CombinedHistoryScreen> createState() => _CombinedHistoryScreenState();
 }
 
-class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with SingleTickerProviderStateMixin {
+class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final KwhService _kwhService = KwhService();
-  final TransactionService _transactionService = TransactionService();
   
   // KWH History state
   String _kwhFilter = 'daily';
@@ -69,10 +67,11 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   Future<void> _loadKwhData() async {
     setState(() => _kwhLoading = true);
     try {
+      final kwhRepo = ref.read(kwhRepositoryProvider);
       final results = await Future.wait([
-        _kwhService.getAggregatedData(_kwhFilter),
-        _kwhService.getTotalKwhGenerated(),
-        _kwhService.getTotalDistanceKm(),
+        kwhRepo.getAggregatedData(_kwhFilter),
+        kwhRepo.getTotalKwhGenerated(),
+        kwhRepo.getTotalDistanceKm(),
       ]);
       setState(() {
         _kwhData = results[0] as List<Map<String, dynamic>>? ?? [];
@@ -88,10 +87,11 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
   Future<void> _loadTransactionData() async {
     setState(() => _transactionLoading = true);
     try {
+      final transactionRepo = ref.read(transactionRepositoryProvider);
       final results = await Future.wait([
-        _transactionService.getAggregatedData(_transactionFilter),
-        _transactionService.getTotalRedeemed(),
-        _transactionService.getBatteryExchangeCount(),
+        transactionRepo.getAggregatedData(_transactionFilter),
+        transactionRepo.getTotalRedeemed(),
+        transactionRepo.getBatteryExchangeCount(),
       ]);
       setState(() {
         _transactionData = results[0] as List<Map<String, dynamic>>? ?? [];
@@ -763,8 +763,8 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
       final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
       final label = item['label'] as String? ?? '';
 
-      // Fetch detailed records for this period
-      final detailedRecords = await _kwhService.getDetailedRecordsForPeriod(
+      final kwhRepo = ref.read(kwhRepositoryProvider);
+      final detailedRecords = await kwhRepo.getDetailedRecordsForPeriod(
         periodDate: periodDate,
         filterType: _kwhFilter,
       );
@@ -802,8 +802,8 @@ class _CombinedHistoryScreenState extends State<CombinedHistoryScreen> with Sing
       final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
       final label = item['label'] as String? ?? '';
 
-      // Fetch detailed transactions for this period
-      final detailedTransactions = await _transactionService.getDetailedTransactionsForPeriod(
+      final transactionRepo = ref.read(transactionRepositoryProvider);
+      final detailedTransactions = await transactionRepo.getDetailedTransactionsForPeriod(
         periodDate: periodDate,
         filterType: _transactionFilter,
       );

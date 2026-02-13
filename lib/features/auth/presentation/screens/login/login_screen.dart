@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/screens/main_navigation.dart';
 import 'package:lakbyke_mobile/screens/signup/signup_qr_screen.dart';
-import 'package:lakbyke_mobile/services/auth_service.dart';
+import 'package:lakbyke_mobile/features/auth/data/repositories/auth_repository.dart';
+import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
 
-class LoginModal extends StatefulWidget {
+class LoginModal extends ConsumerStatefulWidget {
   const LoginModal({super.key, this.onClose});
 
   final VoidCallback? onClose;
 
   @override
-  State<LoginModal> createState() => _LoginModalState();
+  ConsumerState<LoginModal> createState() => _LoginModalState();
 }
 
-class _LoginModalState extends State<LoginModal> {
+class _LoginModalState extends ConsumerState<LoginModal> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
   bool _rememberMe = false;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
@@ -36,8 +37,11 @@ class _LoginModalState extends State<LoginModal> {
       // Save email if remember me is checked
       await _saveRememberedEmail(_emailController.text.trim());
       
+      // Get auth repository from provider
+      final authRepo = ref.read(authRepositoryProvider);
+      
       // 1. Sign In with Firebase Auth
-      User? user = await _authService.signIn(
+      User? user = await authRepo.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
@@ -47,31 +51,26 @@ class _LoginModalState extends State<LoginModal> {
       });
 
       if (user != null) { 
-        // ---------------------------------------------------------
-        // 2. NEW CHECK: Is Email Verified?
-        // ---------------------------------------------------------
+        // 2. Check: Is Email Verified?
         if (!user.emailVerified) {
-          // Failure: Email not verified
-          await FirebaseAuth.instance.signOut(); // Kick them out immediately
+          await authRepo.signOut();
           
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text("Please verify your email address before logging in."),
-                backgroundColor: Colors.orange, // Orange is good for warnings
+                backgroundColor: Colors.orange,
                 duration: Duration(seconds: 4),
               ),
             );
           }
-          return; // Stop execution here
+          return;
         }
         
-        // ---------------------------------------------------------
         // 3. Continue to Database Check (Role & Existence)
-        // ---------------------------------------------------------
         await _checkUserAndNavigate(user);
       } else {
-        // --- FAILURE: Auth failed (Wrong email/pass) ---
+        // Auth failed
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -84,12 +83,13 @@ class _LoginModalState extends State<LoginModal> {
     }
   }
 
-  // Google Login Function - uses Firebase UID to check userTable
+  // Google Login Function
   Future<void> _loginWithGoogle() async {
     if (_isGoogleLoading) return;
     setState(() => _isGoogleLoading = true);
 
-    final result = await _authService.signInWithGoogle();
+    final authRepo = ref.read(authRepositoryProvider);
+    final result = await authRepo.signInWithGoogle();
 
     if (!mounted) return;
     setState(() => _isGoogleLoading = false);
@@ -429,7 +429,8 @@ class _LoginModalState extends State<LoginModal> {
       _isSendingResetEmail = true;
     });
 
-    final error = await _authService.sendPasswordResetEmail(email);
+    final authRepo = ref.read(authRepositoryProvider);
+    final error = await authRepo.sendPasswordResetEmail(email);
 
     if (!mounted) return;
     setState(() {

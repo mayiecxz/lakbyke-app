@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/services/transaction_service.dart';
+import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
 import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
 
-class TransactionHistoryScreen extends StatefulWidget {
+class TransactionHistoryScreen extends ConsumerStatefulWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
-  State<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
+  ConsumerState<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
 }
 
-class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
+class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScreen> {
   String _selectedFilter = 'daily';
   int _currentPage = 1;
-  final TransactionService _transactionService = TransactionService();
 
   int _getItemsPerPage(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -64,8 +64,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget _buildTopCard() {
     return FutureBuilder<Map<String, dynamic>>(
       future: Future.wait([
-        _transactionService.getTotalRedeemed(),
-        _transactionService.getBatteryExchangeCount(),
+        ref.read(transactionRepositoryProvider).getTotalRedeemed(),
+        ref.read(transactionRepositoryProvider).getBatteryExchangeCount(),
       ]).then((results) => {
         'totalRedeemed': results[0] as double,
         'batteryExchangeCount': results[1] as int,
@@ -192,7 +192,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   Widget _buildHistoryList() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _transactionService.getAggregatedData(_selectedFilter),
+      future: ref.read(transactionRepositoryProvider).getAggregatedData(_selectedFilter),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -377,8 +377,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
       final label = item['label'] as String? ?? '';
 
-      // Fetch detailed transactions for this period
-      final detailedTransactions = await _transactionService.getDetailedTransactionsForPeriod(
+      final transactionRepo = ref.read(transactionRepositoryProvider);
+      final detailedTransactions = await transactionRepo.getDetailedTransactionsForPeriod(
         periodDate: periodDate,
         filterType: _selectedFilter,
       );

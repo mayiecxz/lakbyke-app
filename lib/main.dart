@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/config/secrets_loader.dart';
-import 'package:lakbyke_mobile/utils/theme.dart';
+import 'package:lakbyke_mobile/core/theme/theme.dart';
 import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
-import 'package:lakbyke_mobile/services/auth_service.dart';
+import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
+import 'package:lakbyke_mobile/services/chatbot_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -12,30 +14,35 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await SecretsLoader.load();
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  late final AuthService _authService;
+class _MyAppState extends ConsumerState<MyApp> {
+  String? _previousUserId;
 
   @override
   void initState() {
     super.initState();
-    _authService = AuthService();
-    _authService.initializeAuthListener();
-  }
-
-  @override
-  void dispose() {
-    _authService.disposeAuthListener();
-    super.dispose();
+    // Listen for auth state changes to handle cleanup
+    Future.microtask(() {
+      ref.listenManual(authStateProvider, (previous, next) {
+        next.whenData((user) async {
+          // If previous user was logged in and current is null, session ended
+          if (_previousUserId != null && user == null) {
+            final chatbotService = ChatbotService();
+            await chatbotService.deleteChatHistoryForUser(_previousUserId!);
+          }
+          _previousUserId = user?.uid;
+        });
+      });
+    });
   }
 
   @override

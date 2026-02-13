@@ -4,4 +4,4 @@ export 'assets.dart';
 export 'colors.dart';
 export 'dimensions.dart';
 export 'strings.dart';
-export 'theme.dart';
+export 'package:lakbyke_mobile/core/theme/theme.dart';

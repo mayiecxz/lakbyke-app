@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
-import 'package:lakbyke_mobile/services/kwh_service.dart';
+import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
 import 'package:lakbyke_mobile/widgets/energy_detail_modal.dart';
 
-class KwhHistoryScreen extends StatefulWidget {
+class KwhHistoryScreen extends ConsumerStatefulWidget {
   const KwhHistoryScreen({super.key});
 
   @override
-  State<KwhHistoryScreen> createState() => _KwhHistoryScreenState();
+  ConsumerState<KwhHistoryScreen> createState() => _KwhHistoryScreenState();
 }
 
-class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
-  final KwhService _kwhService = KwhService();
+class _KwhHistoryScreenState extends ConsumerState<KwhHistoryScreen> {
   String _selectedFilter = 'daily';
   int _currentPage = 1;
   bool _isLoading = true;
@@ -36,11 +36,11 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
     });
 
     try {
-      // Load aggregated data and totals in parallel
+      final kwhRepo = ref.read(kwhRepositoryProvider);
       final results = await Future.wait([
-        _kwhService.getAggregatedData(_selectedFilter),
-        _kwhService.getTotalKwhGenerated(),
-        _kwhService.getTotalDistanceKm(),
+        kwhRepo.getAggregatedData(_selectedFilter),
+        kwhRepo.getTotalKwhGenerated(),
+        kwhRepo.getTotalDistanceKm(),
       ]);
 
       setState(() {
@@ -48,7 +48,7 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
         _totalGenerated = results[1] as double;
         _totalDistance = results[2] as double;
         _isLoading = false;
-        _currentPage = 1; // Reset to first page when filter changes
+        _currentPage = 1;
       });
     } catch (e) {
       setState(() {
@@ -428,8 +428,8 @@ class _KwhHistoryScreenState extends State<KwhHistoryScreen> {
       final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
       final label = item['label'] as String? ?? '';
 
-      // Fetch detailed records for this period
-      final detailedRecords = await _kwhService.getDetailedRecordsForPeriod(
+      final kwhRepo = ref.read(kwhRepositoryProvider);
+      final detailedRecords = await kwhRepo.getDetailedRecordsForPeriod(
         periodDate: periodDate,
         filterType: _selectedFilter,
       );
