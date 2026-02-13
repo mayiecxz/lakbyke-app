@@ -5,8 +5,9 @@ import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
 import 'package:lakbyke_mobile/widgets/index.dart';
-import 'package:lakbyke_mobile/widgets/energy_detail_modal.dart';
-import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
+import 'package:intl/intl.dart';
+import 'package:lakbyke_mobile/screens/history/kwh_detail_screen.dart';
+import 'package:lakbyke_mobile/screens/history/transaction_detail_screen.dart';
 
 class CombinedHistoryScreen extends ConsumerStatefulWidget {
   const CombinedHistoryScreen({super.key, this.initialTabIndex = 0});
@@ -598,7 +599,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => _showEnergyDetailModal(context, item),
+              onTap: () => _navigateToKwhDetail(context, item),
               borderRadius: BorderRadius.circular(12.0),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: rowPadH, vertical: rowPadV),
@@ -611,7 +612,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
                   children: [
                     Expanded(
                       child: Text(
-                        item['label'] as String,
+                        (item['label'] as String?) ?? _formatTransactionPeriodLabel(item['date'] as DateTime?, _kwhFilter),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
@@ -624,7 +625,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
                         children: [
                           Flexible(
                             child: Text(
-                              _formatEnergyDisplay((item['value'] as num?)?.toDouble() ?? 0.0),
+                              _formatEnergyDisplay((item['wh'] as num?)?.toDouble() ?? (item['value'] as num?)?.toDouble() ?? 0.0),
                               style: const TextStyle(fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
@@ -703,7 +704,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => _showTransactionDetailModal(context, item),
+              onTap: () => _navigateToTransactionDetail(context, item),
               borderRadius: BorderRadius.circular(12.0),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: rowPadH, vertical: rowPadV),
@@ -716,7 +717,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
                   children: [
                     Expanded(
                       child: Text(
-                        item['label'] as String,
+                        (item['label'] as String?) ?? _formatTransactionPeriodLabel(item['date'] as DateTime?, _transactionFilter),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
@@ -754,81 +755,63 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
     return wh >= 1000000 ? '${formatCompactNumber(wh / 1000)} kWh' : formatEnergy(wh);
   }
 
-  Future<void> _showEnergyDetailModal(BuildContext context, Map<String, dynamic> item) async {
-    try {
-      final periodDate = item['date'] as DateTime?;
-      if (periodDate == null) return;
-
-      final energy = (item['value'] as num?)?.toDouble() ?? 0.0;
-      final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
-      final label = item['label'] as String? ?? '';
-
-      final kwhRepo = ref.read(kwhRepositoryProvider);
-      final detailedRecords = await kwhRepo.getDetailedRecordsForPeriod(
-        periodDate: periodDate,
-        filterType: _kwhFilter,
-      );
-
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => EnergyDetailModal(
-            periodLabel: label,
-            periodDate: periodDate,
-            filterType: _kwhFilter,
-            totalEnergy: energy,
-            totalDistance: distance,
-            detailedRecords: detailedRecords,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load details: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  String _formatTransactionPeriodLabel(DateTime? date, String filter) {
+    if (date == null) return '';
+    final dateFormat = DateFormat('MMMM d, yyyy');
+    switch (filter) {
+      case 'daily':
+        return dateFormat.format(date);
+      case 'weekly':
+        final weekEnd = date.add(const Duration(days: 6));
+        return '${dateFormat.format(date)} - ${dateFormat.format(weekEnd)}';
+      case 'monthly':
+        return DateFormat('MMMM yyyy').format(date);
+      case 'yearly':
+        return DateFormat('yyyy').format(date);
+      default:
+        return dateFormat.format(date);
     }
   }
 
-  Future<void> _showTransactionDetailModal(BuildContext context, Map<String, dynamic> item) async {
-    try {
-      final periodDate = item['date'] as DateTime?;
-      if (periodDate == null) return;
+  void _navigateToKwhDetail(BuildContext context, Map<String, dynamic> item) {
+    final periodDate = item['date'] as DateTime?;
+    if (periodDate == null) return;
 
-      final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
-      final label = item['label'] as String? ?? '';
+    final energy = (item['wh'] as num?)?.toDouble() ?? (item['value'] as num?)?.toDouble() ?? 0.0;
+    final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
+    final label = (item['label'] as String?) ?? _formatTransactionPeriodLabel(periodDate, _kwhFilter);
 
-      final transactionRepo = ref.read(transactionRepositoryProvider);
-      final detailedTransactions = await transactionRepo.getDetailedTransactionsForPeriod(
-        periodDate: periodDate,
-        filterType: _transactionFilter,
-      );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KwhDetailScreen(
+          periodLabel: label,
+          periodDate: periodDate,
+          filterType: _kwhFilter,
+          totalEnergy: energy,
+          totalDistance: distance,
+        ),
+      ),
+    );
+  }
 
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => TransactionDetailModal(
-            periodLabel: label,
-            periodDate: periodDate,
-            filterType: _transactionFilter,
-            totalAmount: amount,
-            detailedTransactions: detailedTransactions,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load details: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  void _navigateToTransactionDetail(BuildContext context, Map<String, dynamic> item) {
+    final periodDate = item['date'] as DateTime?;
+    if (periodDate == null) return;
+
+    final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+    final label = (item['label'] as String?) ?? _formatTransactionPeriodLabel(periodDate, _transactionFilter);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TransactionDetailScreen(
+          periodLabel: label,
+          periodDate: periodDate,
+          filterType: _transactionFilter,
+          totalAmount: amount,
+        ),
+      ),
+    );
   }
 }

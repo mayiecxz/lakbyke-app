@@ -171,6 +171,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  static const double _batteryChargeRatePer100Percent = 30.0; // ₱30 flat per 100% charge
+
   Widget _buildBatteryStatus(HomeData? homeData) {
     final batteryLevel = homeData?.mountBatteryPercentage;
     final bool hasBatteryData = batteryLevel != null;
@@ -179,38 +181,151 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        ResponsiveIcon(
-          icon: hasBatteryData ? Icons.battery_full : Icons.battery_unknown,
-          maxSizePercent: 0.12,
-          color: AppColors.homePrimary,
-          minSize: 40.0,
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ResponsiveIcon(
+                icon: hasBatteryData ? Icons.battery_full : Icons.battery_unknown,
+                maxSizePercent: 0.12,
+                color: AppColors.homePrimary,
+                minSize: 40.0,
+              ),
+              const SizedBox(width: 15),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Battery',
+                    style: TextStyle(fontSize: 20, color: AppColors.darkText),
+                  ),
+                  homeData == null
+                      ? const SizedBox(
+                          height: 48,
+                          child: Center(child: AppLoadingSpinner(size: AppSpinnerSize.small)),
+                        )
+                      : Text(
+                          batteryPercent != null ? '$batteryPercent%' : 'No battery detected',
+                          style: TextStyle(
+                            fontSize: batteryPercent != null ? 48 : 16,
+                            fontWeight: FontWeight.bold,
+                            color: batteryPercent != null
+                                ? AppColors.darkText.withOpacity(0.8)
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(width: 15),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Battery',
-              style: TextStyle(fontSize: 20, color: AppColors.darkText),
-            ),
-            homeData == null
-                ? const SizedBox(
-                    height: 48,
-                    child: Center(child: AppLoadingSpinner(size: AppSpinnerSize.small)),
-                  )
-                : Text(
-                    batteryPercent != null ? '$batteryPercent%' : 'No battery detected',
-                    style: TextStyle(
-                      fontSize: batteryPercent != null ? 48 : 16,
-                      fontWeight: FontWeight.bold,
-                      color: batteryPercent != null
-                          ? AppColors.darkText.withOpacity(0.8)
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-          ],
+        _BatteryCostWidget(
+          batteryPercent: batteryPercent,
+          onTap: () => _showBatteryCostModal(context, batteryPercent),
         ),
       ],
+    );
+  }
+
+  void _showBatteryCostModal(BuildContext context, int? batteryPercent) {
+    final hasData = batteryPercent != null;
+    final cost = hasData ? (batteryPercent / 100.0) * _batteryChargeRatePer100Percent : 0.0;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Battery value',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF317263),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Equivalent price of your charged battery as of this moment, based on a flat rate per full charge.',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.homeAccent.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.homePrimary.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Formula',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Battery % × ₱${_batteryChargeRatePer100Percent.toStringAsFixed(0)}.00 per 100% charge',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Current battery',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasData ? '$batteryPercent%' : 'No battery data',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Current battery value',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF317263)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasData ? '₱${cost.toStringAsFixed(2)}' : '—',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF317263)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF317263),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Close', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -329,6 +444,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 // --- Helper Widgets for Reusability ---
+
+class _BatteryCostWidget extends StatelessWidget {
+  final int? batteryPercent;
+  final VoidCallback onTap;
+
+  const _BatteryCostWidget({required this.batteryPercent, required this.onTap});
+
+  static const double _ratePer100 = 30.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasData = batteryPercent != null;
+    final cost = hasData ? (batteryPercent! / 100.0) * _ratePer100 : 0.0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 100,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.homeAccent.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.homePrimary.withOpacity(0.4)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.monetization_on, color: AppColors.homePrimary, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                hasData ? '₱${cost.toStringAsFixed(0)}' : '—',
+                style: TextStyle(
+                  fontSize: hasData ? 18 : 14,
+                  fontWeight: FontWeight.bold,
+                  color: hasData ? AppColors.darkText : Colors.grey,
+                ),
+              ),
+              Text(
+                'Value',
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // Widget for the 3 Metric Items (Distance, Effort, Generated)
 class _MetricItem extends StatelessWidget {

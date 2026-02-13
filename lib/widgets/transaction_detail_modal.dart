@@ -9,6 +9,8 @@ class TransactionDetailModal extends StatelessWidget {
   final String filterType; // 'daily', 'weekly', 'monthly', 'yearly'
   final double totalAmount; // Total redeemed amount
   final List<Map<String, dynamic>>? detailedTransactions; // Optional detailed transactions
+  /// When true, modal is showing a single transaction (e.g. from detail screen); subtitle is simplified.
+  final bool isSingleEntry;
 
   const TransactionDetailModal({
     super.key,
@@ -17,6 +19,7 @@ class TransactionDetailModal extends StatelessWidget {
     required this.filterType,
     required this.totalAmount,
     this.detailedTransactions,
+    this.isSingleEntry = false,
   });
 
   @override
@@ -56,7 +59,7 @@ class TransactionDetailModal extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _getPeriodSubtitle(),
+                              isSingleEntry ? 'Single transaction' : _getPeriodSubtitle(),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],

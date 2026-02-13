@@ -4,7 +4,8 @@ import 'package:lakbyke_mobile/utils/constants.dart';
 import 'package:lakbyke_mobile/utils/formatting.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
-import 'package:lakbyke_mobile/widgets/transaction_detail_modal.dart';
+import 'package:intl/intl.dart';
+import 'package:lakbyke_mobile/screens/history/transaction_detail_screen.dart';
 
 class TransactionHistoryScreen extends ConsumerStatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -59,6 +60,24 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
       _selectedFilter = key;
       _currentPage = 1; // Reset to first page when filter changes
     });
+  }
+
+  String _formatPeriodLabel(DateTime? date, String filter) {
+    if (date == null) return '';
+    final dateFormat = DateFormat('MMMM d, yyyy');
+    switch (filter) {
+      case 'daily':
+        return dateFormat.format(date);
+      case 'weekly':
+        final weekEnd = date.add(const Duration(days: 6));
+        return '${dateFormat.format(date)} - ${dateFormat.format(weekEnd)}';
+      case 'monthly':
+        return DateFormat('MMMM yyyy').format(date);
+      case 'yearly':
+        return DateFormat('yyyy').format(date);
+      default:
+        return dateFormat.format(date);
+    }
   }
 
   Widget _buildTopCard() {
@@ -245,7 +264,7 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: () => _showTransactionDetailModal(context, item, aggregatedData),
+                                onTap: () => _navigateToDetail(context, item),
                                 borderRadius: BorderRadius.circular(12.0),
                                 child: Container(
                                   padding: EdgeInsets.symmetric(horizontal: rowPadH, vertical: rowPadV),
@@ -258,7 +277,7 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          item['label'] as String,
+                                          (item['label'] as String?) ?? _formatPeriodLabel(item['date'] as DateTime?, _selectedFilter),
                                           style: const TextStyle(fontWeight: FontWeight.w600),
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 1,
@@ -365,46 +384,24 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
     );
   }
 
-  Future<void> _showTransactionDetailModal(
-    BuildContext context,
-    Map<String, dynamic> item,
-    List<Map<String, dynamic>> allData,
-  ) async {
-    try {
-      final periodDate = item['date'] as DateTime?;
-      if (periodDate == null) return;
+  void _navigateToDetail(BuildContext context, Map<String, dynamic> item) {
+    final periodDate = item['date'] as DateTime?;
+    if (periodDate == null) return;
 
-      final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
-      final label = item['label'] as String? ?? '';
+    final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+    final label = (item['label'] as String?) ?? _formatPeriodLabel(periodDate, _selectedFilter);
 
-      final transactionRepo = ref.read(transactionRepositoryProvider);
-      final detailedTransactions = await transactionRepo.getDetailedTransactionsForPeriod(
-        periodDate: periodDate,
-        filterType: _selectedFilter,
-      );
-
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => TransactionDetailModal(
-            periodLabel: label,
-            periodDate: periodDate,
-            filterType: _selectedFilter,
-            totalAmount: amount,
-            detailedTransactions: detailedTransactions,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load details: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TransactionDetailScreen(
+          periodLabel: label,
+          periodDate: periodDate,
+          filterType: _selectedFilter,
+          totalAmount: amount,
+        ),
+      ),
+    );
   }
 
   @override

@@ -25,7 +25,8 @@ class _LoginModalState extends ConsumerState<LoginModal> {
   bool _rememberMe = false;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
-  bool _isSendingResetEmail = false; 
+  bool _isSendingResetEmail = false;
+  bool _isPasswordVisible = false; 
 
   // Updated Login Function with Email Verification Check
   Future<void> _login() async {
@@ -544,10 +545,17 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                     // Password Input
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: !_isPasswordVisible,
                       decoration: InputDecoration(
                         labelText: AppStrings.passwordLabel,
                         hintText: AppStrings.passwordHint,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppDimensions.formFieldRadius),
                           borderSide: const BorderSide(color: Color(0xFFCCCCCC), width: 1.5),

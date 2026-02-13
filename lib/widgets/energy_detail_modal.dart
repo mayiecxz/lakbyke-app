@@ -10,6 +10,8 @@ class EnergyDetailModal extends StatelessWidget {
   final double totalEnergy; // in Wh
   final double totalDistance; // in km
   final List<Map<String, dynamic>>? detailedRecords; // Optional detailed records
+  /// When true, modal is showing a single entry (e.g. from detail screen); subtitle is simplified.
+  final bool isSingleEntry;
 
   const EnergyDetailModal({
     super.key,
@@ -19,6 +21,7 @@ class EnergyDetailModal extends StatelessWidget {
     required this.totalEnergy,
     required this.totalDistance,
     this.detailedRecords,
+    this.isSingleEntry = false,
   });
 
   @override
@@ -58,7 +61,7 @@ class EnergyDetailModal extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _getPeriodSubtitle(),
+                              isSingleEntry ? 'Single entry' : _getPeriodSubtitle(),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
