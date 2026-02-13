@@ -1,4 +1,5 @@
 /// Utility functions for formatting data values
+library;
 
 /// Formats a number compactly when >= 1000 (e.g. 1220 → "1.2k", 1000 → "1.0k").
 /// For values under 1000, returns [value].toStringAsFixed([maxDecimals]) (no "k").

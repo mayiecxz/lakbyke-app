@@ -44,7 +44,7 @@ class _MapsScreenState extends State<MapsScreen> {
   int _currentStepIndex = 0;
   double _distanceToNextTurn = 0.0;
   DirectionStep? _currentInstruction;
-  String _googleMapsApiKey = 'AIzaSyCiuyIvt52hTNwThuyx2HSdCGJtIewKV0Q';
+  final String _googleMapsApiKey = 'AIzaSyCiuyIvt52hTNwThuyx2HSdCGJtIewKV0Q';
   
   // Lakbyke stations
   List<LakbykeStation> _lakbykeStations = [];

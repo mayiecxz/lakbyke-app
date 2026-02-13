@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:intl/intl.dart';
+import 'package:lakbyke_mobile/insights/cba_constants.dart';
+import 'package:lakbyke_mobile/insights/cyclist_insights.dart';
 import 'package:lakbyke_mobile/services/transaction_service.dart';
 import 'package:lakbyke_mobile/services/kwh_service.dart';
 
@@ -27,9 +29,23 @@ class InsightsModel {
   double weeklyAverageDistance = 0.0;
   int totalSessions = 0;
   int daysWithActivity = 0;
+  // All-time totals (for performance breakdown)
+  double totalEarnings = 0.0;
+  double totalEnergyWh = 0.0;
+  double totalDistanceKm = 0.0;
 
   // Analytics chart filter
   String analyticsFilter = 'past week';
+
+  // --- CBA reference values (from lib/insights) ---
+  /// Optimal buyback per battery (72Wh); use for pictograph "1 unit = ₱30".
+  double get cbaBatteryValue => CBAConstants.buybackOptimal;
+  /// Reference monthly gross at optimal rate, 22 school days (₱660).
+  double get cbaReferenceMonthlyGross => CyclistInsights.projectedMonthlyGross(days: 22);
+  /// Net daily earnings at optimal buyback (gross − maintenance).
+  double get cbaNetDailyEarnings => CyclistInsights.netDailyEarnings();
+  /// Breakeven tip for cyclists (e.g. "break even in 8 months").
+  String get cbaBreakevenMessage => CyclistInsights.breakevenMessage;
 
   /// Load all insights data from Firebase.
   /// Transactions: from "transactions" table, filtered by current user's mntTag (service tag).
@@ -62,6 +78,9 @@ class InsightsModel {
     if (recentTransactions.isEmpty && kwhHistory.isEmpty) {
       totalSessions = 0;
       daysWithActivity = 0;
+      this.totalEarnings = 0.0;
+      totalEnergyWh = 0.0;
+      totalDistanceKm = 0.0;
       weeklyAverageEarnings = 0.0;
       weeklyAverageDistance = 0.0;
       averageEarningsPerSession = 0.0;
@@ -190,6 +209,9 @@ class InsightsModel {
     // Update model properties
     totalSessions = totalSessionsCount;
     daysWithActivity = daysWithActivityCount;
+    this.totalEarnings = totalEarnings;
+    totalEnergyWh = totalEnergy;
+    totalDistanceKm = totalDistance;
     averageEarningsPerSession = avgEarningsPerSession;
     averageEnergyPerSession = avgEnergyPerSession;
     averageDistancePerSession = avgDistancePerSession;

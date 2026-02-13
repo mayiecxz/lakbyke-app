@@ -62,7 +62,7 @@ class KwhService {
   }
 
   // Get all history data for the current user's device
-  // Data is stored in deviceEnergyData/{serviceTag}/{document_id}/[fields]
+  // Data is stored in deviceEnergyData/{deviceId}/{sessionId} with fields: timestamp, totalWh, totalDistanceKm, etc.
   Future<List<Map<String, dynamic>>> getHistoryData() async {
     try {
       final serviceTag = await getServiceTag();
@@ -83,84 +83,71 @@ class KwhService {
       final data = snapshot.value;
       if (data == null) return [];
 
+      // Normalize to Map<String, dynamic> so we accept any Map type from Firebase
+      final root = data is Map ? data.map((k, v) => MapEntry(k.toString(), v)) : null;
+      if (root == null) return [];
+
       List<Map<String, dynamic>> historyRecords = [];
 
-      // Iterate device nodes: include device records where mntTag matches user's service tag
-      if (data is Map<Object?, Object?>) {
-        data.forEach((deviceId, deviceData) {
-          if (deviceData is Map<Object?, Object?>) {
-            final record = Map<String, dynamic>.from(
-              deviceData.map((key, value) => MapEntry(key.toString(), value)),
-            );
+      // Helper function to safely parse numeric values
+      double? parseNumeric(dynamic value) {
+        if (value == null) return null;
+        if (value is num) return value.toDouble();
+        if (value is String) return double.tryParse(value);
+        return null;
+      }
 
-            final mntTag = (record['mntTag'] as String?) ?? '';
-            final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-            if (cleanMntTag != cleanServiceTag) return;
-            
-            // Extract timestamp (required field)
-            final timestampStr = record['timestamp'] as String?;
-            if (timestampStr == null || timestampStr.isEmpty) {
-              return; // Skip records without timestamp
-            }
-            
-            final timestamp = _parseTimestamp(timestampStr);
-            if (timestamp == null) {
-              return; // Skip records with invalid timestamp
-            }
-            
-            // Helper function to safely parse numeric values
-            double? parseNumeric(dynamic value) {
-              if (value == null) return null;
-              if (value is num) return value.toDouble();
-              if (value is String) return double.tryParse(value);
-              return null;
-            }
-            
-            // Helper function to safely parse integer values
-            int? parseInteger(dynamic value) {
-              if (value == null) return null;
-              if (value is int) return value;
-              if (value is double) return value.toInt();
-              if (value is String) return int.tryParse(value);
-              return null;
-            }
-            
-            // Helper function to safely parse boolean values
-            bool? parseBoolean(dynamic value) {
-              if (value == null) return null;
-              if (value is bool) return value;
-              if (value is String) {
-                return value.toLowerCase() == 'true' || value == '1';
-              }
-              if (value is num) return value != 0;
-              return null;
-            }
-            
-            // Extract all fields from Firebase structure
-            final historyRecord = <String, dynamic>{
-              'timestamp': timestamp,
-              'recordId': deviceId.toString(),
-              
-              // Energy and distance fields
-              'totalWh': parseNumeric(record['totalWh']) ?? 0.0,
-              'totalDistanceKm': parseNumeric(record['totalDistanceKm']) ?? 0.0,
-              
-              // Battery and voltage fields
-              'mountBatteryPercentage': parseInteger(record['mountBatteryPercentage']),
-              'mountVoltage': parseNumeric(record['mountVoltage']),
-              
-              // Power and speed fields (schema: speedKmh as float)
-              'powerGeneratedInWatts': parseNumeric(record['powerGeneratedInWatts']) ?? 0.0,
-              'speedKmh': parseNumeric(record['speedKmh']) ?? 0.0,
-              
-              // Additional fields
-              'mAh': parseInteger(record['mAh']) ?? 0,
-              'isMotorRunning': parseBoolean(record['isMotorRunning']) ?? false,
-            };
-            
-            historyRecords.add(historyRecord);
-          }
-        });
+      int? parseInteger(dynamic value) {
+        if (value == null) return null;
+        if (value is int) return value;
+        if (value is double) return value.toInt();
+        if (value is String) return int.tryParse(value);
+        return null;
+      }
+
+      bool? parseBoolean(dynamic value) {
+        if (value == null) return null;
+        if (value is bool) return value;
+        if (value is String) {
+          return value.toLowerCase() == 'true' || value == '1';
+        }
+        if (value is num) return value != 0;
+        return null;
+      }
+
+      // Structure: deviceEnergyData[deviceId][sessionId] = sessionDoc
+      for (final entry in root.entries) {
+        final deviceId = entry.key;
+        final cleanDeviceId = deviceId.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+        if (cleanDeviceId != cleanServiceTag) continue;
+        final deviceData = entry.value;
+        if (deviceData is! Map) continue;
+        final sessionsMap = Map<String, dynamic>.from(deviceData);
+        for (final sessionEntry in sessionsMap.entries) {
+          final sessionId = sessionEntry.key;
+          final sessionRaw = sessionEntry.value;
+          if (sessionRaw is! Map) continue;
+          final record = Map<String, dynamic>.from(sessionRaw);
+          final timestampStr = record['timestamp'] as String?;
+          if (timestampStr == null || timestampStr.isEmpty) continue;
+          final timestamp = _parseTimestamp(timestampStr);
+          if (timestamp == null) continue;
+
+          // mAh is double in DB (e.g. 3.067361); use parseNumeric to avoid data loss
+          final historyRecord = <String, dynamic>{
+            'timestamp': timestamp,
+            'recordId': sessionId,
+            'totalWh': parseNumeric(record['totalWh']) ?? 0.0,
+            'totalDistanceKm': parseNumeric(record['totalDistanceKm']) ?? 0.0,
+            'mountBatteryPercentage': parseInteger(record['mountBatteryPercentage']),
+            'mountVoltage': parseNumeric(record['mountVoltage']),
+            'powerGeneratedInWatts': parseNumeric(record['powerGeneratedInWatts']) ?? 0.0,
+            'speedKmh': parseNumeric(record['speedKmh']) ?? 0.0,
+            'mAh': parseNumeric(record['mAh']) ?? 0.0,
+            'isMotorRunning': parseBoolean(record['isMotorRunning']) ?? false,
+          };
+          historyRecords.add(historyRecord);
+        }
       }
 
       // Sort by timestamp descending (most recent first)
@@ -388,25 +375,23 @@ class KwhService {
         };
       }
 
-      // Count records and check structure for devices that match the service tag
+      // Count sessions for device that matches the service tag
       int recordCount = 0;
       List<String> sampleFields = [];
-      
+
       if (data is Map<Object?, Object?>) {
         data.forEach((deviceId, deviceData) {
-          if (deviceData is Map<Object?, Object?>) {
-            final record = deviceData;
-            final mntTag = (record['mntTag'] as String?) ?? '';
-            final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-            if (cleanMntTag != cleanServiceTag) return;
-
-            recordCount++;
-
-            // Get sample fields from first matching record
-            if (sampleFields.isEmpty) {
-              sampleFields = record.keys.map((k) => k.toString()).toList();
+          final cleanDeviceId = deviceId.toString().replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+          if (cleanDeviceId != cleanServiceTag) return;
+          if (deviceData is! Map<Object?, Object?>) return;
+          deviceData.forEach((sessionId, sessionRaw) {
+            if (sessionRaw is Map<Object?, Object?>) {
+              recordCount++;
+              if (sampleFields.isEmpty) {
+                sampleFields = sessionRaw.keys.map((k) => k.toString()).toList();
+              }
             }
-          }
+          });
         });
       }
 
@@ -421,7 +406,7 @@ class KwhService {
         'success': true,
         'serviceTag': serviceTag,
         'cleanServiceTag': cleanServiceTag,
-        'firebasePath': 'deviceEnergyData (device nodes filtered by mntTag: $cleanServiceTag)',
+        'firebasePath': 'deviceEnergyData/$cleanServiceTag/{sessionId} (sessions for device)',
         'recordCount': recordCount,
         'sampleFields': sampleFields,
         'sampleRecord': sampleRecord,

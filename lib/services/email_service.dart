@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 class EmailService {
   /// Backend URL for sending OTP emails. Must accept POST with
   /// { email, otpCode, purpose, newEmail? } and return { success, message? } or { success: false, error }.
-  static const String? API_URL = 'https://lakbyke.com/api/send-otp-email';
+  static const String API_URL = 'https://lakbyke.com/api/send-otp-email';
 
   /// Sends an OTP code to [email] for [purpose] (e.g. 'changeEmail', 'changePassword').
   /// [newEmail] is optional and used when purpose is 'changeEmail'.
@@ -35,7 +35,7 @@ class EmailService {
         if (newEmail != null) 'newEmail': newEmail,
       };
 
-      print('📧 Sending OTP email to: $email via ${API_URL}');
+      print('📧 Sending OTP email to: $email via $API_URL');
       
       final response = await http.post(
         uri,

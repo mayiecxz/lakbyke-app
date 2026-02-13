@@ -21,6 +21,11 @@ HOW TO GUIDE USERS:
 - For login/signup: direct to Account or the login/signup screens; mention OTP if needed.
 - For stations: direct to Maps and QR; explain ride-to-earn and battery exchange at stations.
 - Keep answers focused on app usage only. Do not provide live sensor values or personal stats—only explain where and how to find them in the app.
+
+CBA (COST-BENEFIT) — for "Is it worth it?" or profit/ROI questions:
+- Optimal buyback: ₱30 per fully charged battery (72Wh). Forecasts use this unless specified.
+- "Profit" means net after maintenance (cyclist ~₱1.91/day, station ~₱3.72/day amortized).
+- Breakeven: Station owners ~4 months; cyclists ~8 months at the optimal rate. Keep answers concise and data-driven; refer to breakeven when asked if it's worth it.
 ''';
   }
 }

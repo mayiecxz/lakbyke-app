@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/screens/template/header.dart';
 import 'package:lakbyke_mobile/screens/template/screen_title.dart';
@@ -63,9 +64,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           color: AppColors.homePrimary,
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
                                 const ScreenTitle(title: 'INSIGHTS'),
                                 Padding(
                                   padding: const EdgeInsets.fromLTRB(
@@ -77,13 +78,17 @@ class _InsightsScreenState extends State<InsightsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _buildCurrentActivityCard(),
+                                      _buildCurrentActivityCard(context),
                                       const SizedBox(height: AppDimensions.paddingLarge),
-                                      _buildProjectionCard(),
+                                      _buildPerformanceBreakdownCard(context),
                                       const SizedBox(height: AppDimensions.paddingLarge),
-                                      _buildBatteryPictograph(),
+                                      _buildEarningsChart(context),
                                       const SizedBox(height: AppDimensions.paddingLarge),
-                                      _buildMotivationCard(),
+                                      _buildProjectionCard(context),
+                                      const SizedBox(height: AppDimensions.paddingLarge),
+                                      _buildBatteryPictograph(context),
+                                      const SizedBox(height: AppDimensions.paddingLarge),
+                                      _buildMotivationCard(context),
                                     ],
                                   ),
                                 ),
@@ -102,105 +107,98 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildCurrentActivityCard() {
+  double _fontScale(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).shortestSide;
+    return (w / 360).clamp(1.0, 1.35);
+  }
+
+  Widget _buildCurrentActivityCard(BuildContext context) {
+    const white = Colors.white;
+    const white95 = Color(0xFFF2F2F2);
+    final s = _fontScale(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.textTertiary.withValues(alpha: 0.25),
-          width: 1,
-        ),
+        color: AppColors.homePrimary,
+        borderRadius: BorderRadius.circular(16.0),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.homePrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'ACTIVITY SUMMARY',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.homePrimary,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              'ACTIVITY SUMMARY',
+              style: TextStyle(
+                fontSize: 12 * s,
+                fontWeight: FontWeight.w600,
+                color: white.withValues(alpha: 0.95),
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: AppDimensions.paddingLarge),
             Row(
               children: [
                 Expanded(
                   child: _buildStatItem(
+                    context,
                     'Total Sessions',
                     '${_insightsModel.totalSessions}',
                     Icons.directions_bike_rounded,
+                    iconColor: white,
+                    valueColor: white,
+                    labelColor: white95,
                   ),
                 ),
                 Container(
                   width: 1,
                   height: 52,
-                  color: AppColors.textTertiary.withValues(alpha: 0.25),
+                  color: white.withValues(alpha: 0.35),
                 ),
                 Expanded(
                   child: _buildStatItem(
+                    context,
                     'Active Days',
                     '${_insightsModel.daysWithActivity}',
                     Icons.calendar_today_rounded,
+                    iconColor: white,
+                    valueColor: white,
+                    labelColor: white95,
                   ),
                 ),
                 Container(
                   width: 1,
                   height: 52,
-                  color: AppColors.textTertiary.withValues(alpha: 0.25),
+                  color: white.withValues(alpha: 0.35),
                 ),
                 Expanded(
                   child: _buildStatItemWithPeso(
+                    context,
                     'Avg/Session',
                     formatCompactCurrency(_insightsModel.averageEarningsPerSession),
+                    iconColor: white,
+                    valueColor: white,
+                    labelColor: white95,
                   ),
                 ),
               ],
             ),
             if (_insightsModel.weeklyAverageEarnings > 0) ...[
               const SizedBox(height: AppDimensions.paddingMedium),
-              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              Divider(color: white.withValues(alpha: 0.4), height: 1),
               const SizedBox(height: AppDimensions.paddingSmall),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Weekly Average:',
-                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 16 * s, color: white95),
                   ),
                   Text(
                     formatCompactCurrency(_insightsModel.weeklyAverageEarnings),
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: 18 * s,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.homePrimary,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -212,14 +210,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   children: [
                     Text(
                       'Weekly Distance:',
-                      style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 16 * s, color: white95),
                     ),
                     Text(
                       '${_insightsModel.weeklyAverageDistance.abs() >= 1000 ? formatCompactNumber(_insightsModel.weeklyAverageDistance, 1) : _insightsModel.weeklyAverageDistance.toStringAsFixed(1)} km',
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 18 * s,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.homePrimary,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -227,41 +225,188 @@ class _InsightsScreenState extends State<InsightsScreen> {
               ],
             ] else if (_insightsModel.totalSessions == 0) ...[
               const SizedBox(height: AppDimensions.paddingMedium),
-              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              Divider(color: white.withValues(alpha: 0.4), height: 1),
               const SizedBox(height: AppDimensions.paddingSmall),
               _buildInfoBanner(
                 icon: Icons.info_outline_rounded,
                 message: 'No activity recorded yet. Complete a session to start tracking your earnings!',
-                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
-                iconColor: AppColors.warning,
-                textColor: const Color(0xFFE65100),
+                backgroundColor: white.withValues(alpha: 0.15),
+                iconColor: white,
+                textColor: white,
               ),
             ] else if (!_insightsModel.hasActivityInPastWeek() && !_insightsModel.hasActivityInPastMonth()) ...[
               const SizedBox(height: AppDimensions.paddingMedium),
-              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              Divider(color: white.withValues(alpha: 0.4), height: 1),
               const SizedBox(height: AppDimensions.paddingSmall),
               _buildInfoBanner(
                 icon: Icons.info_outline_rounded,
                 message: 'No activity in the past week or month. Start a new session to see recent earnings!',
-                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
-                iconColor: AppColors.warning,
-                textColor: const Color(0xFFE65100),
+                backgroundColor: white.withValues(alpha: 0.15),
+                iconColor: white,
+                textColor: white,
               ),
             ] else if (!_insightsModel.hasActivityInPastWeek()) ...[
               const SizedBox(height: AppDimensions.paddingMedium),
-              Divider(color: AppColors.textTertiary.withValues(alpha: 0.5), height: 1),
+              Divider(color: white.withValues(alpha: 0.4), height: 1),
               const SizedBox(height: AppDimensions.paddingSmall),
               _buildInfoBanner(
                 icon: Icons.info_outline_rounded,
                 message: 'No activity in the past week. Your weekly average will update once you complete a session.',
-                backgroundColor: AppColors.info.withValues(alpha: 0.12),
-                iconColor: AppColors.info,
-                textColor: const Color(0xFF1565C0),
+                backgroundColor: white.withValues(alpha: 0.15),
+                iconColor: white,
+                textColor: white,
               ),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPerformanceBreakdownCard(BuildContext context) {
+    const white = Colors.white;
+    const white95 = Color(0xFFF2F2F2);
+    final m = _insightsModel;
+    final s = _fontScale(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.homePrimary,
+        borderRadius: BorderRadius.circular(16.0),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PERFORMANCE BREAKDOWN',
+              style: TextStyle(
+                fontSize: 12 * s,
+                fontWeight: FontWeight.w600,
+                color: white.withValues(alpha: 0.95),
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            _buildBreakdownRow(context, 'Total earned', formatCompactCurrency(m.totalEarnings), white95, white),
+            _buildBreakdownRow(context, 'Total energy', formatEnergy(m.totalEnergyWh), white95, white),
+            _buildBreakdownRow(context, 'Total distance', m.totalDistanceKm >= 1000 ? '${formatCompactNumber(m.totalDistanceKm, 1)} km' : '${m.totalDistanceKm.toStringAsFixed(1)} km', white95, white),
+            _buildBreakdownRow(context, 'Sessions', '${m.totalSessions}', white95, white),
+            _buildBreakdownRow(context, 'Active days', '${m.daysWithActivity}', white95, white),
+            _buildBreakdownRow(context, 'Avg earnings/session', formatCompactCurrency(m.averageEarningsPerSession), white95, white),
+            _buildBreakdownRow(context, 'Avg energy/session', formatEnergy(m.averageEnergyPerSession), white95, white),
+            _buildBreakdownRow(context, 'Avg distance/session', m.averageDistancePerSession >= 1000 ? '${formatCompactNumber(m.averageDistancePerSession, 1)} km' : '${m.averageDistancePerSession.toStringAsFixed(1)} km', white95, white),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBreakdownRow(BuildContext context, String label, String value, Color labelColor, Color valueColor) {
+    final s = _fontScale(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDimensions.paddingSmall),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 15 * s, color: labelColor)),
+          Text(value, style: TextStyle(fontSize: 15 * s, fontWeight: FontWeight.w600, color: valueColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningsChart(BuildContext context) {
+    final data = _insightsModel.getAnalyticsData();
+    final hasData = data.any((e) => (e['amount'] as double) > 0);
+    final s = _fontScale(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.textTertiary.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(color: AppColors.textPrimary.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'EARNINGS OVER TIME',
+              style: TextStyle(
+                fontSize: 12 * s,
+                fontWeight: FontWeight.w600,
+                color: AppColors.homePrimary,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildChartPeriodTabs(context),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            if (data.isEmpty || !hasData)
+              SizedBox(
+                height: 160,
+                child: Center(
+                  child: Text(
+                    'No earnings data for this period.',
+                    style: TextStyle(fontSize: 15 * s, color: AppColors.textSecondary),
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                height: 200,
+                child: _EarningsBarChart(data: data),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartPeriodTabs(BuildContext context) {
+    const filters = ['past week', 'past month', 'past year', 'all time'];
+    const labels = {'past week': 'Week', 'past month': 'Month', 'past year': 'Year', 'all time': 'All'};
+    final s = _fontScale(context);
+    return Row(
+      children: filters.map((filter) {
+        final selected = _insightsModel.analyticsFilter == filter;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _insightsModel.analyticsFilter = filter;
+                  });
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? AppColors.homeAccent.withValues(alpha: 0.2) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    labels[filter]!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14 * s,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected ? AppColors.homePrimary : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -316,25 +461,37 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon, {
+    Color? iconColor,
+    Color? valueColor,
+    Color? labelColor,
+  }) {
+    final iconC = iconColor ?? AppColors.homePrimary;
+    final valueC = valueColor ?? AppColors.textPrimary;
+    final labelC = labelColor ?? AppColors.textSecondary;
+    final s = _fontScale(context);
     return Column(
       children: [
         Container(
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.homePrimary.withValues(alpha: 0.12),
+            color: (iconColor ?? AppColors.homePrimary).withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: AppColors.homePrimary, size: 22),
+          child: Icon(icon, color: iconC, size: 22),
         ),
         const SizedBox(height: 10),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 19,
+          style: TextStyle(
+            fontSize: 21 * s,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: valueC,
             letterSpacing: -0.3,
           ),
         ),
@@ -342,8 +499,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
+            fontSize: 13 * s,
+            color: labelC,
             fontWeight: FontWeight.w500,
             height: 1.2,
           ),
@@ -353,25 +510,36 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildStatItemWithPeso(String label, String value) {
+  Widget _buildStatItemWithPeso(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? iconColor,
+    Color? valueColor,
+    Color? labelColor,
+  }) {
+    final iconC = iconColor ?? AppColors.homePrimary;
+    final valueC = valueColor ?? AppColors.homePrimary;
+    final labelC = labelColor ?? AppColors.textSecondary;
+    final s = _fontScale(context);
     return Column(
       children: [
         Container(
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.homePrimary.withValues(alpha: 0.12),
+            color: iconC.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(Icons.paid_rounded, color: AppColors.homePrimary, size: 22),
+          child: Icon(Icons.paid_rounded, color: iconC, size: 22),
         ),
         const SizedBox(height: 10),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 15,
+          style: TextStyle(
+            fontSize: 17 * s,
             fontWeight: FontWeight.w700,
-            color: AppColors.homePrimary,
+            color: valueC,
             letterSpacing: -0.2,
           ),
           textAlign: TextAlign.center,
@@ -382,8 +550,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
+            fontSize: 13 * s,
+            color: labelC,
             fontWeight: FontWeight.w500,
             height: 1.2,
           ),
@@ -394,30 +562,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
 
-  Widget _buildProjectionCard() {
+  Widget _buildProjectionCard(BuildContext context) {
     final increase = _insightsModel.projectedMonthlyEarnings - _insightsModel.currentMonthlyProjection;
     final increasePercent = _insightsModel.currentMonthlyProjection > 0
         ? (increase / _insightsModel.currentMonthlyProjection * 100)
         : 0.0;
     
     final hasNoData = _insightsModel.totalSessions == 0;
+    final s = _fontScale(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.homePrimary,
+        borderRadius: BorderRadius.circular(16.0),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.paddingLarge),
@@ -431,7 +588,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 Text(
                   'MONTHLY EARNINGS PROJECTION',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12 * s,
                     fontWeight: FontWeight.w600,
                     color: Colors.white.withValues(alpha: 0.95),
                     letterSpacing: 1.2,
@@ -467,7 +624,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                         'Complete your first session to see earnings projections based on your activity.',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.95),
-                          fontSize: 11,
+                          fontSize: 13 * s,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -484,7 +641,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 Text(
                   formatCompactCurrency(_insightsModel.projectedMonthlyEarnings),
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 30 * s,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: -0.5,
@@ -511,10 +668,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                         const SizedBox(width: 6),
                         Text(
                           '+${increasePercent.toStringAsFixed(1)}%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                            fontSize: 15 * s,
                           ),
                         ),
                       ],
@@ -532,19 +689,31 @@ class _InsightsScreenState extends State<InsightsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildProjectionMetric(
+                  context,
                   'Current activity',
                   formatCompactCurrency(_insightsModel.currentMonthlyProjection),
                 ),
                 _buildProjectionMetric(
+                  context,
                   'Energy',
                   '${(_insightsModel.projectedMonthlyEnergy / 1000).abs() >= 1000 ? formatCompactNumber(_insightsModel.projectedMonthlyEnergy / 1000, 1) : (_insightsModel.projectedMonthlyEnergy / 1000).toStringAsFixed(1)} kWh',
                 ),
                 if (_insightsModel.projectedMonthlyDistance > 0)
                   _buildProjectionMetric(
+                    context,
                     'Distance',
                     '${_insightsModel.projectedMonthlyDistance.abs() >= 1000 ? formatCompactNumber(_insightsModel.projectedMonthlyDistance, 1) : _insightsModel.projectedMonthlyDistance.toStringAsFixed(1)} km',
                   ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'At optimal rate (₱30/battery), ~22 school days/month ≈ ${formatCompactCurrency(_insightsModel.cbaReferenceMonthlyGross)} gross.',
+              style: TextStyle(
+                fontSize: 12 * s,
+                color: Colors.white.withValues(alpha: 0.85),
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ],
         ),
@@ -552,7 +721,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildProjectionMetric(String label, String value) {
+  Widget _buildProjectionMetric(BuildContext context, String label, String value) {
+    final s = _fontScale(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -560,7 +730,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12 * s,
             color: Colors.white.withValues(alpha: 0.95),
             fontWeight: FontWeight.w400,
           ),
@@ -569,7 +739,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 15 * s,
             color: Colors.white,
             fontWeight: FontWeight.w600,
             shadows: [
@@ -652,11 +822,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
     return total;
   }
 
-  Widget _buildBatteryPictograph() {
+  Widget _buildBatteryPictograph(BuildContext context) {
     final weeklyEarnings = _calculateWeeklyEarnings();
     final monthlyEarnings = _calculateMonthlyEarnings();
     final yearlyEarnings = _calculateYearlyEarnings();
     final allTimeEarnings = _calculateAllTimeEarnings();
+    final s = _fontScale(context);
     
     // Calculate projected earnings if cycling consistently
     // Use average earnings per session to project potential earnings
@@ -714,7 +885,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   child: Text(
                     'ENERGY EARNINGS',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 12 * s,
                       fontWeight: FontWeight.w600,
                       color: AppColors.homePrimary,
                       letterSpacing: 1.2,
@@ -727,7 +898,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             Text(
               'Potential earnings if cycling regularly',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14 * s,
                 color: AppColors.textTertiary,
                 fontWeight: FontWeight.w400,
                 height: 1.3,
@@ -784,7 +955,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                             labels[filter]!,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 14 * s,
                               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                               color: selected
                                   ? AppColors.homePrimary
@@ -801,6 +972,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             const SizedBox(height: AppDimensions.paddingMedium),
             // Pictograph display
             _buildPictographSection(
+              context,
               period: _insightsModel.analyticsFilter,
               weeklyEarnings: weeklyEarnings,
               monthlyEarnings: monthlyEarnings,
@@ -817,7 +989,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildPictographSection({
+  Widget _buildPictographSection(
+    BuildContext context, {
     required String period,
     required double weeklyEarnings,
     required double monthlyEarnings,
@@ -828,6 +1001,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     required double projectedYearly,
     required double projectedAllTime,
   }) {
+    final s = _fontScale(context);
     double earnings;
     double projected;
     String periodLabel;
@@ -861,9 +1035,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
     // Use projected earnings for the pictograph (how much they can earn if cycling)
     final displayEarnings = projected > 0 ? projected : earnings;
-    
-    // Each battery represents ₱50
-    const double batteryValue = 50.0;
+    final double batteryValue = _insightsModel.cbaBatteryValue; // CBA: 1 unit (72Wh) = ₱30
     final numBatteries = (displayEarnings / batteryValue).ceil();
     final maxBatteriesToShow = 20; // Limit display to prevent overflow
     final batteriesToShow = numBatteries > maxBatteriesToShow ? maxBatteriesToShow : numBatteries;
@@ -901,7 +1073,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             Text(
               'No earnings data yet',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 17 * s,
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
@@ -910,7 +1082,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             Text(
               'Complete a session to see potential earnings.',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14 * s,
                 color: AppColors.textTertiary,
                 height: 1.3,
               ),
@@ -945,9 +1117,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$periodLabel',
-                    style: const TextStyle(
-                      fontSize: 10,
+                    periodLabel,
+                    style: TextStyle(
+                      fontSize: 12 * s,
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w400,
                     ),
@@ -955,8 +1127,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   const SizedBox(height: 2),
                   Text(
                     formatCompactCurrency(displayEarnings),
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 20 * s,
                       fontWeight: FontWeight.w600,
                       color: AppColors.homePrimary,
                     ),
@@ -966,10 +1138,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text(
+                  Text(
                     'Units',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 12 * s,
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w400,
                     ),
@@ -977,8 +1149,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   const SizedBox(height: 2),
                   Text(
                     hasMore ? '$maxBatteriesToShow+' : '$numBatteries',
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 20 * s,
                       fontWeight: FontWeight.w600,
                       color: AppColors.homePrimary,
                     ),
@@ -1051,7 +1223,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           Text(
                             '+${numBatteries - maxBatteriesToShow}',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 18 * s,
                               fontWeight: FontWeight.w700,
                               color: AppColors.homePrimary.withValues(alpha: 0.9),
                             ),
@@ -1060,7 +1232,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           Text(
                             'more',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12 * s,
                               fontWeight: FontWeight.w500,
                               color: AppColors.textSecondary,
                             ),
@@ -1068,8 +1240,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           const SizedBox(height: 2),
                           Text(
                             formatCompactCurrency((numBatteries - maxBatteriesToShow) * batteryValue),
-                            style: const TextStyle(
-                              fontSize: 11,
+                            style: TextStyle(
+                              fontSize: 13 * s,
                               fontWeight: FontWeight.w600,
                               color: AppColors.homePrimary,
                             ),
@@ -1103,7 +1275,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   Text(
                     '1 unit = ${formatCompactCurrency(batteryValue)}',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 13 * s,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
                     ),
@@ -1119,9 +1291,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
 
 
-  Widget _buildMotivationCard() {
+  Widget _buildMotivationCard(BuildContext context) {
     final monthlyEarnings = _calculateMonthlyEarnings();
     final yearlyEarnings = _calculateYearlyEarnings();
+    final netDaily = _insightsModel.cbaNetDailyEarnings;
+    final breakevenTip = _insightsModel.cbaBreakevenMessage;
+    final s = _fontScale(context);
     String motivationText = '';
     String tipText = '';
 
@@ -1129,17 +1304,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
       motivationText = 'Start your first session to begin earning! Every ride counts towards your potential earnings.';
       tipText = '💡 Tip: Begin cycling regularly to see your earnings grow! Each session contributes to your total.';
     } else if (yearlyEarnings > 0) {
-      final projectedYearly = _insightsModel.averageEarningsPerSession > 0 
-          ? _insightsModel.averageEarningsPerSession * 365 
-          : 0.0;
-      motivationText = 'Great progress! If you cycle daily, you could earn ${formatCompactCurrency(projectedYearly)} per year!';
-      tipText = '💡 Tip: Consistency is key! Regular cycling sessions help maximize your earnings potential.';
+      motivationText = 'Great progress! At the optimal rate (₱30/battery), selling 1 full battery per day is about ₱30/day gross, ~${formatCompactCurrency(netDaily)}/day net after maintenance.';
+      tipText = '💡 Tip: $breakevenTip';
     } else if (monthlyEarnings > 0) {
       motivationText = 'Keep up the great work! Your cycling activity is generating earnings.';
-      tipText = '💡 Tip: Try to maintain a consistent schedule. Regular biking sessions help build momentum!';
+      tipText = '💡 Tip: $breakevenTip';
     } else {
       motivationText = 'Keep cycling to see your earnings grow! Every session counts.';
-      tipText = '💡 Tip: Regular cycling sessions will help you maximize your energy generation and earnings!';
+      tipText = '💡 Tip: $breakevenTip';
     }
 
     return Container(
@@ -1184,7 +1356,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       Text(
                         'TIPS',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12 * s,
                           fontWeight: FontWeight.w600,
                           color: AppColors.homePrimary,
                           letterSpacing: 1.2,
@@ -1198,8 +1370,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
             const SizedBox(height: 14),
             Text(
               motivationText,
-              style: const TextStyle(
-                fontSize: 14,
+              style: TextStyle(
+                fontSize: 16 * s,
                 height: 1.55,
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w400,
@@ -1228,7 +1400,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     child: Text(
                       tipText.replaceFirst('💡 Tip: ', ''),
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 15 * s,
                         color: AppColors.textPrimary.withValues(alpha: 0.9),
                         height: 1.5,
                         fontWeight: FontWeight.w400,
@@ -1313,6 +1485,94 @@ class _BatteryUnitTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EarningsBarChart extends StatelessWidget {
+  const _EarningsBarChart({required this.data});
+
+  final List<Map<String, dynamic>> data;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxY = data.isEmpty
+        ? 100.0
+        : (data.map<double>((e) => (e['amount'] as num).toDouble()).reduce((a, b) => a > b ? a : b) * 1.2).clamp(10.0, double.infinity);
+    final barGroups = data.asMap().entries.map((entry) {
+      final amount = (entry.value['amount'] as num).toDouble();
+      return BarChartGroupData(
+        x: entry.key,
+        barRods: [
+          BarChartRodData(
+            toY: amount,
+            color: AppColors.homeAccent,
+            width: 16,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          ),
+        ],
+        showingTooltipIndicators: [0],
+      );
+    }).toList();
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxY,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final amount = (data[group.x]['amount'] as num).toDouble();
+              return BarTooltipItem(
+                formatCompactCurrency(amount),
+                TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                final i = value.toInt();
+                if (i < 0 || i >= data.length) return const SizedBox();
+                final label = data[i]['label'] as String? ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 36,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '₱${value >= 1000 ? '${(value / 1000).toStringAsFixed(1)}k' : value.toStringAsFixed(0)}',
+                  style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                );
+              },
+            ),
+          ),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (value) => FlLine(color: AppColors.textTertiary.withValues(alpha: 0.2))),
+        borderData: FlBorderData(show: false),
+        barGroups: barGroups,
+      ),
+      duration: const Duration(milliseconds: 200),
     );
   }
 }

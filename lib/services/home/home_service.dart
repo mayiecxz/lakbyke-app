@@ -50,8 +50,106 @@ class HomeService {
         timestamp.day == now.day;
   }
 
-  /// Get the latest battery percentage from deviceEnergyData for the current user's mntTag.
-  /// Returns mountBatteryPercentage from the device doc with the most recent timestamp.
+  /// Normalize Firebase snapshot value to a map we can iterate (handles Map<String,dynamic> etc.).
+  Map<String, dynamic>? _toMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map) {
+      return value.map((k, v) => MapEntry(k.toString(), v));
+    }
+    return null;
+  }
+
+  /// True if [map] is a single live doc (homescreen live: flat fields under deviceId).
+  /// Live doc has "timestamp" and no session-id keys (no keys starting with '-').
+  bool _isLiveDoc(Map<String, dynamic> map) {
+    if (!map.containsKey('timestamp')) return false;
+    return !map.keys.any((k) => k.toString().startsWith('-'));
+  }
+
+  /// Get data for the user's device from deviceEnergyData.
+  /// Supports two structures:
+  /// - Homescreen live: deviceEnergyData/{deviceId} = { timestamp, mountBatteryPercentage, speedKmh, mAh, ... } (flat).
+  /// - Session-based: deviceEnergyData/{deviceId}/{sessionId} = { ... }.
+  /// Returns a list of one doc for live, or many session docs for session-based.
+  Future<List<Map<String, dynamic>>> _getSessionsForDevice(String serviceTag, String cleanServiceTag) async {
+    final deviceRef = _database.child('deviceEnergyData');
+    for (final key in [serviceTag, cleanServiceTag]) {
+      if (key.isEmpty) continue;
+      final directSnapshot = await deviceRef.child(key).get();
+      if (directSnapshot.exists) {
+        final data = _toMap(directSnapshot.value);
+        if (data != null && data.isNotEmpty) {
+          if (_isLiveDoc(data)) return [Map<String, dynamic>.from(data)];
+          return _sessionsMapToList(data);
+        }
+      }
+    }
+    final fullSnapshot = await deviceRef.get();
+    if (!fullSnapshot.exists) return [];
+    final root = _toMap(fullSnapshot.value);
+    if (root == null) return [];
+    for (final entry in root.entries) {
+      final deviceId = entry.key;
+      final cleanDeviceId = deviceId.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      if (cleanDeviceId != cleanServiceTag) continue;
+      final data = _toMap(entry.value);
+      if (data != null) {
+        if (_isLiveDoc(data)) return [Map<String, dynamic>.from(data)];
+        return _sessionsMapToList(data);
+      }
+      return [];
+    }
+    return [];
+  }
+
+  List<Map<String, dynamic>> _sessionsMapToList(Map<String, dynamic> sessionsMap) {
+    final list = <Map<String, dynamic>>[];
+    for (final entry in sessionsMap.entries) {
+      final sessionDoc = _toMap(entry.value);
+      if (sessionDoc != null) list.add(sessionDoc);
+    }
+    return list;
+  }
+
+  /// Parse mountBatteryPercentage from session doc (int, double, or string from Firebase).
+  int? _parseBatteryPercentage(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value.clamp(0, 100);
+    if (value is num) return value.round().clamp(0, 100);
+    if (value is String) return int.tryParse(value)?.clamp(0, 100);
+    return null;
+  }
+
+  /// Parse double from session doc (for speedKmh, mountVoltage, mAh, etc.).
+  double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  /// Parse bool from session doc (for isMotorRunning).
+  bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    if (value is num) return value != 0;
+    return false;
+  }
+
+  /// Copy latest-session sensor fields into [target] for UI access.
+  void _applyLatestSessionSensors(Map<String, dynamic> target, Map<String, dynamic> latestDoc) {
+    final speedKmh = _parseDouble(latestDoc['speedKmh']);
+    if (speedKmh != null) target['speedKmh'] = speedKmh;
+    final mountVoltage = _parseDouble(latestDoc['mountVoltage']);
+    if (mountVoltage != null) target['mountVoltage'] = mountVoltage;
+    final mAh = _parseDouble(latestDoc['mAh']);
+    if (mAh != null) target['mAh'] = mAh;
+    target['isMotorRunning'] = _parseBool(latestDoc['isMotorRunning']);
+  }
+
+  /// Get the latest battery percentage from deviceEnergyData for the current user's device (by serviceTag).
+  /// Structure: deviceEnergyData/{deviceId}/{sessionId} with mountBatteryPercentage in each session.
   Future<int?> getLatestBatteryPercentage() async {
     try {
       final userId = getCurrentUserId();
@@ -64,44 +162,20 @@ class HomeService {
       if (serviceTag == null || serviceTag.isEmpty) return null;
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-      final snapshot = await _database.child('deviceEnergyData').get();
-      if (!snapshot.exists) return null;
+      final sessions = await _getSessionsForDevice(serviceTag, cleanServiceTag);
+      if (sessions.isEmpty) return null;
 
-      final data = snapshot.value;
-      if (data == null || data is! Map<Object?, Object?>) return null;
-
-      Map<String, dynamic>? latestDocument;
-      DateTime? latestTimestamp;
-
-      data.forEach((deviceId, deviceData) {
-        if (deviceData is Map<Object?, Object?>) {
-          final document = Map<String, dynamic>.from(
-            deviceData.map((key, value) => MapEntry(key.toString(), value)),
-          );
-          final mntTag = (document['mntTag'] as String?) ?? '';
-          final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-          if (cleanMntTag != cleanServiceTag) return;
-
-          final timestampStr = document['timestamp'] as String?;
-          final timestamp = _parseIsoTimestamp(timestampStr);
-          if (timestamp != null) {
-            if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
-              latestTimestamp = timestamp;
-              latestDocument = document;
-            }
-          } else if (latestDocument == null) {
-            latestDocument = document;
-          }
-        }
-      });
-
-      if (latestDocument == null) return null;
-      final batt = latestDocument!['mountBatteryPercentage'];
-      if (batt == null) return null;
-      if (batt is int) return batt;
-      if (batt is num) return batt.toInt();
-      if (batt is String) return int.tryParse(batt);
-      return null;
+      Map<String, dynamic>? latestDoc;
+      DateTime? latestTs;
+      for (final doc in sessions) {
+        final ts = _parseIsoTimestamp(doc['timestamp'] as String?);
+        if (ts != null && (latestTs == null || ts.isAfter(latestTs))) {
+          latestTs = ts;
+          latestDoc = doc;
+        } else if (latestDoc == null) latestDoc = doc;
+      }
+      if (latestDoc == null) return null;
+      return _parseBatteryPercentage(latestDoc['mountBatteryPercentage']);
     } catch (e) {
       return null;
     }
@@ -120,56 +194,31 @@ class HomeService {
       if (serviceTag == null || serviceTag.isEmpty) return null;
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      final sessions = await _getSessionsForDevice(serviceTag, cleanServiceTag);
+      if (sessions.isEmpty) return null;
 
-      final snapshot = await _database.child('deviceEnergyData').get();
-
-      if (!snapshot.exists) return null;
-
-      final data = snapshot.value;
-      if (data == null || data is! Map<Object?, Object?>) return null;
-
-      Map<String, dynamic>? latestDocument;
-      DateTime? latestTimestamp;
-
-      data.forEach((deviceId, deviceData) {
-        if (deviceData is Map<Object?, Object?>) {
-          final document = Map<String, dynamic>.from(
-            deviceData.map((key, value) => MapEntry(key.toString(), value)),
-          );
-
-          final mntTag = (document['mntTag'] as String?) ?? '';
-          final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-          if (cleanMntTag != cleanServiceTag) return;
-
-          final timestampStr = document['timestamp'] as String?;
-          final timestamp = _parseIsoTimestamp(timestampStr);
-
-          if (timestamp != null) {
-            if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
-              latestTimestamp = timestamp;
-              latestDocument = document;
-            }
-          } else if (latestDocument == null) {
-            latestDocument = document;
-          }
-        }
-      });
-
-      if (latestDocument != null && latestTimestamp != null) {
-        final doc = latestDocument!;
-        final effort = doc['powerGeneratedInWatts'];
-        final effortValue = (effort is num) ? effort.toDouble() : (effort is String) ? double.tryParse(effort) ?? 0.0 : 0.0;
-
-        return {'effort': effortValue, 'timestamp': latestTimestamp!};
+      Map<String, dynamic>? latestDoc;
+      DateTime? latestTs;
+      for (final doc in sessions) {
+        final ts = _parseIsoTimestamp(doc['timestamp'] as String?);
+        if (ts != null && (latestTs == null || ts.isAfter(latestTs))) {
+          latestTs = ts;
+          latestDoc = doc;
+        } else if (latestDoc == null) latestDoc = doc;
       }
-
+      if (latestDoc != null && latestTs != null) {
+        final effort = latestDoc['powerGeneratedInWatts'];
+        final effortValue = (effort is num) ? effort.toDouble() : (effort is String) ? double.tryParse(effort) ?? 0.0 : 0.0;
+        return {'effort': effortValue, 'timestamp': latestTs};
+      }
       return null;
     } catch (e) {
       return null;
     }
   }
 
-  // Get home data for the current user (consolidates latest device doc + today's metrics + transaction aggregates)
+  // Get home data for the current user (consolidates latest session + today's metrics + transaction aggregates)
+  // Structure: deviceEnergyData/{deviceId}/{sessionId} = { timestamp, totalWh, totalDistanceKm, powerGeneratedInWatts, ... }
   Future<Map<String, dynamic>?> getHomeData() async {
     try {
       final userId = getCurrentUserId();
@@ -182,51 +231,44 @@ class HomeService {
       if (serviceTag == null || serviceTag.isEmpty) return null;
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-
-      final snapshot = await _database.child('deviceEnergyData').get();
+      final sessions = await _getSessionsForDevice(serviceTag, cleanServiceTag);
 
       Map<String, dynamic> homeData = {};
 
-      if (snapshot.exists) {
-        final data = snapshot.value;
-        if (data is Map<Object?, Object?>) {
-          Map<String, dynamic>? latestDocument;
-          DateTime? latestTimestamp;
-
-          data.forEach((deviceId, deviceData) {
-            if (deviceData is Map<Object?, Object?>) {
-              final document = Map<String, dynamic>.from(
-                deviceData.map((key, value) => MapEntry(key.toString(), value)),
-              );
-
-              final mntTag = (document['mntTag'] as String?) ?? '';
-              final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-              if (cleanMntTag != cleanServiceTag) return;
-
-              final timestampStr = document['timestamp'] as String?;
-              final timestamp = _parseIsoTimestamp(timestampStr);
-
-              if (timestamp != null) {
-                if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
-                  latestTimestamp = timestamp;
-                  latestDocument = document;
-                }
-              } else if (latestDocument == null) {
-                latestDocument = document;
-              }
-            }
-          });
-
-          if (latestDocument != null) {
-            homeData = Map<String, dynamic>.from(latestDocument!);
-          }
+      if (sessions.isNotEmpty) {
+        Map<String, dynamic>? latestDoc;
+        DateTime? latestTs;
+        for (final doc in sessions) {
+          final ts = _parseIsoTimestamp(doc['timestamp'] as String?);
+          if (ts != null && (latestTs == null || ts.isAfter(latestTs))) {
+            latestTs = ts;
+            latestDoc = doc;
+          } else if (latestDoc == null) latestDoc = doc;
+        }
+        if (latestDoc != null) {
+          homeData = Map<String, dynamic>.from(latestDoc);
+          // Battery: latest session (home screen shows latest battery)
+          final batt = _parseBatteryPercentage(latestDoc['mountBatteryPercentage']);
+          if (batt != null) homeData['mountBatteryPercentage'] = batt;
+          // Explicit sensor fields for UI: speedKmh, mountVoltage, mAh (double), isMotorRunning
+          _applyLatestSessionSensors(homeData, latestDoc);
         }
       }
 
-      // Fetch today's aggregated data via metrics service
-      final todayData = await getTodayData();
-      homeData['todayDistance'] = todayData['todayDistance'];
-      homeData['todayWh'] = todayData['todayWh'];
+      // Today's metrics: aggregate distance and Wh from today's sessions only
+      double todayDistance = 0.0;
+      double todayWh = 0.0;
+      for (final doc in sessions) {
+        final ts = _parseIsoTimestamp(doc['timestamp'] as String?);
+        if (ts != null && _isToday(ts)) {
+          final d = doc['totalDistanceKm'];
+          final w = doc['totalWh'];
+          if (d != null) todayDistance += (d is num) ? d.toDouble() : (double.tryParse(d.toString()) ?? 0.0);
+          if (w != null) todayWh += (w is num) ? w.toDouble() : (double.tryParse(w.toString()) ?? 0.0);
+        }
+      }
+      homeData['todayDistance'] = todayDistance;
+      homeData['todayWh'] = todayWh;
 
       // Fetch transaction aggregates via TransactionService
       final totalRedeems = await getTotalRedeems();
@@ -254,11 +296,9 @@ class HomeService {
         homeData['liveEffortTimestamp'] = latestEffort['timestamp'];
       }
 
-      // Ensure battery percentage is the latest from deviceEnergyData (by mntTag)
+      // Ensure battery percentage from latest session (structure: device -> sessions -> session doc)
       final latestBattery = await getLatestBatteryPercentage();
-      if (latestBattery != null) {
-        homeData['mountBatteryPercentage'] = latestBattery;
-      }
+      if (latestBattery != null) homeData['mountBatteryPercentage'] = latestBattery;
 
       return homeData;
     } catch (e) {
@@ -302,43 +342,56 @@ class HomeService {
 
       return _database.child('deviceEnergyData').onValue.asyncMap((event) async {
         if (event.snapshot.exists) {
-          final data = event.snapshot.value;
+          final data = _toMap(event.snapshot.value);
+          if (data == null) return null;
+
+          List<Map<String, dynamic>> allSessionsForDevice = [];
+          // 1) Try direct key (homescreen live: deviceEnergyData/MNT0001 = flat doc, or session-based)
+          final deviceData = _toMap(data[serviceTag]) ?? _toMap(data[cleanServiceTag]);
+          if (deviceData != null && deviceData.isNotEmpty) {
+            if (_isLiveDoc(deviceData)) {
+              allSessionsForDevice = [Map<String, dynamic>.from(deviceData)];
+            } else {
+              allSessionsForDevice = _sessionsMapToList(deviceData);
+            }
+          } else {
+            // 2) Find device by clean ID match
+            for (final entry in data.entries) {
+              final deviceId = entry.key;
+              final cleanDeviceId = deviceId.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+              if (cleanDeviceId != cleanServiceTag) continue;
+              final deviceDataEntry = _toMap(entry.value);
+              if (deviceDataEntry != null) {
+                if (_isLiveDoc(deviceDataEntry)) {
+                  allSessionsForDevice = [Map<String, dynamic>.from(deviceDataEntry)];
+                } else {
+                  allSessionsForDevice = _sessionsMapToList(deviceDataEntry);
+                }
+                break;
+              }
+            }
+          }
+
+          if (allSessionsForDevice.isEmpty) return null;
 
           Map<String, dynamic>? latestDocument;
           DateTime? latestTimestamp;
-          List<Map<String, dynamic>> allMatchingDevices = [];
-
-          if (data is Map<Object?, Object?>) {
-            data.forEach((deviceId, deviceData) {
-              if (deviceData is Map<Object?, Object?>) {
-                final document = Map<String, dynamic>.from(
-                  deviceData.map((key, value) => MapEntry(key.toString(), value)),
-                );
-
-                final mntTag = (document['mntTag'] as String?) ?? '';
-                final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-                if (cleanMntTag != cleanServiceTag) return;
-
-                allMatchingDevices.add(document);
-
-                final timestampStr = document['timestamp'] as String?;
-                final timestamp = _parseIsoTimestamp(timestampStr);
-
-                if (timestamp != null) {
-                  if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
-                    latestTimestamp = timestamp;
-                    latestDocument = document;
-                  }
-                } else if (latestDocument == null) {
-                  latestDocument = document;
-                }
-              }
-            });
+          for (final doc in allSessionsForDevice) {
+            final ts = _parseIsoTimestamp(doc['timestamp'] as String?);
+            if (ts != null && (latestTimestamp == null || ts.isAfter(latestTimestamp))) {
+              latestTimestamp = ts;
+              latestDocument = doc;
+            } else if (latestDocument == null) latestDocument = doc;
           }
 
           if (latestDocument != null) {
-            // result includes all fields from latest doc (by mntTag), including mountBatteryPercentage
-            final result = Map<String, dynamic>.from(latestDocument!);
+            final result = Map<String, dynamic>.from(latestDocument);
+
+            // Battery from latest session
+            final batt = _parseBatteryPercentage(latestDocument['mountBatteryPercentage']);
+            if (batt != null) result['mountBatteryPercentage'] = batt;
+            // Sensor fields for UI: speedKmh, mountVoltage, mAh (double), isMotorRunning
+            _applyLatestSessionSensors(result, latestDocument);
 
             final powerWatts = result['powerGeneratedInWatts'];
             if (powerWatts != null) {
@@ -357,7 +410,7 @@ class HomeService {
             double todayDistance = 0.0;
             double todayWh = 0.0;
 
-            for (final doc in allMatchingDevices) {
+            for (final doc in allSessionsForDevice) {
               final timestampStr = doc['timestamp'] as String?;
               final timestamp = _parseIsoTimestamp(timestampStr);
 

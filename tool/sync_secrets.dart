@@ -10,10 +10,10 @@ import 'dart:io';
 
 void main() {
   final projectRoot = Directory.current;
-  final configSecrets = File(projectRoot.path + '/config/secrets.json');
-  final configExample = File(projectRoot.path + '/config/secrets.json.example');
-  final assetsDir = Directory(projectRoot.path + '/assets/config');
-  final assetSecrets = File(projectRoot.path + '/assets/config/secrets.json');
+  final configSecrets = File('${projectRoot.path}/config/secrets.json');
+  final configExample = File('${projectRoot.path}/config/secrets.json.example');
+  final assetsDir = Directory('${projectRoot.path}/assets/config');
+  final assetSecrets = File('${projectRoot.path}/assets/config/secrets.json');
 
   final File source;
   if (configSecrets.existsSync()) {

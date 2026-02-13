@@ -30,6 +30,38 @@ class HomeMetricsService {
         timestamp.day == yesterday.day;
   }
 
+  /// Normalize Firebase snapshot value to Map<String, dynamic> (handles any Map type from RTDB).
+  Map<String, dynamic>? _toMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map) return value.map((k, v) => MapEntry(k.toString(), v));
+    return null;
+  }
+
+  /// Get sessions for device: try deviceEnergyData/{serviceTag} then full tree by clean ID match.
+  Future<List<Map<String, dynamic>>> _getSessionsForDevice(String serviceTag, String cleanServiceTag) async {
+    final deviceRef = _database.child('deviceEnergyData');
+    final directSnapshot = await deviceRef.child(serviceTag).get();
+    if (directSnapshot.exists) {
+      final sessionsMap = _toMap(directSnapshot.value);
+      if (sessionsMap != null && sessionsMap.isNotEmpty) {
+        return sessionsMap.values.map((v) => _toMap(v)).whereType<Map<String, dynamic>>().toList();
+      }
+    }
+    final fullSnapshot = await deviceRef.get();
+    if (!fullSnapshot.exists) return [];
+    final root = _toMap(fullSnapshot.value);
+    if (root == null) return [];
+    for (final entry in root.entries) {
+      final cleanDeviceId = entry.key.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      if (cleanDeviceId != cleanServiceTag) continue;
+      final sessionsMap = _toMap(entry.value);
+      if (sessionsMap != null) {
+        return sessionsMap.values.map((v) => _toMap(v)).whereType<Map<String, dynamic>>().toList();
+      }
+    }
+    return [];
+  }
+
   // Returns: {yesterdayDistance: double, yesterdayWh: double}
   Future<Map<String, dynamic>> getYesterdayData() async {
     try {
@@ -49,57 +81,23 @@ class HomeMetricsService {
       }
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-
-      final snapshot = await _database.child('deviceEnergyData').get();
-
-      if (!snapshot.exists) {
-        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
-      }
-
-      final data = snapshot.value;
-      if (data == null || data is! Map<Object?, Object?>) {
-        return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
-      }
+      final sessions = await _getSessionsForDevice(serviceTag, cleanServiceTag);
 
       double yesterdayDistance = 0.0;
       double yesterdayWh = 0.0;
-
-      data.forEach((deviceId, deviceData) {
-        if (deviceData is Map<Object?, Object?>) {
-          final document = Map<String, dynamic>.from(
-            deviceData.map((key, value) => MapEntry(key.toString(), value)),
-          );
-
-          final mntTag = (document['mntTag'] as String?) ?? '';
-          final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-          if (cleanMntTag != cleanServiceTag) return;
-
-          final timestampStr = document['timestamp'] as String?;
-          final timestamp = _parseIsoTimestamp(timestampStr);
-
-          if (timestamp != null && _isYesterday(timestamp)) {
-            final distance = document['totalDistanceKm'];
-            if (distance != null) {
-              final distanceValue = (distance is num)
-                  ? distance.toDouble()
-                  : (distance is String)
-                      ? double.tryParse(distance) ?? 0.0
-                      : 0.0;
-              yesterdayDistance += distanceValue;
-            }
-
-            final totalWh = document['totalWh'];
-            if (totalWh != null) {
-              final whValue = (totalWh is num)
-                  ? totalWh.toDouble()
-                  : (totalWh is String)
-                      ? double.tryParse(totalWh) ?? 0.0
-                      : 0.0;
-              yesterdayWh += whValue;
-            }
+      for (final document in sessions) {
+        final timestamp = _parseIsoTimestamp(document['timestamp'] as String?);
+        if (timestamp != null && _isYesterday(timestamp)) {
+          final distance = document['totalDistanceKm'];
+          if (distance != null) {
+            yesterdayDistance += (distance is num) ? distance.toDouble() : (double.tryParse(distance.toString()) ?? 0.0);
+          }
+          final totalWh = document['totalWh'];
+          if (totalWh != null) {
+            yesterdayWh += (totalWh is num) ? totalWh.toDouble() : (double.tryParse(totalWh.toString()) ?? 0.0);
           }
         }
-      });
+      }
 
       return {'yesterdayDistance': yesterdayDistance, 'yesterdayWh': yesterdayWh};
     } catch (e) {
@@ -126,57 +124,23 @@ class HomeMetricsService {
       }
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-
-      final snapshot = await _database.child('deviceEnergyData').get();
-
-      if (!snapshot.exists) {
-        return {'todayDistance': 0.0, 'todayWh': 0.0};
-      }
-
-      final data = snapshot.value;
-      if (data == null || data is! Map<Object?, Object?>) {
-        return {'todayDistance': 0.0, 'todayWh': 0.0};
-      }
+      final sessions = await _getSessionsForDevice(serviceTag, cleanServiceTag);
 
       double todayDistance = 0.0;
       double todayWh = 0.0;
-
-      data.forEach((deviceId, deviceData) {
-        if (deviceData is Map<Object?, Object?>) {
-          final document = Map<String, dynamic>.from(
-            deviceData.map((key, value) => MapEntry(key.toString(), value)),
-          );
-
-          final mntTag = (document['mntTag'] as String?) ?? '';
-          final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-          if (cleanMntTag != cleanServiceTag) return;
-
-          final timestampStr = document['timestamp'] as String?;
-          final timestamp = _parseIsoTimestamp(timestampStr);
-
-          if (timestamp != null && _isToday(timestamp)) {
-            final distance = document['totalDistanceKm'];
-            if (distance != null) {
-              final distanceValue = (distance is num)
-                  ? distance.toDouble()
-                  : (distance is String)
-                      ? double.tryParse(distance) ?? 0.0
-                      : 0.0;
-              todayDistance += distanceValue;
-            }
-
-            final totalWh = document['totalWh'];
-            if (totalWh != null) {
-              final whValue = (totalWh is num)
-                  ? totalWh.toDouble()
-                  : (totalWh is String)
-                      ? double.tryParse(totalWh) ?? 0.0
-                      : 0.0;
-              todayWh += whValue;
-            }
+      for (final document in sessions) {
+        final timestamp = _parseIsoTimestamp(document['timestamp'] as String?);
+        if (timestamp != null && _isToday(timestamp)) {
+          final distance = document['totalDistanceKm'];
+          if (distance != null) {
+            todayDistance += (distance is num) ? distance.toDouble() : (double.tryParse(distance.toString()) ?? 0.0);
+          }
+          final totalWh = document['totalWh'];
+          if (totalWh != null) {
+            todayWh += (totalWh is num) ? totalWh.toDouble() : (double.tryParse(totalWh.toString()) ?? 0.0);
           }
         }
-      });
+      }
 
       return {'todayDistance': todayDistance, 'todayWh': todayWh};
     } catch (e) {
@@ -196,47 +160,19 @@ class HomeMetricsService {
       if (serviceTag == null || serviceTag.isEmpty) return null;
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      final sessions = await _getSessionsForDevice(serviceTag, cleanServiceTag);
+      if (sessions.isEmpty) return null;
 
-      final snapshot = await _database.child('deviceEnergyData').get();
-
-      if (snapshot.exists) {
-        final data = snapshot.value;
-
-        if (data is Map<Object?, Object?>) {
-          Map<String, dynamic>? latestDocument;
-          DateTime? latestTimestamp;
-
-          data.forEach((deviceId, deviceData) {
-            if (deviceData is Map<Object?, Object?>) {
-              final document = Map<String, dynamic>.from(
-                deviceData.map((key, value) => MapEntry(key.toString(), value)),
-              );
-
-              final mntTag = (document['mntTag'] as String?) ?? '';
-              final cleanMntTag = mntTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-              if (cleanMntTag != cleanServiceTag) return;
-
-              final timestampStr = document['timestamp'] as String?;
-              final timestamp = _parseIsoTimestamp(timestampStr);
-
-              if (timestamp != null) {
-                if (latestTimestamp == null || timestamp.isAfter(latestTimestamp!)) {
-                  latestTimestamp = timestamp;
-                  latestDocument = document;
-                }
-              } else if (latestDocument == null) {
-                latestDocument = document;
-              }
-            }
-          });
-
-          if (latestDocument != null) {
-            final result = Map<String, dynamic>.from(latestDocument!);
-            return result;
-          }
-        }
+      Map<String, dynamic>? latestDoc;
+      DateTime? latestTs;
+      for (final doc in sessions) {
+        final ts = _parseIsoTimestamp(doc['timestamp'] as String?);
+        if (ts != null && (latestTs == null || ts.isAfter(latestTs))) {
+          latestTs = ts;
+          latestDoc = doc;
+        } else if (latestDoc == null) latestDoc = doc;
       }
-
+      if (latestDoc != null) return Map<String, dynamic>.from(latestDoc);
       return null;
     } catch (e) {
       return null;

@@ -33,10 +33,10 @@ class WelcomeModal extends StatelessWidget {
     if (distanceKm >= 1.0) {
       if (treeEquivalent >= 1.0) {
         final trees = treeEquivalent.toStringAsFixed(1);
-        return 'You pedaled $distStr km yesterday—that avoids as much CO₂ as ${trees} tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
+        return 'You pedaled $distStr km yesterday—that avoids as much CO₂ as $trees tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
       } else if (treeEquivalent >= 0.1) {
         final treePercent = (treeEquivalent * 100).toStringAsFixed(0);
-        return 'You pedaled $distStr km yesterday—avoiding CO₂ equivalent to ${treePercent}% of a tree\'s annual absorption!';
+        return 'You pedaled $distStr km yesterday—avoiding CO₂ equivalent to $treePercent% of a tree\'s annual absorption!';
       } else {
         return 'You pedaled $distStr km yesterday, saving $co2Str kg of CO₂!';
       }
@@ -61,7 +61,7 @@ class WelcomeModal extends StatelessWidget {
         return 'You generated $energyStr yesterday—that\'s enough to charge a smartphone $charges time${charges == '1.0' ? '' : 's'}! 📱';
       } else {
         final percent = (phoneCharges * 100).toStringAsFixed(0);
-        return 'You generated $energyStr yesterday—that\'s ${percent}% of a smartphone charge!';
+        return 'You generated $energyStr yesterday—that\'s $percent% of a smartphone charge!';
       }
     } else if (wh > 0) {
       return 'You generated $energyStr yesterday—powering towards a greener future!';

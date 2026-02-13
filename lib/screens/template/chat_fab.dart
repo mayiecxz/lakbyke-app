@@ -11,8 +11,8 @@ class ChatFAB extends StatelessWidget {
     return FloatingActionButton(
       onPressed: () => ChatbotBottomSheet.show(context),
       backgroundColor: Colors.teal,
-      child: const Icon(Icons.chat_bubble, color: Colors.white),
       tooltip: 'Chat with LakByke Assistant',
+      child: const Icon(Icons.chat_bubble, color: Colors.white),
     );
   }
 }
