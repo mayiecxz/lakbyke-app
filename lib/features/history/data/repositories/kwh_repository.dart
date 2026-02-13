@@ -71,7 +71,7 @@ class KwhRepository {
       final data = snapshot.value;
       if (data is! Map) return [];
 
-      final deviceData = Map<String, dynamic>.from(data as Map);
+      final deviceData = Map<String, dynamic>.from(data);
       final historyRecords = <Map<String, dynamic>>[];
 
       for (final deviceEntry in deviceData.entries) {
@@ -83,13 +83,13 @@ class KwhRepository {
         final deviceValue = deviceEntry.value;
         if (deviceValue is! Map) continue;
 
-        final deviceSessions = Map<String, dynamic>.from(deviceValue as Map);
+        final deviceSessions = Map<String, dynamic>.from(deviceValue);
 
         for (final sessionEntry in deviceSessions.entries) {
           final sessionData = sessionEntry.value;
           if (sessionData is! Map) continue;
 
-          final session = Map<String, dynamic>.from(sessionData as Map);
+          final session = Map<String, dynamic>.from(sessionData);
           final timestampStr = session['timestamp'] as String?;
           
           if (timestampStr != null) {

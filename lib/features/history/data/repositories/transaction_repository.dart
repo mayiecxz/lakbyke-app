@@ -77,12 +77,12 @@ class TransactionRepository {
       if (data is! Map) return [];
 
       final transactions = <Map<String, dynamic>>[];
-      final transactionsMap = Map<String, dynamic>.from(data as Map);
+      final transactionsMap = Map<String, dynamic>.from(data);
 
       for (final entry in transactionsMap.entries) {
         final value = entry.value;
         if (value is Map) {
-          final transactionData = Map<String, dynamic>.from(value as Map);
+          final transactionData = Map<String, dynamic>.from(value);
           final transactionMntTag = transactionData['mntTag'] as String?;
           
           if (transactionMntTag != null) {
@@ -274,7 +274,7 @@ class TransactionRepository {
         return {'success': false, 'error': 'Transaction not found'};
       }
 
-      final transactionsMap = Map<String, dynamic>.from(data as Map);
+      final transactionsMap = Map<String, dynamic>.from(data);
 
       // Check flat structure
       if (transactionsMap.containsKey(uid)) {

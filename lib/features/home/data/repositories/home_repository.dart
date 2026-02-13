@@ -71,7 +71,7 @@ class HomeRepository {
           continue;
         }
 
-        final Map<String, dynamic> deviceData = Map<String, dynamic>.from(data as Map);
+        final Map<String, dynamic> deviceData = Map<String, dynamic>.from(data);
         
         // Find device data by service tag
         Map<String, dynamic>? targetDeviceData;
@@ -197,7 +197,7 @@ class HomeRepository {
 
       final data = snapshot.value;
       if (data is Map) {
-        final deviceData = Map<String, dynamic>.from(data as Map);
+        final deviceData = Map<String, dynamic>.from(data);
         Map<String, dynamic>? targetDeviceData;
         
         if (deviceData.containsKey(serviceTag)) {
