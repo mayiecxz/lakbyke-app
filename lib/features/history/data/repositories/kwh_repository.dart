@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lakbyke_mobile/core/services/service_tag.dart';
 
 /// Repository for energy/kWh history operations
 class KwhRepository {
@@ -14,20 +15,7 @@ class KwhRepository {
 
   String? get currentUserId => _auth.currentUser?.uid;
 
-  Future<String?> getServiceTag() async {
-    try {
-      final userId = currentUserId;
-      if (userId == null) return null;
-
-      final snapshot = await _database.ref('userTable/$userId/serviceTag').get();
-      if (snapshot.exists) {
-        return snapshot.value as String?;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
+  Future<String?> getServiceTag() => getServiceTagFromFirebase(_auth, _database);
 
   DateTime? _parseTimestamp(String timestampStr) {
     if (timestampStr.isEmpty) return null;

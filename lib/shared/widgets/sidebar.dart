@@ -1,0 +1,190 @@
+import 'package:flutter/material.dart';
+import 'package:lakbyke_mobile/core/utils/constants.dart';
+// assets are re-exported from `constants.dart`; avoid duplicate import
+import 'package:lakbyke_mobile/shared/widgets/index.dart';
+import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
+import 'package:lakbyke_mobile/shared/navigation/main_navigation.dart';
+import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:lakbyke_mobile/shared/widgets/validation_dialog.dart';
+import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
+
+class Sidebar extends StatelessWidget {
+  const Sidebar({super.key});
+
+  static Future<T?> show<T>(BuildContext context) {
+    return showGeneralDialog<T>(
+      context: context,
+      pageBuilder: (context, animation, secondaryAnimation) => const SizedBox.shrink(),
+      barrierDismissible: true,
+      barrierLabel: 'Sidebar',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 250),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = Curves.easeOut.transform(animation.value);
+        return Stack(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: MediaQuery.of(context).orientation == Orientation.portrait ? 0.6 : 0.3,
+                child: Transform.translate(
+                  offset: Offset(-30 * (1 - curved), 0),
+                  child: Opacity(
+                    opacity: curved,
+                    child: const _SidebarPanel(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
+class _SidebarPanel extends StatelessWidget {
+  const _SidebarPanel();
+
+  Widget _menuItem(BuildContext context, IconData icon, String label, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap ?? () => Navigator.of(context).pop(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 18.0),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        height: MediaQuery.of(context).size.height,
+        decoration: const BoxDecoration(
+          color: Colors.black,
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              Container(
+                width: MediaQuery.of(context).size.width * (MediaQuery.of(context).orientation == Orientation.portrait ? 0.6 : 0.3),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  boxShadow: [
+BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(2, 0),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28.0),
+                            onPressed: () => Navigator.of(context).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ResponsiveImage(
+                                  assetPath: AppAssets.logoWhite,
+                                  maxWidthPercent: 0.4,
+                                  minWidth: 80.0,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(color: Colors.white12, thickness: 1, height: 1),
+                    _menuItem(context, Icons.directions_bike, AppStrings.home, onTap: () {
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      // Navigate to MainNavigation with home index (0)
+                      navigator.pushReplacement(
+                        MaterialPageRoute(builder: (_) => const MainNavigation(initialIndex: 0)),
+                      );
+                    }),
+                    const Divider(color: Colors.white12, height: 1),
+                    _menuItem(context, Icons.info_outline, 'About', onTap: () {
+                      Navigator.of(context).pop();
+                    }),
+                    const Divider(color: Colors.white12, height: 1),
+                    _menuItem(context, Icons.help_outline, 'Need help?', onTap: () {
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      navigator.push(
+                        MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+                      );
+                    }),
+                    const Divider(color: Colors.white12, height: 1),
+                    _menuItem(context, Icons.logout, 'Logout', onTap: () {
+                      final navigator = Navigator.of(context);
+                      // Close sidebar first then show confirmation dialog
+                      navigator.pop();
+                      // Delay slightly so the sidebar closing animation finishes
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        if (!navigator.mounted) return;
+                        ValidationDialog.show(
+                          navigator.context,
+                          title: 'Confirm Logout',
+                          content: const Text('Are you sure you want to logout?'),
+                          confirmLabel: 'Logout',
+                          cancelLabel: 'Cancel',
+                          onConfirm: () async {
+                            // Delete chat history before logout
+                            final chatbotService = ChatbotRepository();
+                            await chatbotService.deleteChatHistory();
+                            
+                            // After confirmation navigate to Onboarding and remove previous routes
+                            navigator.pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                              (route) => false,
+                            );
+                          },
+                        );
+                      });
+                    }),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/config/secrets_loader.dart';
 import 'package:lakbyke_mobile/core/theme/theme.dart';
-import 'package:lakbyke_mobile/screens/onboarding/onboarding_screen.dart';
+import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
-import 'package:lakbyke_mobile/services/chatbot_service.dart';
+import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -36,7 +36,7 @@ class _MyAppState extends ConsumerState<MyApp> {
         next.whenData((user) async {
           // If previous user was logged in and current is null, session ended
           if (_previousUserId != null && user == null) {
-            final chatbotService = ChatbotService();
+            final chatbotService = ChatbotRepository();
             await chatbotService.deleteChatHistoryForUser(_previousUserId!);
           }
           _previousUserId = user?.uid;
