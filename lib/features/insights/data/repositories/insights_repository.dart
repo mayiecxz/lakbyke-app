@@ -17,6 +17,14 @@ class InsightsRepository {
   })  : _transactionRepository = transactionRepository,
         _kwhRepository = kwhRepository;
 
+  // --- CBA constants (Financial Reality / Mechanical Health) ---
+  /// [CBA Page 3] Total Initial Investment (Debt)
+  static const double _initialCapex = 3792.00;
+  /// [CBA Page 8] Annual Maint. ₱700 / Est. 5,400km/year = ~₱0.13/km. Adjusted to 0.15 for safety margin.
+  static const double _wearCostPerKm = 0.15;
+  /// [CBA Page 7] Motor Brush Life ~3-5 years. Est 10,000km max.
+  static const double _maxMotorLifeKm = 10000.0;
+
   // Insights data
   List<Map<String, dynamic>> recentTransactions = [];
   List<Map<String, dynamic>> kwhHistory = [];
@@ -40,6 +48,19 @@ class InsightsRepository {
   double totalEarnings = 0.0;
   double totalEnergyWh = 0.0;
   double totalDistanceKm = 0.0;
+  double totalDurationHours = 0.0; // For "Sweat Tax" / hourly wage
+
+  // --- Financial reality (CBA compliance) ---
+  double netEarnings = 0.0;        // Gross - Wear Cost
+  double maintenanceReserve = 0.0;  // The "Repair Jar" (Sinking Fund)
+  double roiProgressPercent = 0.0;  // Progress toward recovering ₱3,792
+  double remainingCapexDebt = 0.0;  // How much left to break even
+  double hourlyWage = 0.0;          // "Sweat Tax" efficiency (Earnings / Hour)
+
+  // --- Mechanical health (IMRAD-based) ---
+  double motorHealthPercent = 100.0;  // 100% to 0% based on distance
+  double kmSinceLastBoltCheck = 0.0;  // For vibration safety alerts
+  bool needsBoltCheck = false;       // Trigger alert every 100km
 
   // Analytics chart filter
   String analyticsFilter = 'past week';
@@ -75,24 +96,79 @@ class InsightsRepository {
 
       // Calculate projections
       calculateProjections();
+
+      // CBA-based financial and mechanical calculations
+      calculateFinancialReality();
+      calculateMechanicalHealth();
     } catch (e) {
       // Handle error - data will remain at default values
     }
   }
 
+  /// The "False Profit" correction logic (CBA compliance).
+  void calculateFinancialReality() {
+    // 1. Wear cost (sinking fund): every km degrades motor and loosens bolts
+    maintenanceReserve = totalDistanceKm * _wearCostPerKm;
+
+    // 2. Net income (real spendable cash)
+    netEarnings = totalEarnings - maintenanceReserve;
+
+    // 3. ROI: progress toward recovering initial CAPEX
+    if (_initialCapex > 0) {
+      roiProgressPercent = (totalEarnings / _initialCapex) * 100;
+      remainingCapexDebt = math.max(0, _initialCapex - totalEarnings);
+    }
+
+    // 4. "Sweat Tax" efficiency (earnings per hour)
+    if (totalDurationHours > 0) {
+      hourlyWage = totalEarnings / totalDurationHours;
+    } else {
+      hourlyWage = 0.0;
+    }
+  }
+
+  /// The "Hardware Anxiety" logic (motor brush life, bolt check).
+  void calculateMechanicalHealth() {
+    // 1. Motor brush life (depreciation)
+    final double usedLife = (totalDistanceKm / _maxMotorLifeKm) * 100;
+    motorHealthPercent = (100.0 - usedLife).clamp(0.0, 100.0);
+
+    // 2. Vibration / bolt check (every 100km)
+    kmSinceLastBoltCheck = totalDistanceKm % 100;
+    needsBoltCheck = kmSinceLastBoltCheck > 90;
+  }
+
+  /// Reset all totals and derived metrics (e.g. when no data).
+  void resetData() {
+    totalSessions = 0;
+    daysWithActivity = 0;
+    totalEarnings = 0.0;
+    totalEnergyWh = 0.0;
+    totalDistanceKm = 0.0;
+    totalDurationHours = 0.0;
+    netEarnings = 0.0;
+    maintenanceReserve = 0.0;
+    roiProgressPercent = 0.0;
+    remainingCapexDebt = _initialCapex;
+    motorHealthPercent = 100.0;
+    kmSinceLastBoltCheck = 0.0;
+    needsBoltCheck = false;
+    weeklyAverageEarnings = 0.0;
+    weeklyAverageDistance = 0.0;
+    averageEarningsPerSession = 0.0;
+    averageEnergyPerSession = 0.0;
+    averageDistancePerSession = 0.0;
+    sessionsPerWeek = 1;
+    currentMonthlyProjection = 0.0;
+    projectedMonthlyEarnings = 0.0;
+    projectedMonthlyEnergy = 0.0;
+    projectedMonthlyDistance = 0.0;
+  }
+
   /// Calculate historical averages from transactions and KWH history
   void calculateHistoricalAverages() {
     if (recentTransactions.isEmpty && kwhHistory.isEmpty) {
-      totalSessions = 0;
-      daysWithActivity = 0;
-      this.totalEarnings = 0.0;
-      totalEnergyWh = 0.0;
-      totalDistanceKm = 0.0;
-      weeklyAverageEarnings = 0.0;
-      weeklyAverageDistance = 0.0;
-      averageEarningsPerSession = 0.0;
-      averageEnergyPerSession = 0.0;
-      averageDistancePerSession = 0.0;
+      resetData();
       return;
     }
 
@@ -118,6 +194,7 @@ class InsightsRepository {
     double totalEarnings = 0.0;
     double totalEnergy = 0.0; // in Wh
     double totalDistance = 0.0; // in km
+    double tempTotalDurationHours = 0.0;
 
     for (var transaction in recentTransactions) {
       // Earnings from payout
@@ -134,6 +211,10 @@ class InsightsRepository {
       if (voltage > 0 && powerSubmittedAh > 0) {
         totalEnergy += powerSubmittedAh * voltage; // Convert Ah to Wh
       }
+
+      // Duration for "Sweat Tax" / hourly wage
+      final durationSec = (transaction['durationSeconds'] as num?)?.toDouble() ?? 0.0;
+      tempTotalDurationHours += durationSec / 3600.0;
     }
 
     // Calculate distance from KWH history (deviceEnergyData)
@@ -219,6 +300,7 @@ class InsightsRepository {
     this.totalEarnings = totalEarnings;
     totalEnergyWh = totalEnergy;
     totalDistanceKm = totalDistance;
+    totalDurationHours = tempTotalDurationHours;
     averageEarningsPerSession = avgEarningsPerSession;
     averageEnergyPerSession = avgEnergyPerSession;
     averageDistancePerSession = avgDistancePerSession;
@@ -443,6 +525,20 @@ class InsightsRepository {
       default:
         return 'No data available';
     }
+  }
+
+  /// Helper: Get color/status for Motor Health Ring. Green > 75%, Orange > 30%, Red < 30%.
+  String getMotorHealthStatus() {
+    if (motorHealthPercent > 75) return 'Good';
+    if (motorHealthPercent > 30) return 'Fair';
+    return 'Critical - Check Brushes';
+  }
+
+  /// Helper: Get Efficiency Status (Hourly Wage). CBA optimal ~₱30–₱60 per session (~1 hr).
+  String getEfficiencyStatus() {
+    if (hourlyWage >= 30.0) return 'Optimal';
+    if (hourlyWage >= 15.0) return 'Moderate';
+    return 'Low Efficiency';
   }
 
   /// Helper function to calculate nice rounded numbers for Y-axis (statistical standard)
