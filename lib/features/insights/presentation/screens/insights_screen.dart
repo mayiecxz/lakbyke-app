@@ -324,7 +324,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
 
   Widget _buildEarningsChart(BuildContext context) {
     final data = _insightsRepo.getAnalyticsData();
-    final hasData = data.any((e) => (e['amount'] as double) > 0);
+    final hasData = data.any((e) => ((e['amount'] as num?)?.toDouble() ?? 0.0) > 0);
     final s = _fontScale(context);
     return Container(
       decoration: BoxDecoration(
@@ -771,8 +771,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       final timestamp = transaction['timestamp'] as DateTime? ??
           transaction['timeStamp'] as DateTime?;
       if (timestamp != null && timestamp.isAfter(oneWeekAgo)) {
-        final amount = transaction['payout'] as double? ??
-            transaction['amount'] as double? ??
+        final amount = (transaction['payout'] as num?)?.toDouble() ??
+            (transaction['amount'] as num?)?.toDouble() ??
             0.0;
         total += amount;
       }
@@ -789,8 +789,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       final timestamp = transaction['timestamp'] as DateTime? ??
           transaction['timeStamp'] as DateTime?;
       if (timestamp != null && timestamp.isAfter(oneMonthAgo)) {
-        final amount = transaction['payout'] as double? ??
-            transaction['amount'] as double? ??
+        final amount = (transaction['payout'] as num?)?.toDouble() ??
+            (transaction['amount'] as num?)?.toDouble() ??
             0.0;
         total += amount;
       }
@@ -807,8 +807,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       final timestamp = transaction['timestamp'] as DateTime? ??
           transaction['timeStamp'] as DateTime?;
       if (timestamp != null && timestamp.isAfter(oneYearAgo)) {
-        final amount = transaction['payout'] as double? ??
-            transaction['amount'] as double? ??
+        final amount = (transaction['payout'] as num?)?.toDouble() ??
+            (transaction['amount'] as num?)?.toDouble() ??
             0.0;
         total += amount;
       }
@@ -820,8 +820,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     double total = 0.0;
     
     for (final transaction in _insightsRepo.recentTransactions) {
-      final amount = transaction['payout'] as double? ??
-          transaction['amount'] as double? ??
+      final amount = (transaction['payout'] as num?)?.toDouble() ??
+          (transaction['amount'] as num?)?.toDouble() ??
           0.0;
       total += amount;
     }

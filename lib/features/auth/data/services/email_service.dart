@@ -19,7 +19,7 @@ class EmailService {
     required String purpose,
     String? newEmail,
   }) async {
-    if (API_URL == null || API_URL!.trim().isEmpty) {
+    if (API_URL.trim().isEmpty) {
       return {
         'success': false,
         'error': 'Email service not configured. Please set API_URL in EmailService.',
@@ -27,7 +27,7 @@ class EmailService {
     }
 
     try {
-      final uri = Uri.parse(API_URL!.trim());
+      final uri = Uri.parse(API_URL.trim());
       final body = <String, dynamic>{
         'email': email,
         'otpCode': otpCode,

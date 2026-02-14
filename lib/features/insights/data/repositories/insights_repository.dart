@@ -121,16 +121,16 @@ class InsightsRepository {
 
     for (var transaction in recentTransactions) {
       // Earnings from payout
-      final payout = transaction['payout'] as double? ??
-          transaction['amount'] as double? ??
+      final payout = (transaction['payout'] as num?)?.toDouble() ??
+          (transaction['amount'] as num?)?.toDouble() ??
           0.0;
       totalEarnings += payout;
 
       // Energy from powerSubmitted_Ah and voltage (convert Ah to Wh)
-      final powerSubmittedAh = transaction['powerSubmitted_Ah'] as double? ??
-          transaction['powerSubmitted'] as double? ??
+      final powerSubmittedAh = (transaction['powerSubmitted_Ah'] as num?)?.toDouble() ??
+          (transaction['powerSubmitted'] as num?)?.toDouble() ??
           0.0;
-      final voltage = transaction['voltage'] as double? ?? 0.0;
+      final voltage = (transaction['voltage'] as num?)?.toDouble() ?? 0.0;
       if (voltage > 0 && powerSubmittedAh > 0) {
         totalEnergy += powerSubmittedAh * voltage; // Convert Ah to Wh
       }
@@ -138,7 +138,7 @@ class InsightsRepository {
 
     // Calculate distance from KWH history (deviceEnergyData)
     for (var record in kwhHistory) {
-      final distance = record['totalDistanceKm'] as double? ?? 0.0;
+      final distance = (record['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
       totalDistance += distance;
     }
 
@@ -186,15 +186,15 @@ class InsightsRepository {
 
       // Calculate weekly totals
       for (var transaction in recentTransactionsList) {
-        final payout = transaction['payout'] as double? ??
-            transaction['amount'] as double? ??
+        final payout = (transaction['payout'] as num?)?.toDouble() ??
+            (transaction['amount'] as num?)?.toDouble() ??
             0.0;
         weeklyEarnings += payout;
       }
 
       // Calculate weekly distance from recent KWH history
       for (var record in recentKwhHistoryList) {
-        final distance = record['totalDistanceKm'] as double? ?? 0.0;
+        final distance = (record['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
         weeklyDistance += distance;
       }
     }
@@ -257,8 +257,8 @@ class InsightsRepository {
           transaction['timeStamp'] as DateTime?;
       if (timestamp == null) continue;
 
-      final amount = transaction['payout'] as double? ??
-          transaction['amount'] as double? ??
+      final amount = (transaction['payout'] as num?)?.toDouble() ??
+          (transaction['amount'] as num?)?.toDouble() ??
           0.0;
 
       DateTime key;
