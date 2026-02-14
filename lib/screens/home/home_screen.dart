@@ -506,7 +506,10 @@ class _BatteryCostWidget extends StatelessWidget {
                 ),
                 Text(
                   'Value',
-                  style: TextStyle(fontSize: (w * 0.028).clamp(10.0, 12.0), color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: (w * 0.028).clamp(10.0, 12.0),
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),
