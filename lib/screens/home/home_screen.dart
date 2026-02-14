@@ -177,6 +177,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final batteryLevel = homeData?.mountBatteryPercentage;
     final bool hasBatteryData = batteryLevel != null;
     final int? batteryPercent = batteryLevel?.toInt();
+    final w = MediaQuery.of(context).size.width;
+    final spacing = (w * 0.04).clamp(8.0, 15.0);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -191,35 +193,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 color: AppColors.homePrimary,
                 minSize: 40.0,
               ),
-              const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Battery',
-                    style: TextStyle(fontSize: 20, color: AppColors.darkText),
-                  ),
-                  homeData == null
-                      ? const SizedBox(
-                          height: 48,
-                          child: Center(child: AppLoadingSpinner(size: AppSpinnerSize.small)),
-                        )
-                      : Text(
-                          batteryPercent != null ? '$batteryPercent%' : 'No battery detected',
-                          style: TextStyle(
-                            fontSize: batteryPercent != null ? 48 : 16,
-                            fontWeight: FontWeight.bold,
-                            color: batteryPercent != null
-                                ? AppColors.darkText.withOpacity(0.8)
-                                : AppColors.textSecondary,
+              SizedBox(width: spacing),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Battery',
+                      style: TextStyle(fontSize: (w * 0.048).clamp(16.0, 20.0), color: AppColors.darkText),
+                    ),
+                    homeData == null
+                        ? const SizedBox(
+                            height: 48,
+                            child: Center(child: AppLoadingSpinner(size: AppSpinnerSize.small)),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              batteryPercent != null ? '$batteryPercent%' : 'No battery detected',
+                              style: TextStyle(
+                                fontSize: batteryPercent != null ? 48 : 16,
+                                fontWeight: FontWeight.bold,
+                                color: batteryPercent != null
+                                    ? AppColors.darkText.withOpacity(0.8)
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
                           ),
-                        ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 15),
+        SizedBox(width: spacing),
         _BatteryCostWidget(
           batteryPercent: batteryPercent,
           onTap: () => _showBatteryCostModal(context, batteryPercent),
@@ -455,41 +464,52 @@ class _BatteryCostWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
     final hasData = batteryPercent != null;
     final cost = hasData ? (batteryPercent! / 100.0) * _ratePer100 : 0.0;
+    final width = (w * 0.22).clamp(80.0, 110.0);
+    final paddingH = (w * 0.025).clamp(8.0, 12.0);
+    final paddingV = (w * 0.03).clamp(10.0, 14.0);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 100,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.homeAccent.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.homePrimary.withOpacity(0.4)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(Icons.monetization_on, color: AppColors.homePrimary, size: 22),
-              const SizedBox(height: 4),
-              Text(
-                hasData ? '₱${cost.toStringAsFixed(0)}' : '—',
-                style: TextStyle(
-                  fontSize: hasData ? 18 : 14,
-                  fontWeight: FontWeight.bold,
-                  color: hasData ? AppColors.darkText : Colors.grey,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: width, minHeight: 48),
+          child: Container(
+            width: width,
+            padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
+            decoration: BoxDecoration(
+              color: AppColors.homeAccent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.homePrimary.withOpacity(0.4)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.monetization_on, color: AppColors.homePrimary, size: (w * 0.055).clamp(18.0, 24.0)),
+                SizedBox(height: (w * 0.01).clamp(2.0, 6.0)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    hasData ? '₱${cost.toStringAsFixed(0)}' : '—',
+                    style: TextStyle(
+                      fontSize: hasData ? 18 : 14,
+                      fontWeight: FontWeight.bold,
+                      color: hasData ? AppColors.darkText : Colors.grey,
+                    ),
+                  ),
                 ),
-              ),
-              Text(
-                'Value',
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
-            ],
+                Text(
+                  'Value',
+                  style: TextStyle(fontSize: (w * 0.028).clamp(10.0, 12.0), color: Colors.grey[600]),
+                ),
+              ],
+            ),
           ),
         ),
       ),

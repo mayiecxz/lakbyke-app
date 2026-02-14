@@ -149,8 +149,12 @@ class TransactionRepository {
       final transactions = await getAllTransactions();
       int count = 0;
       for (final transaction in transactions) {
+        // A transaction is a battery exchange if it has meaningful battery % or type
+        final mnt = transaction['mntBattPercentage'] as num?;
+        final stn = transaction['stnBattPercentage'] as num?;
         final type = transaction['type'] as String?;
-        if (type == 'battery_exchange') {
+        final hasBatteryData = (mnt != null && mnt > 0) || (stn != null && stn > 0);
+        if (hasBatteryData || type == 'battery_exchange') {
           count++;
         }
       }
@@ -200,6 +204,12 @@ class TransactionRepository {
         }
         if (isInPeriod) periodTransactions.add(transaction);
       }
+      periodTransactions.sort((a, b) {
+        final aTime = a['timestamp'] as DateTime?;
+        final bTime = b['timestamp'] as DateTime?;
+        if (aTime == null || bTime == null) return 0;
+        return bTime.compareTo(aTime);
+      });
       return periodTransactions;
     } catch (e) {
       return [];
@@ -211,7 +221,6 @@ class TransactionRepository {
       final transactions = await getAllTransactions();
       if (transactions.isEmpty) return [];
 
-      final now = DateTime.now();
       final aggregated = <DateTime, double>{};
 
       for (final transaction in transactions) {
@@ -226,9 +235,10 @@ class TransactionRepository {
             key = DateTime(timestamp.year, timestamp.month, timestamp.day);
             break;
           case 'weekly':
-            final diff = now.difference(timestamp).inDays;
-            final weekStart = now.subtract(Duration(days: diff % 7));
-            key = DateTime(weekStart.year, weekStart.month, weekStart.day);
+            // Monday of the week for this timestamp (weekday: 1=Monday, 7=Sunday)
+            final daysToMonday = timestamp.weekday - 1;
+            final monday = timestamp.subtract(Duration(days: daysToMonday));
+            key = DateTime(monday.year, monday.month, monday.day);
             break;
           case 'monthly':
             key = DateTime(timestamp.year, timestamp.month);

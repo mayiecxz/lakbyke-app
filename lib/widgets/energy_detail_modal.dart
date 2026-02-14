@@ -117,14 +117,15 @@ class EnergyDetailModal extends StatelessWidget {
                         if (detailedRecords != null && detailedRecords!.isNotEmpty) ...[
                           const Divider(),
                           const SizedBox(height: 16),
-                          const Text(
-                            'Additional Details',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                          if (!isSingleEntry)
+                            const Text(
+                              'Additional Details',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
+                          if (!isSingleEntry) const SizedBox(height: 12),
                           _buildDetailsList(),
                         ],
                       ],
@@ -241,23 +242,33 @@ class EnergyDetailModal extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Calculate averages and other stats from detailed records
+    if (isSingleEntry && detailedRecords!.length == 1) {
+      final record = detailedRecords!.first;
+      final power = (record['powerGeneratedInWatts'] as num?)?.toDouble() ?? 0.0;
+      final speed = (record['speedKmh'] as num?)?.toDouble() ?? 0.0;
+      return Column(
+        children: [
+          if (power > 0) _buildDetailRow('Power Generated', '${power.abs() >= 1000 ? formatCompactNumber(power, 1) : power.toStringAsFixed(2)} W'),
+          if (speed > 0) _buildDetailRow('Speed', '${speed.abs() >= 1000 ? formatCompactNumber(speed, 1) : speed.toStringAsFixed(1)} km/h'),
+        ],
+      );
+    }
+
+    // Aggregated stats for multiple records
     double avgPower = 0.0;
     double maxPower = 0.0;
     double avgSpeed = 0.0;
     double maxSpeed = 0.0;
     int recordCount = detailedRecords!.length;
-    
+
     for (final record in detailedRecords!) {
       final power = (record['powerGeneratedInWatts'] as num?)?.toDouble() ?? 0.0;
       final speed = (record['speedKmh'] as num?)?.toDouble() ?? 0.0;
-      
       avgPower += power;
       maxPower = power > maxPower ? power : maxPower;
       avgSpeed += speed;
       maxSpeed = speed > maxSpeed ? speed : maxSpeed;
     }
-    
     if (recordCount > 0) {
       avgPower /= recordCount;
       avgSpeed /= recordCount;

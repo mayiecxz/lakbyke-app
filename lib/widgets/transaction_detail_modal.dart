@@ -95,14 +95,15 @@ class TransactionDetailModal extends StatelessWidget {
                         if (detailedTransactions != null && detailedTransactions!.isNotEmpty) ...[
                           const Divider(),
                           const SizedBox(height: 16),
-                          const Text(
-                            'Transaction Details',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                          if (!isSingleEntry)
+                            const Text(
+                              'Transaction Details',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
+                          if (!isSingleEntry) const SizedBox(height: 12),
                           _buildTransactionsList(),
                         ],
                       ],
@@ -176,12 +177,12 @@ class TransactionDetailModal extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
-              SizedBox(width: 12),
+            children: [
+              const Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
+              const SizedBox(width: 12),
               Text(
-                'Total Redeemed',
-                style: TextStyle(
+                isSingleEntry ? 'Payout' : 'Total Redeemed',
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.white70,
                   fontWeight: FontWeight.w500,
@@ -212,47 +213,59 @@ class TransactionDetailModal extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Calculate stats from detailed transactions
+    if (isSingleEntry && detailedTransactions!.length == 1) {
+      final t = detailedTransactions!.first;
+      final powerSubmittedAh = (t['powerSubmitted_Ah'] as num?)?.toDouble() ??
+          (t['powerSubmitted'] as num?)?.toDouble() ?? 0.0;
+      final voltage = (t['voltage'] as num?)?.toDouble() ?? 0.0;
+      final mntBattPercentage = (t['mntBattPercentage'] as num?)?.toDouble() ?? 0.0;
+      final stnBattPercentage = (t['stnBattPercentage'] as num?)?.toDouble() ?? 0.0;
+      final totalEnergyWh = (voltage > 0 && powerSubmittedAh > 0) ? powerSubmittedAh * voltage : 0.0;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (powerSubmittedAh > 0) _buildDetailRow('Power Submitted', '${powerSubmittedAh.abs() >= 1000 ? formatCompactNumber(powerSubmittedAh, 1) : powerSubmittedAh.toStringAsFixed(2)} Ah'),
+          if (voltage > 0) _buildDetailRow('Voltage', '${voltage.toStringAsFixed(1)} V'),
+          if (totalEnergyWh > 0) _buildDetailRow('Energy Generated', totalEnergyWh >= 1000000 ? '${formatCompactNumber(totalEnergyWh / 1000)} kWh' : '${totalEnergyWh.toStringAsFixed(2)} Wh'),
+          if (mntBattPercentage > 0) _buildDetailRow('Mount Battery', '${mntBattPercentage.toStringAsFixed(1)}%'),
+          if (stnBattPercentage > 0) _buildDetailRow('Station Battery', '${stnBattPercentage.toStringAsFixed(1)}%'),
+        ],
+      );
+    }
+
+    // Aggregated stats for multiple transactions
     int transactionCount = detailedTransactions!.length;
     int batteryExchanges = 0;
     double avgAmount = 0.0;
     double maxAmount = 0.0;
-    double totalPowerSubmitted = 0.0; // Total power submitted in Ah
+    double totalPowerSubmitted = 0.0;
     double avgVoltage = 0.0;
     double avgMntBattPercentage = 0.0;
     double avgStnBattPercentage = 0.0;
-    double totalEnergyWh = 0.0; // Total energy in Wh (Ah * V)
-    
+    double totalEnergyWh = 0.0;
+
     for (final transaction in detailedTransactions!) {
-      final amount = (transaction['payout'] as num?)?.toDouble() ?? 
-                     (transaction['amount'] as num?)?.toDouble() ?? 0.0;
-      
+      final amount = (transaction['payout'] as num?)?.toDouble() ??
+          (transaction['amount'] as num?)?.toDouble() ?? 0.0;
       avgAmount += amount;
       maxAmount = amount > maxAmount ? amount : maxAmount;
-      
-      // Power and energy data
-      final powerSubmittedAh = (transaction['powerSubmitted_Ah'] as num?)?.toDouble() ?? 
-                              (transaction['powerSubmitted'] as num?)?.toDouble() ?? 0.0;
+      final powerSubmittedAh = (transaction['powerSubmitted_Ah'] as num?)?.toDouble() ??
+          (transaction['powerSubmitted'] as num?)?.toDouble() ?? 0.0;
       final voltage = (transaction['voltage'] as num?)?.toDouble() ?? 0.0;
       final mntBattPercentage = (transaction['mntBattPercentage'] as num?)?.toDouble() ?? 0.0;
       final stnBattPercentage = (transaction['stnBattPercentage'] as num?)?.toDouble() ?? 0.0;
-      
       totalPowerSubmitted += powerSubmittedAh;
       avgVoltage += voltage;
       avgMntBattPercentage += mntBattPercentage;
       avgStnBattPercentage += stnBattPercentage;
-      
-      // Calculate energy in Wh: Wh = Ah * V
       if (voltage > 0 && powerSubmittedAh > 0) {
         totalEnergyWh += powerSubmittedAh * voltage;
       }
-      
-      // Check if it's a battery exchange transaction (has battery percentage data)
       if (mntBattPercentage > 0 || stnBattPercentage > 0) {
         batteryExchanges++;
       }
     }
-    
     if (transactionCount > 0) {
       avgAmount /= transactionCount;
       avgVoltage /= transactionCount;
@@ -263,7 +276,6 @@ class TransactionDetailModal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Summary Statistics
         const Text(
           'Summary Statistics',
           style: TextStyle(
@@ -277,8 +289,6 @@ class TransactionDetailModal extends StatelessWidget {
         if (batteryExchanges > 0) _buildDetailRow('Battery Exchanges', batteryExchanges >= 1000 ? formatCompactNumber(batteryExchanges, 0) : batteryExchanges.toString()),
         if (avgAmount > 0) _buildDetailRow('Avg Payout', formatCompactCurrency(avgAmount)),
         if (maxAmount > 0) _buildDetailRow('Max Payout', formatCompactCurrency(maxAmount)),
-        
-        // Energy Statistics
         if (totalPowerSubmitted > 0 || totalEnergyWh > 0) ...[
           const SizedBox(height: 16),
           const Text(
@@ -294,8 +304,6 @@ class TransactionDetailModal extends StatelessWidget {
           if (totalEnergyWh > 0) _buildDetailRow('Total Energy Generated', totalEnergyWh >= 1000000 ? '${formatCompactNumber(totalEnergyWh / 1000)} kWh' : '${totalEnergyWh.toStringAsFixed(2)} Wh'),
           if (avgVoltage > 0) _buildDetailRow('Avg Voltage', '${avgVoltage.toStringAsFixed(1)} V'),
         ],
-        
-        // Battery Statistics
         if (avgMntBattPercentage > 0 || avgStnBattPercentage > 0) ...[
           const SizedBox(height: 16),
           const Text(

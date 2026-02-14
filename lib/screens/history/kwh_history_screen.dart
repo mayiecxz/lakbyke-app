@@ -111,8 +111,7 @@ class _KwhHistoryScreenState extends ConsumerState<KwhHistoryScreen> {
       case 'daily':
         return dateFormat.format(date);
       case 'weekly':
-        final weekEnd = date.add(const Duration(days: 6));
-        return '${dateFormat.format(date)} - ${dateFormat.format(weekEnd)}';
+        return 'Week of ${DateFormat('MMM d, yyyy').format(date)}';
       case 'monthly':
         return DateFormat('MMMM yyyy').format(date);
       case 'yearly':

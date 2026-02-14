@@ -161,6 +161,12 @@ class KwhRepository {
         }
         if (isInPeriod) periodRecords.add(record);
       }
+      periodRecords.sort((a, b) {
+        final aTime = a['timestamp'] as DateTime?;
+        final bTime = b['timestamp'] as DateTime?;
+        if (aTime == null || bTime == null) return 0;
+        return bTime.compareTo(aTime);
+      });
       return periodRecords;
     } catch (e) {
       return [];
@@ -208,7 +214,6 @@ class KwhRepository {
       final history = await getHistoryData();
       if (history.isEmpty) return [];
 
-      final now = DateTime.now();
       final aggregated = <DateTime, Map<String, double>>{};
 
       for (final record in history) {
@@ -228,9 +233,10 @@ class KwhRepository {
             key = DateTime(timestamp.year, timestamp.month, timestamp.day);
             break;
           case 'weekly':
-            final diff = now.difference(timestamp).inDays;
-            final weekStart = now.subtract(Duration(days: diff % 7));
-            key = DateTime(weekStart.year, weekStart.month, weekStart.day);
+            // Monday of the week for this timestamp (weekday: 1=Monday, 7=Sunday)
+            final daysToMonday = timestamp.weekday - 1;
+            final monday = timestamp.subtract(Duration(days: daysToMonday));
+            key = DateTime(monday.year, monday.month, monday.day);
             break;
           case 'monthly':
             key = DateTime(timestamp.year, timestamp.month);

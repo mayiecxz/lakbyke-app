@@ -447,13 +447,23 @@ class TransactionService {
   }
 
   // Get battery exchange count (transactions with battery exchange)
-  // Already filtered by current user's service tag via getAllTransactions()
+  // Must match TransactionRepository logic so Home and History show the same value.
+  // Count only when there is meaningful battery data (>0) or type; our addTransaction()
+  // normalizes missing fields to 0, so we must use >0 to avoid counting all transactions.
   Future<int> getBatteryExchangeCount() async {
     try {
       final transactions = await getAllTransactions();
-      // All transactions are already filtered by service tag, so count all of them
-      // All transactions with matching mntTag are considered battery exchanges
-      return transactions.length;
+      int count = 0;
+      for (final transaction in transactions) {
+        final mnt = transaction['mntBattPercentage'] as num?;
+        final stn = transaction['stnBattPercentage'] as num?;
+        final type = transaction['type'] as String?;
+        final hasBatteryData = (mnt != null && mnt > 0) || (stn != null && stn > 0);
+        if (hasBatteryData || type == 'battery_exchange') {
+          count++;
+        }
+      }
+      return count;
     } catch (e) {
       return 0;
     }
