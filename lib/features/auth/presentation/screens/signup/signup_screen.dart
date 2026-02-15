@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
-import 'package:lakbyke_mobile/features/account/providers/account_providers.dart';
 import 'package:lakbyke_mobile/features/account/data/repositories/user_repository.dart' show createUserInUserTable;
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
