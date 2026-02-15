@@ -5,6 +5,7 @@ import 'package:lakbyke_mobile/core/utils/formatting.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/insights/domain/cba_constants.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/investment_recovery_breakdown_dialog.dart';
 
 /// Hero card: circular ROI gauge, investment recovered %, breakeven date.
 class InvestmentRecoveryCard extends StatelessWidget {
@@ -50,43 +51,57 @@ class InvestmentRecoveryCard extends StatelessWidget {
         SizedBox(
           width: gaugeSize,
           height: gaugeSize,
-          child: CustomPaint(
-            painter: _InvestmentGaugePainter(
-              progress: progress,
-              strokeWidth: 12,
-              trackColor: AppColors.homeAccent.withValues(alpha: 0.25),
-              progressColor: AppColors.homeAccent,
-            ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: Size(gaugeSize, gaugeSize),
+                painter: _InvestmentGaugePainter(
+                  progress: progress,
+                  strokeWidth: 12,
+                  trackColor: AppColors.homeAccent.withValues(alpha: 0.25),
+                  progressColor: AppColors.homeAccent,
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${model.roiProgressFormatted}%',
+                    style: TextStyle(
+                      fontSize: (32 * s).clamp(26.0, 40.0),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textOnPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    model.hasRecoveredInvestment
+                        ? 'Investment Recovered'
+                        : 'Investment Recovery',
+                    style: TextStyle(
+                      fontSize: (14 * s).clamp(12.0, 16.0),
+                      color: AppColors.textOnPrimary.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${formatCompactCurrency(model.totalEarnings)} / ${formatCompactCurrency(CBAConstants.cyclistCapex)}',
+                    style: TextStyle(
+                      fontSize: (15 * s).clamp(13.0, 17.0),
+                      color: AppColors.homeAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          '${model.roiProgressFormatted}%',
-          style: TextStyle(
-            fontSize: (32 * s).clamp(26.0, 40.0),
-            fontWeight: FontWeight.w800,
-            color: AppColors.textOnPrimary,
-            letterSpacing: -0.5,
-          ),
-        ),
-        Text(
-          model.hasRecoveredInvestment ? 'Investment Recovered' : 'Investment Recovery',
-          style: TextStyle(
-            fontSize: (14 * s).clamp(12.0, 16.0),
-            color: AppColors.textOnPrimary.withValues(alpha: 0.9),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          '${formatCompactCurrency(model.totalEarnings)} / ${formatCompactCurrency(CBAConstants.cyclistCapex)}',
-          style: TextStyle(
-            fontSize: (15 * s).clamp(13.0, 17.0),
-            color: AppColors.homeAccent,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           model.breakevenDateFormatted,
           textAlign: TextAlign.center,
@@ -95,6 +110,16 @@ class InvestmentRecoveryCard extends StatelessWidget {
             color: AppColors.textOnPrimary.withValues(alpha: 0.85),
             height: 1.35,
           ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => InvestmentRecoveryBreakdownDialog.show(context, model),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.homeAccent,
+            side: const BorderSide(color: AppColors.homeAccent),
+          ),
+          icon: const Icon(Icons.info_outline_rounded, size: 18),
+          label: const Text('View breakdown'),
         ),
       ],
     );

@@ -56,7 +56,8 @@ class InsightsRepository {
   }
 
   /// Build an immutable snapshot for the UI. Call after [loadInsightsData].
-  InsightsModel toModel() {
+  /// [semesterEnd] overrides the default from CBAConstants when provided (e.g. from user settings).
+  InsightsModel toModel({DateTime? semesterEnd}) {
     final initialInvestment = _initialCapex;
     final roiProgressPercent =
         initialInvestment > 0 ? (totalEarnings / initialInvestment) * 100 : 0.0;
@@ -65,13 +66,14 @@ class InsightsRepository {
         daysWithActivity > 0 ? totalEarnings / daysWithActivity : 0.0;
 
     final now = DateTime.now();
+    final effectiveSemesterEnd = semesterEnd ?? CBAConstants.semesterEnd;
     final estimatedBreakevenDate = InsightsCalculations.estimateBreakevenDate(
       remainingToBreakeven.toDouble(),
       dailyAverageEarnings,
       now,
     );
     final remainingSchoolDays =
-        InsightsCalculations.countRemainingSchoolDays(now, CBAConstants.semesterEnd);
+        InsightsCalculations.countRemainingSchoolDays(now, effectiveSemesterEnd);
     final projectedSemesterEarnings =
         _projectSemesterEarnings(dailyAverageEarnings, remainingSchoolDays);
     final bonusEarningsFor15MinMore =
@@ -98,7 +100,7 @@ class InsightsRepository {
       estimatedBreakevenDate: estimatedBreakevenDate,
       dailyAverageEarnings: dailyAverageEarnings.toDouble(),
       projectedSemesterEarnings: projectedSemesterEarnings,
-      semesterEndDate: CBAConstants.semesterEnd,
+      semesterEndDate: effectiveSemesterEnd,
       remainingSchoolDays: remainingSchoolDays,
       bonusEarningsFor15MinMore: bonusEarningsFor15MinMore,
       totalDistanceKm: totalDistanceKm,

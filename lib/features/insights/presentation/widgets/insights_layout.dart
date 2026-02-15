@@ -27,7 +27,7 @@ class InsightsLayout {
       (width * 0.22).clamp(64.0, 96.0);
 
   /// Size for the hero investment recovery circular gauge.
-  double get gaugeSize => (size.shortestSide * 0.5).clamp(160.0, 220.0);
+  double get gaugeSize => (size.shortestSide * 0.54).clamp(172.0, 238.0);
 
   double chartHeight(double height) =>
       (height * 0.22).clamp(160.0, 220.0);

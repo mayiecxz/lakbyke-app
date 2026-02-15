@@ -5,6 +5,8 @@ import 'package:lakbyke_mobile/core/utils/formatting.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_shared_widgets.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/semester_breakdown_dialog.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/semester_setup_modal.dart';
 
 /// Section A: Projected semester earnings and +15 min bonus insight.
 class ForecasterCard extends StatelessWidget {
@@ -106,18 +108,91 @@ class ForecasterCard extends StatelessWidget {
             ),
           ),
         ],
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => SemesterBreakdownDialog.show(context, model),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.homePrimary,
+                side: const BorderSide(color: AppColors.homePrimary),
+              ),
+              icon: const Icon(Icons.info_outline_rounded, size: 18),
+              label: const Text('View breakdown'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: () => SemesterSetupModal.show(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.homePrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: const Icon(Icons.edit_calendar_rounded, size: 16),
+              label: const Text('Set date'),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return InsightsInfoBanner(
-      layout: layout,
-      icon: Icons.auto_awesome_rounded,
-      message: 'Complete rides to see your projected semester earnings and tips.',
-      backgroundColor: AppColors.homeAccent.withValues(alpha: 0.12),
-      iconColor: AppColors.homePrimary,
-      textColor: AppColors.darkText,
+    final s = layout.fontScale;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'PROJECTED SEMESTER EARNINGS',
+          style: TextStyle(
+            fontSize: (12 * s).clamp(11.0, 14.0),
+            fontWeight: FontWeight.w700,
+            color: AppColors.homePrimary,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 12),
+        InsightsInfoBanner(
+          layout: layout,
+          icon: Icons.auto_awesome_rounded,
+          message: 'Complete rides to see your projected semester earnings and tips.',
+          backgroundColor: AppColors.homeAccent.withValues(alpha: 0.12),
+          iconColor: AppColors.homePrimary,
+          textColor: AppColors.darkText,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            OutlinedButton.icon(
+              onPressed: null,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.homePrimary,
+                side: const BorderSide(color: AppColors.homePrimary),
+              ),
+              icon: const Icon(Icons.info_outline_rounded, size: 18),
+              label: const Text('View breakdown'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: () => SemesterSetupModal.show(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.homePrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: const Icon(Icons.edit_calendar_rounded, size: 16),
+              label: const Text('Set date'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
