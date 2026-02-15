@@ -1,144 +1,196 @@
 import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'package:lakbyke_mobile/features/insights/domain/cba_constants.dart';
-import 'package:lakbyke_mobile/features/insights/domain/cyclist_insights.dart';
+import 'package:lakbyke_mobile/features/insights/domain/insights_calculations.dart';
+import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/history/data/repositories/transaction_repository.dart';
 import 'package:lakbyke_mobile/features/history/data/repositories/kwh_repository.dart';
 
 /// Repository for insights data and calculations.
 /// Uses TransactionRepository and KwhRepository (single source of truth).
 class InsightsRepository {
-  final TransactionRepository _transactionRepository;
-  final KwhRepository _kwhRepository;
-
   InsightsRepository({
     required TransactionRepository transactionRepository,
     required KwhRepository kwhRepository,
   })  : _transactionRepository = transactionRepository,
         _kwhRepository = kwhRepository;
 
-  // --- CBA constants (Financial Reality / Mechanical Health) ---
-  /// [CBA Page 3] Total Initial Investment (Debt)
-  static const double _initialCapex = 3792.00;
-  /// [CBA Page 8] Annual Maint. ₱700 / Est. 5,400km/year = ~₱0.13/km. Adjusted to 0.15 for safety margin.
-  static const double _wearCostPerKm = 0.15;
-  /// [CBA Page 7] Motor Brush Life ~3-5 years. Est 10,000km max.
-  static const double _maxMotorLifeKm = 10000.0;
+  final TransactionRepository _transactionRepository;
+  final KwhRepository _kwhRepository;
 
-  // Insights data
+  static const double _initialCapex = CBAConstants.cyclistCapex;
+
   List<Map<String, dynamic>> recentTransactions = [];
   List<Map<String, dynamic>> kwhHistory = [];
 
-  // Insights settings
-  int sessionsPerWeek = 1;
-  double averageEarningsPerSession = 0.0;
-  double averageEnergyPerSession = 0.0; // in Wh
-  double averageDistancePerSession = 0.0; // in km
-  double currentMonthlyProjection = 0.0;
-  double projectedMonthlyEarnings = 0.0;
-  double projectedMonthlyEnergy = 0.0; // in Wh
-  double projectedMonthlyDistance = 0.0; // in km
-
-  // Historical data from Firebase
-  double weeklyAverageEarnings = 0.0;
-  double weeklyAverageDistance = 0.0;
   int totalSessions = 0;
   int daysWithActivity = 0;
-  // All-time totals (for performance breakdown)
   double totalEarnings = 0.0;
   double totalEnergyWh = 0.0;
   double totalDistanceKm = 0.0;
-  double totalDurationHours = 0.0; // For "Sweat Tax" / hourly wage
+  double totalDurationHours = 0.0;
+  double averageEarningsPerSession = 0.0;
+  double weeklyAverageEarnings = 0.0;
+  double weeklyAverageDistance = 0.0;
+  int sessionsPerWeek = 1;
 
-  // --- Financial reality (CBA compliance) ---
-  double netEarnings = 0.0;        // Gross - Wear Cost
-  double maintenanceReserve = 0.0;  // The "Repair Jar" (Sinking Fund)
-  double roiProgressPercent = 0.0;  // Progress toward recovering ₱3,792
-  double remainingCapexDebt = 0.0;  // How much left to break even
-  double hourlyWage = 0.0;          // "Sweat Tax" efficiency (Earnings / Hour)
-
-  // --- Mechanical health (IMRAD-based) ---
-  double motorHealthPercent = 100.0;  // 100% to 0% based on distance
-  double kmSinceLastBoltCheck = 0.0;  // For vibration safety alerts
-  bool needsBoltCheck = false;       // Trigger alert every 100km
-
-  // Analytics chart filter
-  String analyticsFilter = 'past week';
-
-  // --- CBA reference values (from lib/insights) ---
-  /// Optimal buyback per battery (72Wh); use for pictograph "1 unit = ₱30".
-  double get cbaBatteryValue => CBAConstants.buybackOptimal;
-  /// Reference monthly gross at optimal rate, 22 school days (₱660).
-  double get cbaReferenceMonthlyGross => CyclistInsights.projectedMonthlyGross(days: 22);
-  /// Net daily earnings at optimal buyback (gross − maintenance).
-  double get cbaNetDailyEarnings => CyclistInsights.netDailyEarnings();
-  /// Breakeven tip for cyclists (e.g. "break even in 8 months").
-  String get cbaBreakevenMessage => CyclistInsights.breakevenMessage;
+  String _mntTag = '';
 
   /// Load all insights data from Firebase.
-  /// Transactions: from "transactions" table, filtered by current user's mntTag (service tag).
-  /// KWH history: from "deviceEnergyData" table, filtered by mntTag.
   Future<void> loadInsightsData() async {
     try {
-      // Load transactions (single source: TransactionRepository)
       recentTransactions = await _transactionRepository.getAllTransactions();
+      final tag = await _transactionRepository.getServiceTag();
+      _mntTag = tag?.trim().isNotEmpty == true ? tag!.trim() : '';
 
-      // Load KWH history (single source: KwhRepository)
       try {
         kwhHistory = await _kwhRepository.getHistoryData();
-      } catch (e) {
-        // Continue without KWH history
+      } catch (_) {
         kwhHistory = [];
       }
 
-      // Calculate historical averages from real Firebase data
       calculateHistoricalAverages();
-
-      // Calculate projections
-      calculateProjections();
-
-      // CBA-based financial and mechanical calculations
-      calculateFinancialReality();
-      calculateMechanicalHealth();
-    } catch (e) {
-      // Handle error - data will remain at default values
+    } catch (e, stackTrace) {
+      Error.throwWithStackTrace(e, stackTrace);
     }
   }
 
-  /// The "False Profit" correction logic (CBA compliance).
-  void calculateFinancialReality() {
-    // 1. Wear cost (sinking fund): every km degrades motor and loosens bolts
-    maintenanceReserve = totalDistanceKm * _wearCostPerKm;
+  /// Build an immutable snapshot for the UI. Call after [loadInsightsData].
+  InsightsModel toModel() {
+    final initialInvestment = _initialCapex;
+    final roiProgressPercent =
+        initialInvestment > 0 ? (totalEarnings / initialInvestment) * 100 : 0.0;
+    final remainingToBreakeven = math.max(0, initialInvestment - totalEarnings);
+    final dailyAverageEarnings =
+        daysWithActivity > 0 ? totalEarnings / daysWithActivity : 0.0;
 
-    // 2. Net income (real spendable cash)
-    netEarnings = totalEarnings - maintenanceReserve;
+    final now = DateTime.now();
+    final estimatedBreakevenDate = InsightsCalculations.estimateBreakevenDate(
+      remainingToBreakeven.toDouble(),
+      dailyAverageEarnings,
+      now,
+    );
+    final remainingSchoolDays =
+        InsightsCalculations.countRemainingSchoolDays(now, CBAConstants.semesterEnd);
+    final projectedSemesterEarnings =
+        _projectSemesterEarnings(dailyAverageEarnings, remainingSchoolDays);
+    final bonusEarningsFor15MinMore =
+        _bonusFor15MinMore(dailyAverageEarnings, remainingSchoolDays);
 
-    // 3. ROI: progress toward recovering initial CAPEX
-    if (_initialCapex > 0) {
-      roiProgressPercent = (totalEarnings / _initialCapex) * 100;
-      remainingCapexDebt = math.max(0, _initialCapex - totalEarnings);
-    }
+    final unitHealthStatus = InsightsCalculations.classifyUnitHealth(totalDistanceKm);
+    final (String unitHealthLabel, String unitHealthDescription) =
+        _unitHealthLabelAndDescription(unitHealthStatus);
 
-    // 4. "Sweat Tax" efficiency (earnings per hour)
-    if (totalDurationHours > 0) {
-      hourlyWage = totalEarnings / totalDurationHours;
-    } else {
-      hourlyWage = 0.0;
+    final last5 = _getLast5RideTimestamps();
+    final hasEnoughDataForPersona = last5.length >= 3;
+    final riderPersona = InsightsCalculations.classifyRiderPersona(last5);
+    final (String riderPersonaName, String riderPersonaAdvice) =
+        _riderPersonaNameAndAdvice(riderPersona);
+    final averageRideHour = _averageRideHour(last5);
+
+    final displayTag = _mntTag.isEmpty ? 'MNT0001' : _mntTag.toUpperCase();
+
+    return InsightsModel(
+      totalEarnings: totalEarnings,
+      initialInvestment: initialInvestment,
+      roiProgressPercent: roiProgressPercent.toDouble(),
+      remainingToBreakeven: remainingToBreakeven.toDouble(),
+      estimatedBreakevenDate: estimatedBreakevenDate,
+      dailyAverageEarnings: dailyAverageEarnings.toDouble(),
+      projectedSemesterEarnings: projectedSemesterEarnings,
+      semesterEndDate: CBAConstants.semesterEnd,
+      remainingSchoolDays: remainingSchoolDays,
+      bonusEarningsFor15MinMore: bonusEarningsFor15MinMore,
+      totalDistanceKm: totalDistanceKm,
+      unitHealthStatus: unitHealthStatus,
+      unitHealthLabel: unitHealthLabel,
+      unitHealthDescription: unitHealthDescription,
+      mntTag: displayTag,
+      riderPersona: riderPersona,
+      riderPersonaName: riderPersonaName,
+      riderPersonaAdvice: riderPersonaAdvice,
+      averageRideHour: averageRideHour,
+      peakStationHour: 12,
+      recentRideTimestamps: last5,
+      hasEnoughDataForPersona: hasEnoughDataForPersona,
+    );
+  }
+
+  double _projectSemesterEarnings(double dailyAverageEarnings, int remainingSchoolDays) {
+    return dailyAverageEarnings * remainingSchoolDays;
+  }
+
+  double _bonusFor15MinMore(double dailyAverageEarnings, int remainingSchoolDays) {
+    if (totalSessions <= 0 || totalDurationHours <= 0) return 0.0;
+    final avgSessionMinutes = (totalDurationHours * 60) / totalSessions;
+    if (avgSessionMinutes <= 0) return 0.0;
+    final earningRatePerMinute = dailyAverageEarnings / avgSessionMinutes;
+    return earningRatePerMinute * 15 * remainingSchoolDays;
+  }
+
+  (String, String) _unitHealthLabelAndDescription(String status) {
+    switch (status) {
+      case 'excellent':
+        return ('Condition: Excellent', 'No maintenance actions needed.');
+      case 'bolt_check':
+        return (
+          'Maintenance Due: Check Mounting Bolts',
+          'Have a technician verify mounting bolts for safety.',
+        );
+      case 'motor_inspection':
+        return (
+          'Maintenance Due: Inspect Motor Brushes',
+          'Schedule motor brush inspection to maintain performance.',
+        );
+      default:
+        return ('Condition: Unknown', 'No maintenance actions needed.');
     }
   }
 
-  /// The "Hardware Anxiety" logic (motor brush life, bolt check).
-  void calculateMechanicalHealth() {
-    // 1. Motor brush life (depreciation)
-    final double usedLife = (totalDistanceKm / _maxMotorLifeKm) * 100;
-    motorHealthPercent = (100.0 - usedLife).clamp(0.0, 100.0);
-
-    // 2. Vibration / bolt check (every 100km)
-    kmSinceLastBoltCheck = totalDistanceKm % 100;
-    needsBoltCheck = kmSinceLastBoltCheck > 90;
+  List<DateTime> _getLast5RideTimestamps() {
+    final withTs = <DateTime>[];
+    for (final t in recentTransactions) {
+      final ts = t['timestamp'] as DateTime? ?? t['timeStamp'] as DateTime?;
+      if (ts != null) withTs.add(ts);
+    }
+    withTs.sort((a, b) => b.compareTo(a));
+    return withTs.take(5).toList();
   }
 
-  /// Reset all totals and derived metrics (e.g. when no data).
+  double _averageRideHour(List<DateTime> timestamps) {
+    if (timestamps.isEmpty) return 0.0;
+    double sum = 0.0;
+    for (final t in timestamps) {
+      sum += t.hour + t.minute / 60.0 + t.second / 3600.0;
+    }
+    return sum / timestamps.length;
+  }
+
+  (String, String) _riderPersonaNameAndAdvice(String persona) {
+    switch (persona) {
+      case 'early_bird':
+        return (
+          'Early Bird',
+          'Ride early to stay cool and beat the midday rush.',
+        );
+      case 'peak_provider':
+        return (
+          'Peak Provider',
+          'You ride when the station is busiest—great for earning.',
+        );
+      case 'sunset_cruiser':
+        return (
+          'Sunset Cruiser',
+          'Evening rides help you wind down and still contribute.',
+        );
+      default:
+        return (
+          'Unknown',
+          'Complete at least 3 rides to unlock your Rider Persona.',
+        );
+    }
+  }
+
   void resetData() {
     totalSessions = 0;
     daysWithActivity = 0;
@@ -146,37 +198,22 @@ class InsightsRepository {
     totalEnergyWh = 0.0;
     totalDistanceKm = 0.0;
     totalDurationHours = 0.0;
-    netEarnings = 0.0;
-    maintenanceReserve = 0.0;
-    roiProgressPercent = 0.0;
-    remainingCapexDebt = _initialCapex;
-    motorHealthPercent = 100.0;
-    kmSinceLastBoltCheck = 0.0;
-    needsBoltCheck = false;
+    averageEarningsPerSession = 0.0;
     weeklyAverageEarnings = 0.0;
     weeklyAverageDistance = 0.0;
-    averageEarningsPerSession = 0.0;
-    averageEnergyPerSession = 0.0;
-    averageDistancePerSession = 0.0;
     sessionsPerWeek = 1;
-    currentMonthlyProjection = 0.0;
-    projectedMonthlyEarnings = 0.0;
-    projectedMonthlyEnergy = 0.0;
-    projectedMonthlyDistance = 0.0;
   }
 
-  /// Calculate historical averages from transactions and KWH history
   void calculateHistoricalAverages() {
     if (recentTransactions.isEmpty && kwhHistory.isEmpty) {
       resetData();
       return;
     }
 
-    // Group transactions by date
     final Map<String, List<Map<String, dynamic>>> transactionsByDate = {};
     final Set<String> uniqueDates = {};
 
-    for (var transaction in recentTransactions) {
+    for (final transaction in recentTransactions) {
       final timestamp = transaction['timestamp'] as DateTime? ??
           transaction['timeStamp'] as DateTime?;
       if (timestamp == null) continue;
@@ -184,393 +221,94 @@ class InsightsRepository {
       final dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
       uniqueDates.add(dateKey);
 
-      if (!transactionsByDate.containsKey(dateKey)) {
-        transactionsByDate[dateKey] = [];
-      }
-      transactionsByDate[dateKey]!.add(transaction);
+      transactionsByDate.putIfAbsent(dateKey, () => []).add(transaction);
     }
 
-    // Calculate totals from transactions
-    double totalEarnings = 0.0;
-    double totalEnergy = 0.0; // in Wh
-    double totalDistance = 0.0; // in km
-    double tempTotalDurationHours = 0.0;
+    double sumEarnings = 0.0;
+    double sumEnergy = 0.0;
+    double sumDistance = 0.0;
+    double sumDurationHours = 0.0;
 
-    for (var transaction in recentTransactions) {
-      // Earnings from payout
+    for (final transaction in recentTransactions) {
       final payout = (transaction['payout'] as num?)?.toDouble() ??
           (transaction['amount'] as num?)?.toDouble() ??
           0.0;
-      totalEarnings += payout;
+      sumEarnings += payout;
 
-      // Energy from powerSubmitted_Ah and voltage (convert Ah to Wh)
       final powerSubmittedAh = (transaction['powerSubmitted_Ah'] as num?)?.toDouble() ??
           (transaction['powerSubmitted'] as num?)?.toDouble() ??
           0.0;
       final voltage = (transaction['voltage'] as num?)?.toDouble() ?? 0.0;
       if (voltage > 0 && powerSubmittedAh > 0) {
-        totalEnergy += powerSubmittedAh * voltage; // Convert Ah to Wh
+        sumEnergy += powerSubmittedAh * voltage;
       }
 
-      // Duration for "Sweat Tax" / hourly wage
       final durationSec = (transaction['durationSeconds'] as num?)?.toDouble() ?? 0.0;
-      tempTotalDurationHours += durationSec / 3600.0;
+      sumDurationHours += durationSec / 3600.0;
     }
 
-    // Calculate distance from KWH history (deviceEnergyData)
-    for (var record in kwhHistory) {
-      final distance = (record['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
-      totalDistance += distance;
+    for (final record in kwhHistory) {
+      final d = (record['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
+      sumDistance += d;
     }
 
-    // Calculate averages
-    final daysWithActivityCount = uniqueDates.length;
-    final totalSessionsCount = recentTransactions.length;
+    final daysCount = uniqueDates.length;
+    final sessionsCount = recentTransactions.length;
 
-    // Calculate weekly average (last 4 weeks or all time)
     final now = DateTime.now();
     final fourWeeksAgo = now.subtract(const Duration(days: 28));
 
-    final recentTransactionsList = recentTransactions.where((t) {
-      final timestamp = t['timestamp'] as DateTime? ??
-          t['timeStamp'] as DateTime?;
-      return timestamp != null && timestamp.isAfter(fourWeeksAgo);
+    final recentList = recentTransactions.where((t) {
+      final ts = t['timestamp'] as DateTime? ?? t['timeStamp'] as DateTime?;
+      return ts != null && ts.isAfter(fourWeeksAgo);
     }).toList();
 
-    final recentKwhHistoryList = kwhHistory.where((r) {
-      final timestamp = r['timestamp'] as DateTime?;
-      return timestamp != null && timestamp.isAfter(fourWeeksAgo);
+    final recentKwh = kwhHistory.where((r) {
+      final ts = r['timestamp'] as DateTime?;
+      return ts != null && ts.isAfter(fourWeeksAgo);
     }).toList();
 
     double weeklyEarnings = 0.0;
     double weeklyDistance = 0.0;
-    int recentWeeks = 1; // Default to 1 week if no recent data
+    int recentWeeks = 1;
 
-    if (recentTransactionsList.isNotEmpty || recentKwhHistoryList.isNotEmpty) {
-      // Calculate average per week over last 4 weeks
+    if (recentList.isNotEmpty || recentKwh.isNotEmpty) {
       final weeksData = <int, List<Map<String, dynamic>>>{};
-      for (var transaction in recentTransactionsList) {
-        final timestamp = transaction['timestamp'] as DateTime? ??
+      for (final transaction in recentList) {
+        final ts = transaction['timestamp'] as DateTime? ??
             transaction['timeStamp'] as DateTime?;
-        if (timestamp == null) continue;
-
-        final weeksSince = now.difference(timestamp).inDays ~/ 7;
+        if (ts == null) continue;
+        final weeksSince = now.difference(ts).inDays ~/ 7;
         if (weeksSince < 4) {
-          if (!weeksData.containsKey(weeksSince)) {
-            weeksData[weeksSince] = [];
-          }
-          weeksData[weeksSince]!.add(transaction);
+          weeksData.putIfAbsent(weeksSince, () => []).add(transaction);
         }
       }
-
       recentWeeks = weeksData.isEmpty ? 1 : weeksData.length;
-
-      // Calculate weekly totals
-      for (var transaction in recentTransactionsList) {
+      for (final transaction in recentList) {
         final payout = (transaction['payout'] as num?)?.toDouble() ??
             (transaction['amount'] as num?)?.toDouble() ??
             0.0;
         weeklyEarnings += payout;
       }
-
-      // Calculate weekly distance from recent KWH history
-      for (var record in recentKwhHistoryList) {
-        final distance = (record['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
-        weeklyDistance += distance;
+      for (final record in recentKwh) {
+        weeklyDistance += (record['totalDistanceKm'] as num?)?.toDouble() ?? 0.0;
       }
     }
 
-    // Calculate average per session
-    final avgEarningsPerSession =
-        totalSessionsCount > 0 ? totalEarnings / totalSessionsCount : 0.0;
-    final avgEnergyPerSession =
-        totalSessionsCount > 0 ? totalEnergy / totalSessionsCount : 0.0;
-    final avgDistancePerSession =
-        totalSessionsCount > 0 ? totalDistance / totalSessionsCount : 0.0;
-
-    // Calculate weekly average (divide by number of weeks)
-    final weeklyAvgEarnings =
-        recentWeeks > 0 ? weeklyEarnings / recentWeeks : 0.0;
-    final weeklyAvgDistance =
+    totalSessions = sessionsCount;
+    daysWithActivity = daysCount;
+    totalEarnings = sumEarnings;
+    totalEnergyWh = sumEnergy;
+    totalDistanceKm = sumDistance;
+    totalDurationHours = sumDurationHours;
+    averageEarningsPerSession =
+        sessionsCount > 0 ? sumEarnings / sessionsCount : 0.0;
+    weeklyAverageEarnings = recentWeeks > 0 ? weeklyEarnings / recentWeeks : 0.0;
+    weeklyAverageDistance =
         recentWeeks > 0 ? weeklyDistance / recentWeeks : 0.0;
 
-    // Update model properties
-    totalSessions = totalSessionsCount;
-    daysWithActivity = daysWithActivityCount;
-    this.totalEarnings = totalEarnings;
-    totalEnergyWh = totalEnergy;
-    totalDistanceKm = totalDistance;
-    totalDurationHours = tempTotalDurationHours;
-    averageEarningsPerSession = avgEarningsPerSession;
-    averageEnergyPerSession = avgEnergyPerSession;
-    averageDistancePerSession = avgDistancePerSession;
-    weeklyAverageEarnings = weeklyAvgEarnings;
-    weeklyAverageDistance = weeklyAvgDistance;
-
-    // Set initial sessions per week based on activity
-    if (daysWithActivityCount > 0) {
-      sessionsPerWeek = (daysWithActivityCount / 7).ceil().clamp(1, 7);
+    if (daysCount > 0) {
+      sessionsPerWeek = (daysCount / 7).ceil().clamp(1, 7);
     }
-  }
-
-  /// Calculate monthly projections based on sessions per week
-  void calculateProjections() {
-    // Calculate monthly projection based on sessions per week
-    const weeksPerMonth = 4.33; // Average weeks per month
-    final sessionsPerMonth = sessionsPerWeek * weeksPerMonth;
-
-    projectedMonthlyEarnings = averageEarningsPerSession * sessionsPerMonth;
-    projectedMonthlyEnergy = averageEnergyPerSession * sessionsPerMonth;
-    projectedMonthlyDistance = averageDistancePerSession * sessionsPerMonth;
-
-    // Current monthly projection (based on weekly average)
-    currentMonthlyProjection = weeklyAverageEarnings * weeksPerMonth;
-  }
-
-  /// Calculate analytics data based on selected filter
-  /// Returns all data points for the period, including zeros for days/months/years with no data
-  List<Map<String, dynamic>> getAnalyticsData() {
-    final now = DateTime.now();
-    final aggregated = <DateTime, double>{};
-
-    // First, aggregate existing transaction data (even if empty, we'll still generate data points)
-    for (final transaction in recentTransactions) {
-      final timestamp = transaction['timestamp'] as DateTime? ??
-          transaction['timeStamp'] as DateTime?;
-      if (timestamp == null) continue;
-
-      final amount = (transaction['payout'] as num?)?.toDouble() ??
-          (transaction['amount'] as num?)?.toDouble() ??
-          0.0;
-
-      DateTime key;
-
-      switch (analyticsFilter) {
-        case 'past week':
-          // Group by day (date only, no time)
-          key = DateTime(timestamp.year, timestamp.month, timestamp.day);
-          break;
-        case 'past month':
-          // Group by day (date only, no time)
-          key = DateTime(timestamp.year, timestamp.month, timestamp.day);
-          break;
-        case 'past year':
-          // Group by month
-          key = DateTime(timestamp.year, timestamp.month);
-          break;
-        case 'all time':
-          // Group by year
-          key = DateTime(timestamp.year);
-          break;
-        default:
-          key = DateTime(timestamp.year, timestamp.month, timestamp.day);
-      }
-
-      aggregated[key] = (aggregated[key] ?? 0.0) + amount;
-    }
-
-    // Generate all data points for the selected period
-    List<Map<String, dynamic>> allDataPoints = [];
-
-    switch (analyticsFilter) {
-      case 'past week':
-        // Generate 7 days (today and 6 days before)
-        for (int i = 6; i >= 0; i--) {
-          final date = now.subtract(Duration(days: i));
-          final key = DateTime(date.year, date.month, date.day);
-          final amount = aggregated[key] ?? 0.0;
-          final label = DateFormat('EEE').format(date); // Day abbreviation (Mon, Tue, etc.)
-
-          allDataPoints.add({
-            'label': label,
-            'amount': amount,
-            'date': key,
-          });
-        }
-        break;
-
-      case 'past month':
-        // Generate last 30 days (past month)
-        for (int i = 29; i >= 0; i--) {
-          final date = now.subtract(Duration(days: i));
-          final key = DateTime(date.year, date.month, date.day);
-          final amount = aggregated[key] ?? 0.0;
-          // Show day number, but for better readability, show abbreviated format for some days
-          final label = i == 29 || i == 0 || i % 7 == 0
-              ? DateFormat('MMM d').format(date) // Show month and day for first, last, and weekly markers
-              : '${date.day}'; // Just day number for others
-
-          allDataPoints.add({
-            'label': label,
-            'amount': amount,
-            'date': key,
-          });
-        }
-        break;
-
-      case 'past year':
-        // Generate 12 months (current month and 11 months before)
-        for (int i = 11; i >= 0; i--) {
-          final date = DateTime(now.year, now.month - i, 1);
-          // Handle year rollover
-          final adjustedDate = date.month <= 0
-              ? DateTime(date.year - 1, date.month + 12, 1)
-              : date;
-          final key = DateTime(adjustedDate.year, adjustedDate.month);
-          final amount = aggregated[key] ?? 0.0;
-          final label = DateFormat('MMM').format(adjustedDate); // Month abbreviation
-
-          allDataPoints.add({
-            'label': label,
-            'amount': amount,
-            'date': key,
-          });
-        }
-        break;
-
-      case 'all time':
-        // Find first transaction year
-        int firstYear = now.year;
-        if (recentTransactions.isNotEmpty) {
-          for (final transaction in recentTransactions) {
-            final timestamp = transaction['timestamp'] as DateTime? ??
-                transaction['timeStamp'] as DateTime?;
-            if (timestamp != null && timestamp.year < firstYear) {
-              firstYear = timestamp.year;
-            }
-          }
-        }
-
-        // Generate all years from first year to current year
-        for (int year = firstYear; year <= now.year; year++) {
-          final key = DateTime(year);
-          final amount = aggregated[key] ?? 0.0;
-          final label = year.toString(); // Year as string
-
-          allDataPoints.add({
-            'label': label,
-            'amount': amount,
-            'date': key,
-          });
-        }
-        break;
-
-      default:
-        // Default to past week
-        for (int i = 6; i >= 0; i--) {
-          final date = now.subtract(Duration(days: i));
-          final key = DateTime(date.year, date.month, date.day);
-          final amount = aggregated[key] ?? 0.0;
-          final label = DateFormat('EEE').format(date);
-
-          allDataPoints.add({
-            'label': label,
-            'amount': amount,
-            'date': key,
-          });
-        }
-    }
-
-    // Sort by date ascending (oldest first for chart)
-    allDataPoints.sort((a, b) =>
-        (a['date'] as DateTime).compareTo(b['date'] as DateTime));
-
-    return allDataPoints;
-  }
-
-  /// Check if there's actual data (non-zero amounts) for the current filter period
-  bool hasDataForCurrentPeriod() {
-    final analyticsData = getAnalyticsData();
-    if (analyticsData.isEmpty) return false;
-    
-    // Check if any data point has a non-zero amount
-    return analyticsData.any((dataPoint) => (dataPoint['amount'] as double) > 0);
-  }
-
-  /// Check if there's activity in the past week
-  bool hasActivityInPastWeek() {
-    final now = DateTime.now();
-    final oneWeekAgo = now.subtract(const Duration(days: 7));
-    
-    return recentTransactions.any((transaction) {
-      final timestamp = transaction['timestamp'] as DateTime? ??
-          transaction['timeStamp'] as DateTime?;
-      return timestamp != null && timestamp.isAfter(oneWeekAgo);
-    });
-  }
-
-  /// Check if there's activity in the past month
-  bool hasActivityInPastMonth() {
-    final now = DateTime.now();
-    final oneMonthAgo = now.subtract(const Duration(days: 30));
-    
-    return recentTransactions.any((transaction) {
-      final timestamp = transaction['timestamp'] as DateTime? ??
-          transaction['timeStamp'] as DateTime?;
-      return timestamp != null && timestamp.isAfter(oneMonthAgo);
-    });
-  }
-
-  /// Get a descriptive message for when there's no data for the current period
-  String getNoDataMessage() {
-    switch (analyticsFilter) {
-      case 'past week':
-        return 'No earnings data for the past week. Start a session to see your earnings!';
-      case 'past month':
-        return 'No earnings data for the past month. Start a session to see your earnings!';
-      case 'past year':
-        return 'No earnings data for the past year. Start a session to see your earnings!';
-      case 'all time':
-        return 'No earnings data available. Start a session to see your earnings!';
-      default:
-        return 'No data available';
-    }
-  }
-
-  /// Helper: Get color/status for Motor Health Ring. Green > 75%, Orange > 30%, Red < 30%.
-  String getMotorHealthStatus() {
-    if (motorHealthPercent > 75) return 'Good';
-    if (motorHealthPercent > 30) return 'Fair';
-    return 'Critical - Check Brushes';
-  }
-
-  /// Helper: Get Efficiency Status (Hourly Wage). CBA optimal ~₱30–₱60 per session (~1 hr).
-  String getEfficiencyStatus() {
-    if (hourlyWage >= 30.0) return 'Optimal';
-    if (hourlyWage >= 15.0) return 'Moderate';
-    return 'Low Efficiency';
-  }
-
-  /// Helper function to calculate nice rounded numbers for Y-axis (statistical standard)
-  static double niceNumber(double range, bool round) {
-    if (range == 0) return 1.0;
-    final exponent = (math.log(range) / math.ln10).floor();
-    final powerOf10 = math.pow(10, exponent).toDouble();
-    final fraction = range / powerOf10;
-    double niceFraction;
-
-    if (round) {
-      if (fraction < 1.5) {
-        niceFraction = 1;
-      } else if (fraction < 3) {
-        niceFraction = 2;
-      } else if (fraction < 7) {
-        niceFraction = 5;
-      } else {
-        niceFraction = 10;
-      }
-    } else {
-      if (fraction <= 1) {
-        niceFraction = 1;
-      } else if (fraction <= 2) {
-        niceFraction = 2;
-      } else if (fraction <= 5) {
-        niceFraction = 5;
-      } else {
-        niceFraction = 10;
-      }
-    }
-
-    return niceFraction * powerOf10;
   }
 }

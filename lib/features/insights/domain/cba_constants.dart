@@ -13,6 +13,8 @@ class CBAConstants {
 
   // === CYCLIST CONSTANTS ===
   static const double cyclistCapex = 3792.00;
+  /// ROI percent at which investment is considered recovered (breakeven).
+  static const double cyclistRoiRecoveredPercent = 100.0;
   static const double cyclistYearlyMaint = 700.00;
   static const double cyclistDailyMaint = cyclistYearlyMaint / 365; // ~1.91
   static const int cyclistBreakevenMonths = 8;
@@ -25,4 +27,8 @@ class CBAConstants {
   // === ENERGY ===
   static const double batteryCapacityWh = 72.0;
   static const String batteryUnitLabel = '1 Unit (72Wh)';
+
+  // === SEMESTER DATES (configurable per semester) ===
+  static final DateTime semesterStart = DateTime(2025, 8, 18);
+  static final DateTime semesterEnd = DateTime(2026, 3, 27);
 }
