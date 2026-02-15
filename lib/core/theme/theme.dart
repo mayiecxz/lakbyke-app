@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/utils/colors.dart';
-import 'package:lakbyke_mobile/core/utils/dimensions.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
+import 'package:lakbyke_mobile/core/constants/dimensions.dart';
 
 /// Centralized theme configuration for the entire application.
 /// This ensures consistent styling across all screens and enables easy theme switching.

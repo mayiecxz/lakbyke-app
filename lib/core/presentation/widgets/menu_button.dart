@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/shared/widgets/sidebar.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/sidebar.dart';
 
 class MenuButton extends StatelessWidget {
   final double size;

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-import 'package:lakbyke_mobile/features/account/data/repositories/user_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/features/account/providers/account_providers.dart';
 
 enum OTPPurpose {
   changeEmail,
   changePassword,
 }
 
-class OTPVerificationDialog extends StatefulWidget {
+class OTPVerificationDialog extends ConsumerStatefulWidget {
   final String email;
   final OTPPurpose purpose;
   final String? newEmail;
@@ -20,16 +21,15 @@ class OTPVerificationDialog extends StatefulWidget {
   });
 
   @override
-  State<OTPVerificationDialog> createState() => _OTPVerificationDialogState();
+  ConsumerState<OTPVerificationDialog> createState() => _OTPVerificationDialogState();
 }
 
-class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
+class _OTPVerificationDialogState extends ConsumerState<OTPVerificationDialog> {
   final List<TextEditingController> _otpControllers = List.generate(
     6,
     (_) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
-  final UserRepository _userService = UserRepository();
   bool _isLoading = false;
   bool _isSending = false;
   bool _isResending = false;
@@ -70,10 +70,9 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
         if (widget.newEmail == null) {
           throw Exception('New email is required for email change');
         }
-        result = await _userService.sendEmailChangeOTP(widget.newEmail!);
+        result = await ref.read(userRepositoryProvider).sendEmailChangeOTP(widget.newEmail!);
       } else {
-        // For password changes, send OTP to email
-        result = await _userService.sendPasswordChangeOTP();
+        result = await ref.read(userRepositoryProvider).sendPasswordChangeOTP();
       }
 
       if (!mounted) return;
@@ -141,9 +140,9 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
         if (widget.newEmail == null) {
           throw Exception('New email is required for email change');
         }
-        result = await _userService.resendEmailChangeOTP(widget.newEmail!);
+        result = await ref.read(userRepositoryProvider).resendEmailChangeOTP(widget.newEmail!);
       } else {
-        result = await _userService.resendPasswordChangeOTP();
+        result = await ref.read(userRepositoryProvider).resendPasswordChangeOTP();
       }
 
       if (result['success']) {
@@ -216,7 +215,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog> {
           : 'changePassword';
 
       // Verify OTP using the user service
-      final verificationResult = await _userService.verifyOTP(
+      final verificationResult = await ref.read(userRepositoryProvider).verifyOTP(
         otpCode: otpCode,
         purpose: purpose,
       );

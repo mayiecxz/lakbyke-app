@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
-import 'package:lakbyke_mobile/shared/widgets/header.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
-import 'package:lakbyke_mobile/shared/widgets/energy_detail_modal.dart';
-import 'package:lakbyke_mobile/shared/widgets/index.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/energy_detail_modal.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 
 /// Detail screen showing individual energy records for a selected period.
 /// Reached when user taps a period (e.g. "January 2025") from KWH history.

@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_model.dart';
-import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
+import 'package:lakbyke_mobile/features/chatbot/providers/chatbot_providers.dart';
 import 'package:lakbyke_mobile/features/chatbot/data/services/chatbot_prompt_service.dart';
 import 'package:intl/intl.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/sheet_chat_bubble.dart';
 
 const _userBubbleColor = Color(0xFF0F8A8A);
-const _botBubbleColor = Color(0xFFE8F5F5);
 const _gradientStart = Color(0xFFE0F7FA);
 const _gradientEnd = Color(0xFFB2DFDB);
 const _inputBg = Color(0xFFF5F5F5);
-const _bubbleRadius = 18.0;
-const _avatarSize = 32.0;
 
 /// Chatbot bottom sheet: modern UI, app-help only, API key from env.
-class ChatbotBottomSheet extends StatefulWidget {
+class ChatbotBottomSheet extends ConsumerStatefulWidget {
   const ChatbotBottomSheet({super.key});
 
   static Future<void> show(BuildContext context) {
@@ -32,15 +31,14 @@ class ChatbotBottomSheet extends StatefulWidget {
   }
 
   @override
-  State<ChatbotBottomSheet> createState() => _ChatbotBottomSheetState();
+  ConsumerState<ChatbotBottomSheet> createState() => _ChatbotBottomSheetState();
 }
 
-class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
+class _ChatbotBottomSheetState extends ConsumerState<ChatbotBottomSheet> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
-  final ChatbotRepository _chatbotService = ChatbotRepository();
   GenerativeModel? _model;
 
   @override
@@ -69,7 +67,8 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
   }
 
   Future<void> _loadChatHistory() async {
-    final history = await _chatbotService.loadChatHistory();
+    final repo = ref.read(chatbotRepositoryProvider);
+    final history = await repo.loadChatHistory();
     if (!mounted) return;
     if (history.isEmpty) {
       _addMessage("Hi! I'm your LakByke support assistant. Ask about the app—Home, Maps, QR, History, Insights, or Account.", false);
@@ -93,7 +92,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
         );
       }
     });
-    _chatbotService.saveMessage(cleanedText, isUser, message.time);
+    ref.read(chatbotRepositoryProvider).saveMessage(cleanedText, isUser, message.time);
   }
 
   Future<void> _sendMessage() async {
@@ -244,7 +243,7 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
                             ),
                           ),
                         ),
-                      _SheetChatBubble(text: msg.text, isUser: msg.isUser, time: msg.time),
+                      SheetChatBubble(text: msg.text, isUser: msg.isUser, time: msg.time),
                     ],
                   );
                 },
@@ -318,86 +317,5 @@ class _ChatbotBottomSheetState extends State<ChatbotBottomSheet> {
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-}
-
-class _SheetChatBubble extends StatelessWidget {
-  final String text;
-  final bool isUser;
-  final DateTime time;
-
-  const _SheetChatBubble({required this.text, required this.isUser, required this.time});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isUser) _avatar(isUser),
-          if (!isUser) const SizedBox(width: 8),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isUser ? _userBubbleColor : _botBubbleColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(_bubbleRadius),
-                  topRight: const Radius.circular(_bubbleRadius),
-                  bottomLeft: Radius.circular(isUser ? _bubbleRadius : 6),
-                  bottomRight: Radius.circular(isUser ? 6 : _bubbleRadius),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    text,
-                    style: TextStyle(color: isUser ? Colors.white : Colors.black87, fontSize: 15, height: 1.35),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        DateFormat('HH:mm').format(time),
-                        style: TextStyle(fontSize: 11, color: isUser ? Colors.white70 : Colors.black54),
-                      ),
-                      if (isUser) ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.done_all, size: 14, color: Colors.white70),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isUser) const SizedBox(width: 8),
-          if (isUser) _avatar(isUser),
-        ],
-      ),
-    );
-  }
-
-  Widget _avatar(bool isUser) {
-    return CircleAvatar(
-      radius: _avatarSize / 2,
-      backgroundColor: isUser ? _userBubbleColor.withValues(alpha: 0.9) : _botBubbleColor,
-      child: Icon(
-        isUser ? Icons.person : Icons.smart_toy_rounded,
-        size: 18,
-        color: isUser ? Colors.white : _userBubbleColor,
-      ),
-    );
   }
 }

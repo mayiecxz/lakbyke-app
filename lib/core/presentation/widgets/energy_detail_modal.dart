@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:intl/intl.dart';
 
 /// Modal dialog showing detailed energy information for a specific period

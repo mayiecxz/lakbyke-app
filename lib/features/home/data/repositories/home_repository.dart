@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lakbyke_mobile/core/services/service_tag.dart';
+import 'package:lakbyke_mobile/core/data/service_tag.dart';
 import 'package:lakbyke_mobile/features/home/domain/models/home_data.dart';
 import 'package:lakbyke_mobile/features/history/data/repositories/transaction_repository.dart';
 import 'package:lakbyke_mobile/features/home/data/repositories/metrics_repository.dart';
@@ -24,17 +24,17 @@ class HomeRepository {
   HomeRepository({
     FirebaseDatabase? database,
     FirebaseAuth? auth,
-    TransactionRepository? transactionRepository,
-    MetricsRepository? metricsRepository,
+    required TransactionRepository transactionRepository,
+    required MetricsRepository metricsRepository,
   })  : _database = database ?? FirebaseDatabase.instance,
         _auth = auth ?? FirebaseAuth.instance,
-        _transactionRepository = transactionRepository ?? TransactionRepository(),
-        _metricsRepository = metricsRepository ?? MetricsRepository();
+        _transactionRepository = transactionRepository,
+        _metricsRepository = metricsRepository;
 
   /// Get current user ID
   String? get currentUserId => _auth.currentUser?.uid;
 
-  /// Get user's service tag (single source: core/services/service_tag.dart)
+  /// Get user's service tag (single source: core/data/service_tag.dart)
   Future<String?> getServiceTag() => getServiceTagFromFirebase(_auth, _database);
 
   /// Stream of home data - THIS IS THE SINGLE FIREBASE LISTENER

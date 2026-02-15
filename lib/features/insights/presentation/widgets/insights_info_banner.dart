@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:lakbyke_mobile/core/utils/dimensions.dart';
+import 'package:lakbyke_mobile/core/constants/dimensions.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
 
 /// Reusable info banner for insights cards (e.g. empty states). Uses [layout] for font scale and padding.

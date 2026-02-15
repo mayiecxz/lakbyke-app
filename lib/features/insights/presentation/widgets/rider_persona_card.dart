@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:lakbyke_mobile/core/utils/colors.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
-import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_shared_widgets.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_info_banner.dart';
 
 /// Section C: Rider persona (Early Bird / Peak Provider / Sunset Cruiser) and advice.
 class RiderPersonaCard extends StatelessWidget {

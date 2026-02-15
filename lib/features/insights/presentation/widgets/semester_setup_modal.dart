@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:lakbyke_mobile/core/utils/colors.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
 import 'package:lakbyke_mobile/features/insights/data/semester_config_storage.dart';
 import 'package:lakbyke_mobile/features/insights/domain/cba_constants.dart';
 import 'package:lakbyke_mobile/features/insights/providers/insights_providers.dart';

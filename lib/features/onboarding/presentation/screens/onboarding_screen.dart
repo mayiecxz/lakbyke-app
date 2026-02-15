@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/features/auth/presentation/screens/login/login_screen.dart';
 import 'package:lakbyke_mobile/features/auth/presentation/screens/signup/signup_qr_screen.dart';
-import 'package:lakbyke_mobile/shared/widgets/index.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 
 // ============================================================================
 // OnboardingScreen

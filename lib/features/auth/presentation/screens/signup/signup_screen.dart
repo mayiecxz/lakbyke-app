@@ -1,16 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/features/auth/data/services/auth_service.dart';
-import 'package:lakbyke_mobile/features/account/data/repositories/user_repository.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
+import 'package:lakbyke_mobile/features/account/providers/account_providers.dart';
+import 'package:lakbyke_mobile/features/account/data/repositories/user_repository.dart' show createUserInUserTable;
+import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
 // SignupScreen
 // ============================================================================
 
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({
     super.key,
     required this.serviceTag,
@@ -20,13 +22,13 @@ class SignupScreen extends StatefulWidget {
   final String serviceTag;
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
 /// Pattern: letters (A–Z, a–z), spaces, and dash (-) only.
 final RegExp _namePattern = RegExp(r'^[a-zA-Z\- ]*$');
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
@@ -88,7 +90,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       // 3. Create Firebase Auth user
-      final authService = AuthService();
+      final authService = ref.read(authServiceProvider);
       final cred = await authService.createUserWithEmailAndPassword(
         email: email,
         password: password,

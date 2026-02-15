@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lakbyke_mobile/core/utils/colors.dart';
-import 'package:lakbyke_mobile/core/utils/dimensions.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
+import 'package:lakbyke_mobile/core/constants/dimensions.dart';
 
 /// A custom service tag input widget with specific formatting: [3 digits] [space] [4 digits]
 /// Example: [M][N][T] [A][0][0][1]

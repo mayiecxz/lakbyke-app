@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
-import 'package:lakbyke_mobile/shared/widgets/header.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
-import 'package:lakbyke_mobile/shared/widgets/index.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 import 'package:intl/intl.dart';
 import 'package:lakbyke_mobile/features/history/presentation/screens/kwh_detail_screen.dart';
 

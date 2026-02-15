@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:lakbyke_mobile/shared/widgets/header.dart';
-import 'package:lakbyke_mobile/shared/widgets/screen_title.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/screen_title.dart';
 import 'package:lakbyke_mobile/features/insights/providers/insights_providers.dart';
-import 'package:lakbyke_mobile/core/utils/colors.dart';
-import 'package:lakbyke_mobile/core/utils/dimensions.dart';
-import 'package:lakbyke_mobile/shared/widgets/index.dart';
-import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_widgets.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
+import 'package:lakbyke_mobile/core/constants/dimensions.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/forecaster_card.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/investment_recovery_card.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/rider_persona_card.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/unit_health_card.dart';
 
 class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:lakbyke_mobile/core/utils/colors.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/insights/domain/cba_constants.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';

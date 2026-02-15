@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 
 /// Modal dialog showing detailed transaction information for a specific period
 class TransactionDetailModal extends StatelessWidget {

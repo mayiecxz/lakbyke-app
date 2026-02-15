@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 
 /// Welcome modal that displays yesterday's achievements with environmental benefits
 class WelcomeModal extends StatelessWidget {

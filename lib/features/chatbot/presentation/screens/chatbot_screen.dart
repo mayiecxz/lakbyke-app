@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_model.dart';
-import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
+import 'package:lakbyke_mobile/features/chatbot/providers/chatbot_providers.dart';
 import 'package:lakbyke_mobile/features/chatbot/data/services/chatbot_prompt_service.dart';
-import 'package:lakbyke_mobile/shared/widgets/header.dart' show Header, kHeaderContentTopPadding;
+import 'package:lakbyke_mobile/core/presentation/widgets/header.dart' show Header, kHeaderContentTopPadding;
 import 'package:intl/intl.dart';
 
 // Chat UI constants (modern, responsive)
@@ -16,19 +17,18 @@ const _inputBg = Color(0xFFF5F5F5);
 const _bubbleRadius = 18.0;
 const _avatarSize = 32.0;
 
-class ChatbotScreen extends StatefulWidget {
+class ChatbotScreen extends ConsumerStatefulWidget {
   const ChatbotScreen({super.key});
 
   @override
-  State<ChatbotScreen> createState() => _ChatbotScreenState();
+  ConsumerState<ChatbotScreen> createState() => _ChatbotScreenState();
 }
 
-class _ChatbotScreenState extends State<ChatbotScreen> {
+class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
-  final ChatbotRepository _chatbotService = ChatbotRepository();
   GenerativeModel? _model;
 
   @override
@@ -57,7 +57,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   Future<void> _loadChatHistory() async {
-    final history = await _chatbotService.loadChatHistory();
+    final repo = ref.read(chatbotRepositoryProvider);
+    final history = await repo.loadChatHistory();
     if (history.isEmpty) {
       _addMessage("Hi! I'm your LakByke support assistant. Ask about the app—Home, Maps, QR, History, Insights, or Account.", false);
     } else {
@@ -78,7 +79,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         );
       }
     });
-    _chatbotService.saveMessage(cleanedText, isUser, message.time);
+    ref.read(chatbotRepositoryProvider).saveMessage(cleanedText, isUser, message.time);
   }
 
   Future<void> _sendMessage() async {

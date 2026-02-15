@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/shared/widgets/chatbot_bottom_sheet.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/chatbot_bottom_sheet.dart';
 
 /// Floating Action Button for accessing the chatbot assistant.
 /// Follows Material Design guidelines for chat FABs.

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
-import 'package:lakbyke_mobile/shared/widgets/index.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 import 'package:lakbyke_mobile/features/home/presentation/screens/welcome_modal.dart';
-import 'package:lakbyke_mobile/shared/widgets/header.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/home/providers/home_providers.dart';
 import 'package:lakbyke_mobile/features/home/domain/models/home_data.dart';
-import 'package:lakbyke_mobile/shared/navigation/main_navigation.dart';
+import 'package:lakbyke_mobile/core/navigation/main_navigation.dart';
+import 'package:lakbyke_mobile/features/home/presentation/components/battery_cost_widget.dart';
+import 'package:lakbyke_mobile/features/home/presentation/components/metric_item.dart';
+import 'package:lakbyke_mobile/features/home/presentation/components/action_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -171,8 +174,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  static const double _batteryChargeRatePer100Percent = 30.0; // ₱30 flat per 100% charge
-
   Widget _buildBatteryStatus(HomeData? homeData) {
     final batteryLevel = homeData?.mountBatteryPercentage;
     final bool hasBatteryData = batteryLevel != null;
@@ -229,7 +230,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
         SizedBox(width: spacing),
-        _BatteryCostWidget(
+        BatteryCostWidget(
           batteryPercent: batteryPercent,
           onTap: () => _showBatteryCostModal(context, batteryPercent),
         ),
@@ -239,7 +240,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _showBatteryCostModal(BuildContext context, int? batteryPercent) {
     final hasData = batteryPercent != null;
-    final cost = hasData ? (batteryPercent / 100.0) * _batteryChargeRatePer100Percent : 0.0;
+    final cost = hasData ? (batteryPercent / 100.0) * BatteryCostWidget.ratePer100 : 0.0;
 
     showDialog(
       context: context,
@@ -292,7 +293,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Battery % × ₱${_batteryChargeRatePer100Percent.toStringAsFixed(0)}.00 per 100% charge',
+                      'Battery % × ₱${BatteryCostWidget.ratePer100.toStringAsFixed(0)}.00 per 100% charge',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 12),
@@ -349,20 +350,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _MetricItem(
+          MetricItem(
             icon: Icons.directions_bike,
             value: homeData == null ? null : (distance.abs() >= 1000 ? '${formatCompactNumber(distance, 1)}km' : '${distance.toStringAsFixed(1)}km'),
             label: 'Distance',
             subtitle: 'Today',
           ),
-          _MetricItem(
+          MetricItem(
             icon: Icons.flash_on,
             value: homeData == null ? null : '${effort.toInt()}W',
             label: 'Effort',
             subtitle: isStale ? 'Stale' : 'Live',
             isLive: !isStale,
           ),
-          _MetricItem(
+          MetricItem(
             icon: Icons.check_box,
             value: homeData == null ? null : (generated >= 1000000 ? '${formatCompactNumber(generated / 1000)} kWh' : formatEnergy(generated)),
             label: 'Generated',
@@ -418,7 +419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _ActionButton(
+              ActionButton(
                 icon: Icons.flash_on,
                 title: 'Total Generated',
                 value: homeData == null ? null : (totalGenerated >= 1000000 ? '${formatCompactNumber(totalGenerated / 1000)} kWh' : formatEnergy(totalGenerated)),
@@ -426,7 +427,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 width: buttonWidth,
                 onViewHistory: () => MainNavigation.navigateToHistoryFromContext(context, initialTabIndex: 0),
               ),
-              _ActionButton(
+              ActionButton(
                 icon: Icons.account_balance_wallet,
                 title: 'Total Redeems',
                 value: homeData == null ? null : formatCompactCurrency(totalRedeems),
@@ -438,7 +439,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _ActionButton(
+          ActionButton(
             icon: Icons.battery_charging_full,
             title: homeData == null ? null : '${batteriesExchanged >= 1000 ? formatCompactNumber(batteriesExchanged, 0) : batteriesExchanged} Batteries Exchanged',
             value: '',
@@ -452,289 +453,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// --- Helper Widgets for Reusability ---
-
-class _BatteryCostWidget extends StatelessWidget {
-  final int? batteryPercent;
-  final VoidCallback onTap;
-
-  const _BatteryCostWidget({required this.batteryPercent, required this.onTap});
-
-  static const double _ratePer100 = 30.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final hasData = batteryPercent != null;
-    final cost = hasData ? (batteryPercent! / 100.0) * _ratePer100 : 0.0;
-    final width = (w * 0.22).clamp(80.0, 110.0);
-    final paddingH = (w * 0.025).clamp(8.0, 12.0);
-    final paddingV = (w * 0.03).clamp(10.0, 14.0);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: width, minHeight: 48),
-          child: Container(
-            width: width,
-            padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
-            decoration: BoxDecoration(
-              color: AppColors.homeAccent.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.homePrimary.withOpacity(0.4)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(Icons.monetization_on, color: AppColors.homePrimary, size: (w * 0.055).clamp(18.0, 24.0)),
-                SizedBox(height: (w * 0.01).clamp(2.0, 6.0)),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    hasData ? '₱${cost.toStringAsFixed(0)}' : '—',
-                    style: TextStyle(
-                      fontSize: hasData ? 18 : 14,
-                      fontWeight: FontWeight.bold,
-                      color: hasData ? AppColors.darkText : Colors.grey,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Value',
-                  style: TextStyle(
-                    fontSize: (w * 0.028).clamp(10.0, 12.0),
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Widget for the 3 Metric Items (Distance, Effort, Generated)
-class _MetricItem extends StatelessWidget {
-  final IconData icon;
-  final String? value;
-  final String label;
-  final String? subtitle;
-  final bool isLive;
-
-  const _MetricItem({
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.subtitle,
-    this.isLive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ResponsiveIcon(
-          icon: icon,
-          maxSizePercent: 0.06,
-          color: AppColors.homeAccent,
-          minSize: 20.0,
-        ),
-        const SizedBox(height: 5),
-        value != null
-            ? Text(
-                value!,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
-                ),
-              )
-            : const AppLoadingSpinner(size: AppSpinnerSize.small),
-        const SizedBox(height: 2),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isLive ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isLive ? Colors.green : Colors.grey,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isLive)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: isLive ? Colors.green.shade700 : Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// Widget for the main Action Buttons (Total Generated, Redeems, Exchanged)
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String? title;
-  final String? value;
-  final Color color;
-  final double width;
-  final bool isCurrency;
-  final bool isFullWidth;
-  final VoidCallback? onViewHistory;
-
-  const _ActionButton({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.color,
-    required this.width,
-    this.isCurrency = false,
-    this.isFullWidth = false,
-    this.onViewHistory,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onViewHistory,
-        borderRadius: BorderRadius.circular(AppDimensions.homeActionButtonRadius),
-        child: Container(
-          width: width,
-          padding: const EdgeInsets.all(AppDimensions.homeActionButtonPadding),
-          decoration: BoxDecoration(
-            color: const Color(0xFF317263),
-            borderRadius: BorderRadius.circular(AppDimensions.homeActionButtonRadius),
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: isFullWidth ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-            children: [
-              if (!isFullWidth)
-                Column(
-                  children: [
-                    Icon(icon, color: Colors.white, size: 40.0),
-                    const SizedBox(height: 8),
-                    title != null
-                        ? Text(
-                            title!,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
-                            ),
-                            textAlign: TextAlign.center,
-                          )
-                        : const AppLoadingSpinner(size: AppSpinnerSize.small, color: Colors.white),
-                  ],
-                ),
-              if (isFullWidth)
-                Row(
-                  children: [
-                    Icon(icon, color: Colors.white, size: 32.0),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: title != null
-                          ? Text(
-                              title!,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Center(child: AppLoadingSpinner(size: AppSpinnerSize.small, color: Colors.white)),
-                    ),
-                  ],
-                ),
-              if (value != null && value!.isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 10),
-                    Text(
-                      value!,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: onViewHistory,
-                      child: Text(
-                        'View History',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.7),
-                          decoration: onViewHistory != null ? TextDecoration.underline : null,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                )
-              else if (!isFullWidth && value == null)
-                const Padding(
-                  padding: EdgeInsets.only(top: 10),
-                  child: AppLoadingSpinner(size: AppSpinnerSize.small, color: Colors.white),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

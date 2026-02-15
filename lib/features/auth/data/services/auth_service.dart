@@ -21,11 +21,12 @@ class GoogleSignInFailure extends GoogleSignInResult {
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final ChatbotRepository? _chatbotRepository;
   late final GoogleSignIn _googleSignIn;
   StreamSubscription<User?>? _authStateSubscription;
   User? _previousUser; // Track previous user state
 
-  AuthService() {
+  AuthService({ChatbotRepository? chatbotRepository}) : _chatbotRepository = chatbotRepository {
     // Initialize GoogleSignIn with the appropriate client ID based on platform.
     // For Android: serverClientId (web client ID) is required so Firebase gets an idToken.
     // Ensure Android app SHA-1 (debug + release) is added in Firebase Console >
@@ -151,7 +152,7 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      final chatbotService = ChatbotRepository();
+      final chatbotService = _chatbotRepository ?? ChatbotRepository();
       await chatbotService.deleteChatHistory();
       await _auth.signOut();
       // Only sign out from google_sign_in on mobile platforms
@@ -185,7 +186,7 @@ class AuthService {
   // Handle session end
   Future<void> _handleSessionEnd() async {
     try {
-      final chatbotService = ChatbotRepository();
+      final chatbotService = _chatbotRepository ?? ChatbotRepository();
       final userId = _previousUser?.uid;
       if (userId != null) {
         await chatbotService.deleteChatHistoryForUser(userId);

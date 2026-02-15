@@ -1,6 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lakbyke_mobile/core/services/service_tag.dart';
+import 'package:lakbyke_mobile/core/data/service_tag.dart';
 
 /// Repository for device energy metrics (today/yesterday totals).
 /// Extracted from HomeRepository so each responsibility has its own class.

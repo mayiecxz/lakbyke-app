@@ -4,7 +4,7 @@ import 'package:lakbyke_mobile/config/secrets_loader.dart';
 import 'package:lakbyke_mobile/core/theme/theme.dart';
 import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
-import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
+import 'package:lakbyke_mobile/features/chatbot/providers/chatbot_providers.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -34,10 +34,9 @@ class _MyAppState extends ConsumerState<MyApp> {
     Future.microtask(() {
       ref.listenManual(authStateProvider, (previous, next) {
         next.whenData((user) async {
-          // If previous user was logged in and current is null, session ended
           if (_previousUserId != null && user == null) {
-            final chatbotService = ChatbotRepository();
-            await chatbotService.deleteChatHistoryForUser(_previousUserId!);
+            final chatbotRepo = ref.read(chatbotRepositoryProvider);
+            await chatbotRepo.deleteChatHistoryForUser(_previousUserId!);
           }
           _previousUserId = user?.uid;
         });

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:lakbyke_mobile/core/utils/colors.dart';
-import 'package:lakbyke_mobile/core/utils/formatting.dart';
+import 'package:lakbyke_mobile/core/constants/colors.dart';
+import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 
 /// Dialog that shows how investment recovery is computed.

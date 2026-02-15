@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-import 'package:lakbyke_mobile/shared/navigation/main_navigation.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/navigation/main_navigation.dart';
 import 'package:lakbyke_mobile/features/auth/presentation/screens/signup/signup_qr_screen.dart';
 import 'package:lakbyke_mobile/features/auth/data/repositories/auth_repository.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';

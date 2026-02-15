@@ -1,55 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/utils/constants.dart';
-// assets are re-exported from `constants.dart`; avoid duplicate import
-import 'package:lakbyke_mobile/shared/widgets/index.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/responsive_image.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/validation_dialog.dart';
+import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
 import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
-import 'package:lakbyke_mobile/shared/navigation/main_navigation.dart';
+import 'package:lakbyke_mobile/core/navigation/main_navigation.dart';
 import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:lakbyke_mobile/shared/widgets/validation_dialog.dart';
-import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
 
-class Sidebar extends StatelessWidget {
-  const Sidebar({super.key});
+/// Inner panel of the sidebar: logo, close button, and menu items.
+class SidebarPanel extends ConsumerWidget {
+  const SidebarPanel({super.key});
 
-  static Future<T?> show<T>(BuildContext context) {
-    return showGeneralDialog<T>(
-      context: context,
-      pageBuilder: (context, animation, secondaryAnimation) => const SizedBox.shrink(),
-      barrierDismissible: true,
-      barrierLabel: 'Sidebar',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 250),
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = Curves.easeOut.transform(animation.value);
-        return Stack(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: MediaQuery.of(context).orientation == Orientation.portrait ? 0.6 : 0.3,
-                child: Transform.translate(
-                  offset: Offset(-30 * (1 - curved), 0),
-                  child: Opacity(
-                    opacity: curved,
-                    child: const _SidebarPanel(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
-}
-
-class _SidebarPanel extends StatelessWidget {
-  const _SidebarPanel();
-
-  Widget _menuItem(BuildContext context, IconData icon, String label, {VoidCallback? onTap}) {
+  static Widget menuItem(BuildContext context, IconData icon, String label, {VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap ?? () => Navigator.of(context).pop(),
       child: Padding(
@@ -69,7 +32,7 @@ class _SidebarPanel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -85,8 +48,8 @@ class _SidebarPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.black,
                   boxShadow: [
-BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.6),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
                       blurRadius: 10,
                       offset: const Offset(2, 0),
                     ),
@@ -123,20 +86,19 @@ BoxShadow(
                     ),
                     const SizedBox(height: 8),
                     const Divider(color: Colors.white12, thickness: 1, height: 1),
-                    _menuItem(context, Icons.directions_bike, AppStrings.home, onTap: () {
+                    menuItem(context, Icons.directions_bike, AppStrings.home, onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
-                      // Navigate to MainNavigation with home index (0)
                       navigator.pushReplacement(
                         MaterialPageRoute(builder: (_) => const MainNavigation(initialIndex: 0)),
                       );
                     }),
                     const Divider(color: Colors.white12, height: 1),
-                    _menuItem(context, Icons.info_outline, 'About', onTap: () {
+                    menuItem(context, Icons.info_outline, 'About', onTap: () {
                       Navigator.of(context).pop();
                     }),
                     const Divider(color: Colors.white12, height: 1),
-                    _menuItem(context, Icons.help_outline, 'Need help?', onTap: () {
+                    menuItem(context, Icons.help_outline, 'Need help?', onTap: () {
                       final navigator = Navigator.of(context);
                       navigator.pop();
                       navigator.push(
@@ -144,13 +106,12 @@ BoxShadow(
                       );
                     }),
                     const Divider(color: Colors.white12, height: 1),
-                    _menuItem(context, Icons.logout, 'Logout', onTap: () {
+                    menuItem(context, Icons.logout, 'Logout', onTap: () {
                       final navigator = Navigator.of(context);
-                      // Close sidebar first then show confirmation dialog
                       navigator.pop();
-                      // Delay slightly so the sidebar closing animation finishes
                       Future.delayed(const Duration(milliseconds: 200), () {
                         if (!navigator.mounted) return;
+                        final authService = ref.read(authServiceProvider);
                         ValidationDialog.show(
                           navigator.context,
                           title: 'Confirm Logout',
@@ -158,15 +119,13 @@ BoxShadow(
                           confirmLabel: 'Logout',
                           cancelLabel: 'Cancel',
                           onConfirm: () async {
-                            // Delete chat history before logout
-                            final chatbotService = ChatbotRepository();
-                            await chatbotService.deleteChatHistory();
-                            
-                            // After confirmation navigate to Onboarding and remove previous routes
-                            navigator.pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-                              (route) => false,
-                            );
+                            await authService.signOut();
+                            if (navigator.mounted) {
+                              navigator.pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                                (route) => false,
+                              );
+                            }
                           },
                         );
                       });
