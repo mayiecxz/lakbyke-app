@@ -4,11 +4,13 @@ import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 import 'package:lakbyke_mobile/features/home/presentation/screens/welcome_modal.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/home/providers/home_providers.dart';
 import 'package:lakbyke_mobile/features/home/domain/models/home_data.dart';
-import 'package:lakbyke_mobile/core/navigation/main_navigation.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
+import 'package:lakbyke_mobile/app/presentation/shell_routes.dart';
 import 'package:lakbyke_mobile/features/home/presentation/components/battery_cost_widget.dart';
+import 'package:lakbyke_mobile/features/home/presentation/components/battery_level_icon.dart';
 import 'package:lakbyke_mobile/features/home/presentation/components/metric_item.dart';
 import 'package:lakbyke_mobile/features/home/presentation/components/action_button.dart';
 
@@ -179,7 +181,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final bool hasBatteryData = batteryLevel != null;
     final int? batteryPercent = batteryLevel?.toInt();
     final w = MediaQuery.of(context).size.width;
-    final spacing = (w * 0.04).clamp(8.0, 15.0);
+    final spacing = (w * 0.03).clamp(6.0, 14.0);
+    final iconSize = (w * 0.14).clamp(40.0, 56.0);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -188,43 +191,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ResponsiveIcon(
-                icon: hasBatteryData ? Icons.battery_full : Icons.battery_unknown,
-                maxSizePercent: 0.12,
-                color: AppColors.homePrimary,
-                minSize: 40.0,
-              ),
+              hasBatteryData
+                  ? BatteryLevelIcon(
+                      percentage: batteryPercent,
+                      size: iconSize,
+                    )
+                  : Icon(
+                      Icons.battery_unknown,
+                      size: iconSize,
+                      color: AppColors.homePrimary.withValues(alpha: 0.5),
+                    ),
               SizedBox(width: spacing),
               Flexible(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Battery',
-                      style: TextStyle(fontSize: (w * 0.048).clamp(16.0, 20.0), color: AppColors.darkText),
-                    ),
-                    homeData == null
-                        ? const SizedBox(
-                            height: 48,
-                            child: Center(child: AppLoadingSpinner(size: AppSpinnerSize.small)),
-                          )
-                        : FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              batteryPercent != null ? '$batteryPercent%' : 'No battery detected',
-                              style: TextStyle(
-                                fontSize: batteryPercent != null ? 48 : 16,
-                                fontWeight: FontWeight.bold,
-                                color: batteryPercent != null
-                                    ? AppColors.darkText.withOpacity(0.8)
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
+                child: homeData == null
+                    ? const SizedBox(
+                        height: 48,
+                        child: Center(child: AppLoadingSpinner(size: AppSpinnerSize.small)),
+                      )
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          batteryPercent != null ? '$batteryPercent%' : 'No battery detected',
+                          style: TextStyle(
+                            fontSize: batteryPercent != null ? 48 : 16,
+                            fontWeight: FontWeight.bold,
+                            color: batteryPercent != null
+                                ? AppColors.darkText.withOpacity(0.8)
+                                : AppColors.textSecondary,
                           ),
-                  ],
-                ),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -240,7 +237,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _showBatteryCostModal(BuildContext context, int? batteryPercent) {
     final hasData = batteryPercent != null;
-    final cost = hasData ? (batteryPercent / 100.0) * BatteryCostWidget.ratePer100 : 0.0;
+    final rawCost = hasData ? (batteryPercent / 100.0) * BatteryCostWidget.ratePer100 : 0.0;
+    final cost = hasData ? roundDownToMultipleOf5(rawCost).toDouble() : 0.0;
 
     showDialog(
       context: context,
@@ -293,7 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Battery % × ₱${BatteryCostWidget.ratePer100.toStringAsFixed(0)}.00 per 100% charge',
+                      'Battery % × ₱${BatteryCostWidget.ratePer100.toStringAsFixed(0)}.00 per 100% charge, then rounded down to nearest ₱5',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 12),
@@ -313,8 +311,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      hasData ? '₱${cost.toStringAsFixed(2)}' : '—',
+                      hasData ? '₱${cost.toInt()}' : '—',
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF317263)),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Payout policy',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Payouts are issued in multiples of ₱5 only. Amounts shown are rounded down to the nearest ₱5 to reflect this limit.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.35),
                     ),
                   ],
                 ),
@@ -425,16 +433,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 value: homeData == null ? null : (totalGenerated >= 1000000 ? '${formatCompactNumber(totalGenerated / 1000)} kWh' : formatEnergy(totalGenerated)),
                 color: AppColors.homePrimary,
                 width: buttonWidth,
-                onViewHistory: () => MainNavigation.navigateToHistoryFromContext(context, initialTabIndex: 0),
+                onViewHistory: () {
+                  ref.read(shellNavigatorKeyProvider)?.currentState?.popUntil(
+                    (route) => route.settings.name == ShellRoutes.dashboard,
+                  );
+                  ref.read(appRouterControllerProvider.notifier).navigateToHistoryFromDashboard(initialTabIndex: 0);
+                },
               ),
               ActionButton(
                 icon: Icons.account_balance_wallet,
                 title: 'Total Redeems',
-                value: homeData == null ? null : formatCompactCurrency(totalRedeems),
+                value: homeData == null ? null : formatCompactCurrency(roundDownToMultipleOf5(totalRedeems)),
                 color: AppColors.homePrimary,
                 width: buttonWidth,
                 isCurrency: true,
-                onViewHistory: () => MainNavigation.navigateToHistoryFromContext(context, initialTabIndex: 1),
+                onViewHistory: () {
+                  ref.read(shellNavigatorKeyProvider)?.currentState?.popUntil(
+                    (route) => route.settings.name == ShellRoutes.dashboard,
+                  );
+                  ref.read(appRouterControllerProvider.notifier).navigateToHistoryFromDashboard(initialTabIndex: 1);
+                },
               ),
             ],
           ),

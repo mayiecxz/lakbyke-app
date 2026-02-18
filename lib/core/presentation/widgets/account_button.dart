@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
-import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
-import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
+import 'package:lakbyke_mobile/app/presentation/shell_routes.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/features/account/presentation/screens/account_settings_screen.dart';
+import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/account_menu_item.dart';
 
 /// Account icon button in the header that opens a popup menu (settings, help, logout).
@@ -64,26 +66,28 @@ class _AccountButtonState extends ConsumerState<AccountButton> with SingleTicker
             isDestructive: false,
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AccountSettingsScreen(),
+              ref.read(shellNavigatorKeyProvider)?.currentState?.push(
+                buildShellPageRoute(
+                  const AccountSettingsScreen(),
+                  settings: const RouteSettings(name: ShellRoutes.account),
                 ),
               );
             },
           ),
         ),
         PopupMenuItem<String>(
-          value: 'need_help',
+          value: 'chatbot',
           child: AccountMenuItem(
-            icon: Icons.help_outline,
-            title: 'Need help?',
+            icon: Icons.chat_outlined,
+            title: 'Chatbot',
             isDestructive: false,
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+              ref.read(shellNavigatorKeyProvider)?.currentState?.push(
+                buildChatbotPageRoute(
+                  const ChatbotScreen(),
+                  settings: const RouteSettings(name: ShellRoutes.chatbot),
+                ),
               );
             },
           ),
@@ -119,10 +123,7 @@ class _AccountButtonState extends ConsumerState<AccountButton> with SingleTicker
         try {
           await authService.signOut();
           if (navigator.mounted) {
-            navigator.pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-              (route) => false,
-            );
+            ref.read(appRouterControllerProvider.notifier).goToOnboarding();
           }
         } catch (e) {
           if (navigator.mounted) {

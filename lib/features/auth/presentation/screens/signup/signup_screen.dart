@@ -15,10 +15,14 @@ class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({
     super.key,
     required this.serviceTag,
+    this.onBack,
   });
 
   /// Service tag from verified unit registration (after QR token verification).
   final String serviceTag;
+
+  /// When set, used for back button instead of Navigator.pop (e.g. when used inside app shell).
+  final VoidCallback? onBack;
 
   @override
   ConsumerState<SignupScreen> createState() => _SignupScreenState();
@@ -258,7 +262,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => widget.onBack != null ? widget.onBack!() : Navigator.pop(context),
         ),
         title: Text(
           'Service Tag: ${widget.serviceTag}',

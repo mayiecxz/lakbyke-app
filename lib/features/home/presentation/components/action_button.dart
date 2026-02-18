@@ -109,8 +109,7 @@ class ActionButton extends StatelessWidget {
                         'View History',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          decoration: onViewHistory != null ? TextDecoration.underline : null,
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                         textAlign: TextAlign.center,
                       ),

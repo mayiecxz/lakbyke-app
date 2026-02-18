@@ -5,7 +5,8 @@ import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_model.dart';
 import 'package:lakbyke_mobile/features/chatbot/providers/chatbot_providers.dart';
 import 'package:lakbyke_mobile/features/chatbot/data/services/chatbot_prompt_service.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart' show Header, kHeaderContentTopPadding;
+import 'package:lakbyke_mobile/core/presentation/widgets/header.dart' show kHeaderContentTopPadding;
+import 'package:lakbyke_mobile/core/presentation/widgets/header_with_back.dart';
 import 'package:intl/intl.dart';
 
 // Chat UI constants (modern, responsive)
@@ -257,7 +258,7 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                 ),
               ),
             ),
-            const Header(),
+            const HeaderWithBack(title: 'Chatbot'),
           ],
         ),
       ),

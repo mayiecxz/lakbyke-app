@@ -1,3 +1,4 @@
+export 'animated_screen_switcher.dart';
 export 'responsive_logo.dart';
 export 'responsive_icon.dart';
 export 'responsive_image.dart';

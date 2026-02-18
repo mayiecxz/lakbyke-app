@@ -5,271 +5,218 @@ import 'package:lakbyke_mobile/features/qr/presentation/screens/qr_scanner_scree
 import 'package:lakbyke_mobile/features/insights/presentation/screens/insights_screen.dart';
 import 'package:lakbyke_mobile/features/history/presentation/screens/combined_history_screen.dart';
 
-class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key, this.initialIndex = 0});
+/// Tab bar + FAB shell. State is driven by [initialIndex] and [initialHistoryTabIndex];
+/// [onTabTapped] and [onHistoryTabChanged] must be called to update external state.
+class MainNavigation extends StatelessWidget {
+  const MainNavigation({
+    super.key,
+    required this.initialIndex,
+    required this.initialHistoryTabIndex,
+    required this.onTabTapped,
+    required this.onHistoryTabChanged,
+    this.slideDirection = 0.0,
+  });
 
   final int initialIndex;
+  final int initialHistoryTabIndex;
+  final ValueChanged<int> onTabTapped;
+  final ValueChanged<int> onHistoryTabChanged;
+  final double slideDirection;
+
+  static const int historyMainIndex = 4;
+  static const int historyTabCount = 2;
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
-
-  // Static method to find and navigate from child widgets
-  static void navigateToHistoryFromContext(BuildContext context, {int initialTabIndex = 0}) {
-    final state = context.findAncestorStateOfType<_MainNavigationState>();
-    state?.navigateToHistory(initialTabIndex: initialTabIndex);
+  Widget build(BuildContext context) {
+    return _MainNavigationContent(
+      initialIndex: initialIndex,
+      initialHistoryTabIndex: initialHistoryTabIndex,
+      slideDirection: slideDirection,
+      onTabTapped: onTabTapped,
+      onHistoryTabChanged: onHistoryTabChanged,
+    );
   }
 }
 
-class _MainNavigationState extends State<MainNavigation> {
-  late int _currentIndex;
-  double _slideDirection = 0.0; // Track slide direction for animations
+class _MainNavigationContent extends StatelessWidget {
+  const _MainNavigationContent({
+    required this.initialIndex,
+    required this.initialHistoryTabIndex,
+    required this.slideDirection,
+    required this.onTabTapped,
+    required this.onHistoryTabChanged,
+  });
 
-  @override
-  void initState() {
-    super.initState();
-    _currentIndex = widget.initialIndex;
-  }
+  final int initialIndex;
+  final int initialHistoryTabIndex;
+  final double slideDirection;
+  final ValueChanged<int> onTabTapped;
+  final ValueChanged<int> onHistoryTabChanged;
 
-  // Store history tab index to pass to CombinedHistoryScreen
-  int _historyInitialTabIndex = 0;
-  
-  // Screens: QR scanner and Maps receive isActive so permission/usage only when tab is selected
-  List<Widget> get _screens => [
+  static const Color _activeColor = Color(0xFF317263);
+  static const Color _accentColor = Color(0xFF70D2C8);
+
+  List<Widget> _screens(int currentIndex) => [
     const HomeScreen(),
-    MapsScreen(isActive: _currentIndex == 1),
-    QrScannerScreen(isActive: _currentIndex == 2),
+    MapsScreen(isActive: currentIndex == 1),
+    QrScannerScreen(isActive: currentIndex == 2),
     const InsightsScreen(),
-    CombinedHistoryScreen(initialTabIndex: _historyInitialTabIndex),
+    CombinedHistoryScreen(
+      initialTabIndex: initialHistoryTabIndex,
+      onTabChanged: onHistoryTabChanged,
+    ),
   ];
 
-  void _onTabTapped(int index) {
-    if (_currentIndex != index) {
-      // Calculate slide direction before updating state
-      _slideDirection = index > _currentIndex ? 1.0 : -1.0;
-      setState(() {
-        _currentIndex = index;
-      });
+  void _onSwipeLeft() {
+    if (initialIndex == MainNavigation.historyMainIndex) {
+      if (initialHistoryTabIndex < MainNavigation.historyTabCount - 1) {
+        onHistoryTabChanged(initialHistoryTabIndex + 1);
+      }
+    } else if (initialIndex < 4) {
+      onTabTapped(initialIndex + 1);
     }
   }
 
-  // Method to navigate to history with specific tab index
-  void navigateToHistory({int initialTabIndex = 0}) {
-    _historyInitialTabIndex = initialTabIndex;
-    _onTabTapped(4); // History is at index 4
+  void _onSwipeRight() {
+    if (initialIndex == MainNavigation.historyMainIndex) {
+      if (initialHistoryTabIndex > 0) {
+        onHistoryTabChanged(initialHistoryTabIndex - 1);
+      } else {
+        onTabTapped(initialIndex - 1);
+      }
+    } else if (initialIndex > 0) {
+      onTabTapped(initialIndex - 1);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 150), // Reduced from 300ms
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        transitionBuilder: (child, animation) {
-          // Simplified slide transition - faster
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: Offset(_slideDirection, 0),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          );
+      extendBody: true,
+      body: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          final velocity = details.primaryVelocity ?? 0;
+          const threshold = 40.0;
+          if (velocity < -threshold) _onSwipeLeft();
+          else if (velocity > threshold) _onSwipeRight();
         },
-        child: IndexedStack(
-          key: ValueKey<int>(_currentIndex),
-          index: _currentIndex,
-          children: _screens,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(slideDirection * 0.2, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            );
+          },
+          child: IndexedStack(
+            key: ValueKey<int>(initialIndex),
+            index: initialIndex,
+            children: _screens(initialIndex),
+          ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      floatingActionButton: SizedBox(
+        height: 70,
+        width: 70,
+        child: FloatingActionButton(
+          onPressed: () => onTabTapped(2),
+          elevation: 4,
+          backgroundColor: initialIndex == 2 ? _accentColor : Colors.black,
+          shape: CircleBorder(
+            side: BorderSide(
+              color: _accentColor,
+              width: initialIndex == 2 ? 4 : 2,
+            ),
+          ),
+          child: Icon(
+            Icons.qr_code_scanner,
+            size: 32,
+            color: initialIndex == 2 ? Colors.black : _accentColor,
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: _buildModernNavBar(),
     );
   }
 
-  Widget _buildBottomNavBar() {
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
-    final bottomPadding = mediaQuery.padding.bottom;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Container(
-        padding: EdgeInsets.only(
-          left: screenWidth * 0.01,
-          right: screenWidth * 0.01,
-          top: screenHeight * 0.008,
-          bottom: bottomPadding > 0 ? bottomPadding : 1, // Align to bottom, prevent overflow
-        ),
-        constraints: BoxConstraints(
-          minHeight: 84,
-        ),
+  Widget _buildModernNavBar() {
+    return BottomAppBar(
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 10.0,
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 10,
+      shadowColor: Colors.black.withOpacity(0.2),
+      height: 80,
+      padding: EdgeInsets.zero,
+      child: SafeArea(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem(
-              icon: Icons.directions_bike,
-              label: 'Home',
-              index: 0,
-              isActive: _currentIndex == 0,
-            ),
-            _buildNavItem(
-              icon: Icons.map,
-              label: 'Maps',
-              index: 1,
-              isActive: _currentIndex == 1,
-            ),
-            _buildQrButton(),
-            _buildNavItem(
-              icon: Icons.trending_up,
-              label: 'Insights',
-              index: 3,
-              isActive: _currentIndex == 3,
-            ),
-            _buildNavItem(
-              icon: Icons.history,
-              label: 'History',
-              index: 4,
-              isActive: _currentIndex == 4,
-            ),
+            _buildNavPill(icon: Icons.directions_bike, label: 'Home', index: 0),
+            _buildNavPill(icon: Icons.map_outlined, label: 'Maps', index: 1),
+            const SizedBox(width: 40),
+            _buildNavPill(icon: Icons.trending_up, label: 'Insights', index: 3),
+            _buildNavPill(icon: Icons.history, label: 'History', index: 4),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem({
+  Widget _buildNavPill({
     required IconData icon,
     required String label,
     required int index,
-    required bool isActive,
   }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    
-    // Responsive sizing based on screen dimensions
-    final iconSize = isActive 
-        ? (screenWidth * 0.06).clamp(26.0, 32.0) // Larger when active
-        : (screenWidth * 0.055).clamp(22.0, 26.0);
-    final fontSize = (screenWidth * 0.028).clamp(9.0, 12.0);
-    final containerPadding = EdgeInsets.symmetric(
-      horizontal: screenWidth * 0.02,
-      vertical: screenHeight * 0.008,
-    );
-    
-    return Expanded(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100), // Reduced from 250ms
-        curve: Curves.easeOut,
-        margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
-        padding: containerPadding,
-        decoration: BoxDecoration(
-          color: isActive 
-              ? const Color(0xFF317263) 
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: isActive
-              ? Border.all(
-                  color: const Color(0xFF317263),
-                  width: 2,
-                )
-              : null,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _onTabTapped(index),
-            borderRadius: BorderRadius.circular(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: isActive ? Colors.white : Colors.grey,
-                  size: iconSize,
-                ),
-                SizedBox(height: screenHeight * 0.004),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    color: isActive ? Colors.white : Colors.grey,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+    final isActive = initialIndex == index;
 
-  Widget _buildQrButton() {
-    final isActive = _currentIndex == 2;
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
-    
-    // Larger responsive sizing for QR button
-    final buttonSize = (screenWidth * 0.18).clamp(70.0, 85.0);
-    final iconSize = (screenWidth * 0.09).clamp(36.0, 44.0);
-    
     return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Transform.translate(
-            offset: Offset(0, -(screenHeight * 0.015)),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 100), // Reduced from 250ms
+      child: InkWell(
+        onTap: () => onTabTapped(index),
+        customBorder: const CircleBorder(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              width: buttonSize,
-              height: buttonSize,
-              decoration: BoxDecoration(
-                color: isActive 
-                    ? const Color(0xFF70D2C8) 
-                    : const Color(0xFF70D2C8).withOpacity(0.9),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isActive ? Colors.white : Colors.white.withOpacity(0.8),
-                  width: isActive ? 4 : 3,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isActive 
-                        ? const Color(0xFF70D2C8).withOpacity(0.4)
-                        : Colors.black.withOpacity(0.25),
-                    blurRadius: isActive ? 16 : 12,
-                    offset: Offset(0, isActive ? 8 : 6),
-                  ),
-                ],
+              padding: EdgeInsets.symmetric(
+                horizontal: isActive ? 20.0 : 0.0,
+                vertical: 6.0,
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _onTabTapped(2),
-                  borderRadius: BorderRadius.circular(buttonSize / 2),
-                  child: Icon(
-                    Icons.qr_code_scanner,
-                    color: Colors.white,
-                    size: iconSize,
-                  ),
-                ),
+              decoration: BoxDecoration(
+                color: isActive ? _activeColor.withOpacity(0.15) : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                icon,
+                color: isActive ? _activeColor : Colors.grey.shade500,
+                size: 26,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                color: isActive ? _activeColor : Colors.grey.shade500,
+              ),
+              child: Text(label),
+            ),
+          ],
+        ),
       ),
     );
   }

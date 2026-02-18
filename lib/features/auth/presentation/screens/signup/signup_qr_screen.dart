@@ -9,12 +9,15 @@ import 'package:lakbyke_mobile/features/auth/presentation/screens/signup/signup_
 
 /// QR scanner screen for signup. Scanned QR contains a token; the token is verified
 /// against Firebase `unitRegistration`. On success, navigates to [SignupScreen]
-/// with the [serviceTag] shown at the top.
+/// with the [serviceTag] (or calls [onVerified] if provided).
 class SignupQrScreen extends StatefulWidget {
-  const SignupQrScreen({super.key, this.isActive = true});
+  const SignupQrScreen({super.key, this.isActive = true, this.onVerified});
 
   /// When false, the camera is not started and a placeholder is shown.
   final bool isActive;
+
+  /// When set, called with [serviceTag] instead of using Navigator to open signup.
+  final void Function(String serviceTag)? onVerified;
 
   @override
   State<SignupQrScreen> createState() => _SignupQrScreenState();
@@ -146,11 +149,15 @@ class _SignupQrScreenState extends State<SignupQrScreen> {
           }
           _usedServiceTags.add(serviceTag);
           _hasNavigated = true;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => SignupScreen(serviceTag: serviceTag),
-            ),
-          );
+          if (widget.onVerified != null) {
+            widget.onVerified!(serviceTag);
+          } else {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => SignupScreen(serviceTag: serviceTag),
+              ),
+            );
+          }
           break;
         case VerifyTokenInvalidFormat():
           _resetAndResumeScanner();

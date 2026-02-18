@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
-import 'package:lakbyke_mobile/core/navigation/main_navigation.dart';
-import 'package:lakbyke_mobile/features/auth/presentation/screens/signup/signup_qr_screen.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
 import 'package:lakbyke_mobile/features/auth/data/repositories/auth_repository.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -145,13 +144,16 @@ class _LoginModalState extends ConsumerState<LoginModal> {
           // --- SUCCESS: UID found + Role is Cyclist ---
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text(AppStrings.loginSuccess)),
+              SnackBar(
+                content: const Text(AppStrings.loginSuccess),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
             );
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MainNavigation()),
-            );
+            await Future.delayed(const Duration(milliseconds: 400));
+            if (mounted) {
+              ref.read(appRouterControllerProvider.notifier).goToDashboard();
+            }
           }
         } else {
           // --- FAILURE: UID found, but WRONG role ---
@@ -213,13 +215,16 @@ class _LoginModalState extends ConsumerState<LoginModal> {
           // --- SUCCESS: Valid Credentials + Role is Cyclist ---
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text(AppStrings.loginSuccess)),
+              SnackBar(
+                content: const Text(AppStrings.loginSuccess),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
             );
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MainNavigation()),
-            );
+            await Future.delayed(const Duration(milliseconds: 400));
+            if (mounted) {
+              ref.read(appRouterControllerProvider.notifier).goToDashboard();
+            }
           }
         } else {
           // --- FAILURE: Correct credentials, but WRONG role ---
@@ -715,12 +720,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                         const Text("Don't have an account? "),
                         GestureDetector(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignupQrScreen(),
-                              ),
-                            );
+                            ref.read(appRouterControllerProvider.notifier).goToSignupQr();
                           },
                           child: const Text(
                             AppStrings.signUp,

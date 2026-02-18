@@ -12,6 +12,13 @@ String formatCompactNumber(num value, [int maxDecimals = 1]) {
   return value.toStringAsFixed(maxDecimals);
 }
 
+/// Rounds down to the nearest multiple of 5 (e.g. 18 → 15, 22 → 20).
+/// For negative values, rounds toward zero (e.g. -7 → -5).
+num roundDownToMultipleOf5(num value) {
+  if (value.isNaN || value.isInfinite) return value;
+  return (value ~/ 5) * 5;
+}
+
 /// Formats currency with compact form when >= 1000 (e.g. 1220 → "₱1.2k").
 /// For values under 1000, returns "₱" + value with 2 decimals.
 String formatCompactCurrency(num value) {

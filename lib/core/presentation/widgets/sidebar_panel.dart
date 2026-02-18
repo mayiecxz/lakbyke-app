@@ -4,9 +4,11 @@ import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/responsive_image.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
+import 'package:lakbyke_mobile/app/presentation/shell_routes.dart'
+    show buildChatbotPageRoute, buildShellPageRoute, ShellRoutes;
 import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
-import 'package:lakbyke_mobile/core/navigation/main_navigation.dart';
-import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
 
 /// Inner panel of the sidebar: logo, close button, and menu items.
 class SidebarPanel extends ConsumerWidget {
@@ -87,22 +89,24 @@ class SidebarPanel extends ConsumerWidget {
                     const SizedBox(height: 8),
                     const Divider(color: Colors.white12, thickness: 1, height: 1),
                     menuItem(context, Icons.directions_bike, AppStrings.home, onTap: () {
-                      final navigator = Navigator.of(context);
-                      navigator.pop();
-                      navigator.pushReplacement(
-                        MaterialPageRoute(builder: (_) => const MainNavigation(initialIndex: 0)),
+                      Navigator.of(context).pop();
+                      ref.read(shellNavigatorKeyProvider)?.currentState?.popUntil(
+                        (route) => route.settings.name == ShellRoutes.dashboard,
                       );
+                      ref.read(appRouterControllerProvider.notifier).setDashboardTab(0);
                     }),
                     const Divider(color: Colors.white12, height: 1),
                     menuItem(context, Icons.info_outline, 'About', onTap: () {
                       Navigator.of(context).pop();
                     }),
                     const Divider(color: Colors.white12, height: 1),
-                    menuItem(context, Icons.help_outline, 'Need help?', onTap: () {
-                      final navigator = Navigator.of(context);
-                      navigator.pop();
-                      navigator.push(
-                        MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+                    menuItem(context, Icons.chat_outlined, 'Chatbot', onTap: () {
+                      Navigator.of(context).pop();
+                      ref.read(shellNavigatorKeyProvider)?.currentState?.push(
+                        buildChatbotPageRoute(
+                          const ChatbotScreen(),
+                          settings: const RouteSettings(name: ShellRoutes.chatbot),
+                        ),
                       );
                     }),
                     const Divider(color: Colors.white12, height: 1),
@@ -121,10 +125,7 @@ class SidebarPanel extends ConsumerWidget {
                           onConfirm: () async {
                             await authService.signOut();
                             if (navigator.mounted) {
-                              navigator.pushAndRemoveUntil(
-                                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-                                (route) => false,
-                              );
+                              ref.read(appRouterControllerProvider.notifier).goToOnboarding();
                             }
                           },
                         );

@@ -276,22 +276,40 @@ class TransactionRepository {
 
       // Check flat structure
       if (transactionsMap.containsKey(uid)) {
+        final raw = transactionsMap[uid];
+        final stnTagFromRecord = raw is Map
+            ? (Map<String, dynamic>.from(raw)['stnTag'] as String?)
+            : null;
         await _database.ref('transactions').child(uid).update({
           'mntTag': mntTag.trim(),
           'status': 'qr_scanned',
         });
-        return {'success': true, 'message': 'Transaction updated successfully'};
+        return {
+          'success': true,
+          'message': 'Transaction updated successfully',
+          'mntTag': mntTag.trim(),
+          'stnTag': stnTagFromRecord,
+        };
       }
 
       // Check nested structure
       for (final entry in transactionsMap.entries) {
         final stationData = entry.value;
         if (stationData is Map && stationData.containsKey(uid)) {
+          final raw = stationData[uid];
+          final t = raw is Map ? Map<String, dynamic>.from(raw) : null;
+          final stnTagFromRecord =
+              t?['stnTag'] as String? ?? entry.key as String?;
           await _database.ref('transactions').child(entry.key).child(uid).update({
             'mntTag': mntTag.trim(),
             'status': 'qr_scanned',
           });
-          return {'success': true, 'message': 'Transaction updated successfully'};
+          return {
+            'success': true,
+            'message': 'Transaction updated successfully',
+            'mntTag': mntTag.trim(),
+            'stnTag': stnTagFromRecord,
+          };
         }
       }
 

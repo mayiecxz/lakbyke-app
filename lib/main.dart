@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/config/secrets_loader.dart';
 import 'package:lakbyke_mobile/core/theme/theme.dart';
-import 'package:lakbyke_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:lakbyke_mobile/app/presentation/app_shell.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
 import 'package:lakbyke_mobile/features/chatbot/providers/chatbot_providers.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -50,7 +50,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       title: 'LakByke',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: const OnboardingScreen(),
+      home: const AppShell(),
     );
   }
 }

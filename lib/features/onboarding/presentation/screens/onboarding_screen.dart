@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/features/auth/presentation/screens/login/login_screen.dart';
-import 'package:lakbyke_mobile/features/auth/presentation/screens/signup/signup_qr_screen.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 
 // ============================================================================
@@ -11,14 +12,14 @@ import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 /// OnboardingScreen is the entry point for unauthenticated users.
 /// Displays the app branding, tagline, and action buttons (login/signup).
 /// The login modal appears by default with a slide-up animation.
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoginModalVisible = true;
   late final GlobalKey<_AnimatedLoginModalState> _modalKey;
@@ -216,9 +217,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   /// Handles signup button press. Navigate to unit QR scanner, then to signup with serviceTag.
   void _handleSignupPressed() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SignupQrScreen()),
-    );
+    ref.read(appRouterControllerProvider.notifier).goToSignupQr();
   }
 }
 

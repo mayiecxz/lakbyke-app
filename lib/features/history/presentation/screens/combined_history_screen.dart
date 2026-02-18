@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
+import 'package:lakbyke_mobile/app/presentation/shell_routes.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/formatting/formatting.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 import 'package:intl/intl.dart';
@@ -10,9 +11,14 @@ import 'package:lakbyke_mobile/features/history/presentation/screens/kwh_detail_
 import 'package:lakbyke_mobile/features/history/presentation/screens/transaction_detail_screen.dart';
 
 class CombinedHistoryScreen extends ConsumerStatefulWidget {
-  const CombinedHistoryScreen({super.key, this.initialTabIndex = 0});
+  const CombinedHistoryScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.onTabChanged,
+  });
 
   final int initialTabIndex;
+  final ValueChanged<int>? onTabChanged;
 
   @override
   ConsumerState<CombinedHistoryScreen> createState() => _CombinedHistoryScreenState();
@@ -44,6 +50,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
       initialIndex: widget.initialTabIndex.clamp(0, 1),
     );
     _tabController.addListener(() {
+      widget.onTabChanged?.call(_tabController.index);
       setState(() {}); // Rebuild when tab changes for icon color updates
     });
     _loadKwhData();
@@ -780,16 +787,16 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
     final distance = (item['distance'] as num?)?.toDouble() ?? 0.0;
     final label = (item['label'] as String?) ?? _formatTransactionPeriodLabel(periodDate, _kwhFilter);
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => KwhDetailScreen(
+    ref.read(shellNavigatorKeyProvider)?.currentState?.push(
+      buildShellPageRoute(
+        KwhDetailScreen(
           periodLabel: label,
           periodDate: periodDate,
           filterType: _kwhFilter,
           totalEnergy: energy,
           totalDistance: distance,
         ),
+        settings: RouteSettings(name: ShellRoutes.kwhDetail),
       ),
     );
   }
@@ -801,15 +808,15 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
     final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
     final label = (item['label'] as String?) ?? _formatTransactionPeriodLabel(periodDate, _transactionFilter);
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TransactionDetailScreen(
+    ref.read(shellNavigatorKeyProvider)?.currentState?.push(
+      buildShellPageRoute(
+        TransactionDetailScreen(
           periodLabel: label,
           periodDate: periodDate,
           filterType: _transactionFilter,
           totalAmount: amount,
         ),
+        settings: RouteSettings(name: ShellRoutes.transactionDetail),
       ),
     );
   }
