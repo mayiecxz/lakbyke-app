@@ -53,7 +53,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             Container(color: Colors.black),
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                padding: const EdgeInsets.only(top: 0),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: asyncInsights.when(
@@ -109,7 +109,6 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                 ),
               ),
             ),
-            const Header(),
           ],
         ),
       ),

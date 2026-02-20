@@ -127,7 +127,7 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
             // 2. Main content area (white)
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                padding: const EdgeInsets.only(top: 0),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: Column(
@@ -210,8 +210,6 @@ class _CombinedHistoryScreenState extends ConsumerState<CombinedHistoryScreen> w
                 ),
               ),
             ),
-            // 3. Fixed Header overlay
-            const Header(),
           ],
         ),
       ),

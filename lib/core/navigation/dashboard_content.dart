@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:lakbyke_mobile/features/maps/presentation/screens/maps_screen.dart';
 import 'package:lakbyke_mobile/features/qr/presentation/screens/qr_scanner_screen.dart';
@@ -9,26 +10,52 @@ import 'package:lakbyke_mobile/app/domain/models/app_route.dart';
 import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
 
 /// Dashboard tab content only (no Scaffold). Used as the initial route of the shell Navigator.
-/// Tab state comes from [AppRouteAuthenticated]; callbacks update app router.
-class DashboardContent extends ConsumerWidget {
+/// Tab state comes from [AppRouteAuthenticated]; PageView slides between tabs.
+class DashboardContent extends ConsumerStatefulWidget {
   const DashboardContent({super.key});
 
-  static const int historyMainIndex = 4;
-  static const int historyTabCount = 2;
+  @override
+  ConsumerState<DashboardContent> createState() => _DashboardContentState();
+}
 
-  List<Widget> _screens(int currentIndex, int historyTabIndex, ValueChanged<int> onHistoryTabChanged) => [
-    const HomeScreen(),
-    MapsScreen(isActive: currentIndex == 1),
-    QrScannerScreen(isActive: currentIndex == 2),
-    const InsightsScreen(),
-    CombinedHistoryScreen(
-      initialTabIndex: historyTabIndex,
-      onTabChanged: onHistoryTabChanged,
-    ),
-  ];
+class _DashboardContentState extends ConsumerState<DashboardContent> {
+  static const int _tabCount = 5;
+  late PageController _pageController;
+
+  static List<Widget> _screens(
+    int currentIndex,
+    int historyTabIndex,
+    ValueChanged<int> onHistoryTabChanged,
+  ) =>
+      [
+        const HomeScreen(),
+        MapsScreen(isActive: currentIndex == 1),
+        QrScannerScreen(isActive: currentIndex == 2),
+        const InsightsScreen(),
+        CombinedHistoryScreen(
+          initialTabIndex: historyTabIndex,
+          onTabChanged: onHistoryTabChanged,
+        ),
+      ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    final route = ref.read(appRouterControllerProvider);
+    final initialIndex = route is AppRouteAuthenticated
+        ? route.tabIndex.clamp(0, _tabCount - 1)
+        : 0;
+    _pageController = PageController(initialPage: initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final route = ref.watch(appRouterControllerProvider);
     if (route is! AppRouteAuthenticated) {
       return const SizedBox.shrink();
@@ -37,60 +64,39 @@ class DashboardContent extends ConsumerWidget {
     final historyTabIndex = route.historyTabIndex;
     final notifier = ref.read(appRouterControllerProvider.notifier);
 
-    void onSwipeLeft() {
-      if (tabIndex == historyMainIndex) {
-        if (historyTabIndex < historyTabCount - 1) {
-          notifier.setDashboardHistoryTab(historyTabIndex + 1);
-        }
-      } else if (tabIndex < 4) {
-        notifier.setDashboardTab(tabIndex + 1);
-      }
-    }
-
-    void onSwipeRight() {
-      if (tabIndex == historyMainIndex) {
-        if (historyTabIndex > 0) {
-          notifier.setDashboardHistoryTab(historyTabIndex - 1);
-        } else {
-          notifier.setDashboardTab(tabIndex - 1);
-        }
-      } else if (tabIndex > 0) {
-        notifier.setDashboardTab(tabIndex - 1);
-      }
-    }
-
-    return GestureDetector(
-      onHorizontalDragEnd: (details) {
-        final velocity = details.primaryVelocity ?? 0;
-        const threshold = 40.0;
-        if (velocity < -threshold) {
-          onSwipeLeft();
-        } else if (velocity > threshold) {
-          onSwipeRight();
-        }
-      },
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.2, 0),
-              end: Offset.zero,
-            ).animate(animation),
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
+    // When tab changed from outside (e.g. bottom nav tap), animate PageView to that page.
+    if (_pageController.hasClients) {
+      final currentPage = _pageController.page?.round() ?? 0;
+      if (currentPage != tabIndex) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_pageController.hasClients) return;
+          _pageController.animateToPage(
+            tabIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
           );
-        },
-        child: IndexedStack(
-          key: ValueKey<int>(tabIndex),
-          index: tabIndex,
-          children: _screens(tabIndex, historyTabIndex, notifier.setDashboardHistoryTab),
+        });
+      }
+    }
+
+    // Single fixed header below safe area; PageView content transitions underneath.
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: Column(
+        children: [
+          const Header(),
+          Expanded(
+            child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              notifier.setDashboardTab(index);
+            },
+            children: _screens(tabIndex, historyTabIndex, notifier.setDashboardHistoryTab),
+          ),
         ),
-      ),
+      ],
+    ),
     );
   }
 }

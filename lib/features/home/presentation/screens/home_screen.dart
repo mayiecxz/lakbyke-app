@@ -70,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Container(color: Colors.black),
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.only(top: 60),
+                padding: const EdgeInsets.only(top: 0),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: homeDataAsync.when(
@@ -169,7 +169,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
-            const Header(),
           ],
         ),
       ),

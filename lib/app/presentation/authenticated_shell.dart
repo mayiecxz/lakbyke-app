@@ -122,6 +122,8 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell> {
     final fabBorderColor = isFabActive ? _accentColor : Colors.grey;
     final fabIconColor = isFabActive ? _accentColor : Colors.grey;
 
+    // Header and bottom nav are scaffold slots outside the Navigator, so they stay
+    // fixed and are not affected by route or tab transitions (only body content changes).
     return Scaffold(
       extendBody: true,
       body: Navigator(

@@ -97,8 +97,9 @@ class _MainNavigationContent extends StatelessWidget {
         onHorizontalDragEnd: (details) {
           final velocity = details.primaryVelocity ?? 0;
           const threshold = 40.0;
-          if (velocity < -threshold) _onSwipeLeft();
-          else if (velocity > threshold) _onSwipeRight();
+          if (velocity < -threshold) {
+            _onSwipeLeft();
+          } else if (velocity > threshold) _onSwipeRight();
         },
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),

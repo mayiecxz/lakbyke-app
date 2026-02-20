@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/maps/domain/models/direction_step.dart';
 import 'package:lakbyke_mobile/features/maps/domain/models/route_info.dart';
 import 'package:lakbyke_mobile/features/maps/domain/models/polyline_decoder.dart';
@@ -523,7 +522,7 @@ class _MapsScreenState extends State<MapsScreen> {
             // 2. Main content area (white)
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                padding: const EdgeInsets.only(top: 0),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: Column(
@@ -1124,8 +1123,6 @@ class _MapsScreenState extends State<MapsScreen> {
                 ),
               ),
             ),
-            // 3. Fixed Header overlay
-            const Header(),
           ],
         ),
       ),

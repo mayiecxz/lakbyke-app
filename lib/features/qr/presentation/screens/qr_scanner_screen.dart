@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
 import 'package:lakbyke_mobile/features/qr/domain/models/qr_scan_result.dart';
 import 'package:lakbyke_mobile/features/qr/presentation/components/qr_scan_result_dialog.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
@@ -149,7 +148,7 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
             Container(color: Colors.black),
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.only(top: kHeaderContentTopPadding),
+                padding: const EdgeInsets.only(top: 0),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white),
                   child: widget.isActive
@@ -158,7 +157,6 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
                 ),
               ),
             ),
-            const Header(),
           ],
         ),
       ),

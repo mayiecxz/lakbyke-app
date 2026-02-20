@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 /// Route names for the shell Navigator.
@@ -9,27 +10,12 @@ abstract final class ShellRoutes {
   static const String kwhDetail = '/kwh-detail';
 }
 
-/// Builds a horizontal slide page route for in-shell navigation.
-/// Matches the feel of the history screen (Energy / Transaction) and dashboard tab transitions.
+/// Builds a Cupertino-style push route for in-shell navigation: new screen slides in
+/// from the right and the previous screen stays partially visible on the left.
 PageRoute<T> buildShellPageRoute<T>(Widget page, {RouteSettings? settings}) {
-  return PageRouteBuilder<T>(
+  return CupertinoPageRoute<T>(
+    builder: (context) => page,
     settings: settings,
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: const Duration(milliseconds: 250),
-    reverseTransitionDuration: const Duration(milliseconds: 250),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final slide = Tween<Offset>(
-        begin: const Offset(1.0, 0),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      ));
-      return SlideTransition(
-        position: slide,
-        child: child,
-      );
-    },
   );
 }
 
