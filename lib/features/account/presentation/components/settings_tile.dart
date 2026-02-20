@@ -7,6 +7,8 @@ class SettingsTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  /// When true, uses red/destructive styling (e.g. for Logout).
+  final bool isDestructive;
 
   const SettingsTile({
     super.key,
@@ -14,10 +16,12 @@ class SettingsTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.isDestructive = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = isDestructive ? Colors.red : AppColors.primary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -30,12 +34,12 @@ class SettingsTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
                 child: Icon(
                   icon,
-                  color: AppColors.primary,
+                  color: color,
                   size: 24,
                 ),
               ),
@@ -46,18 +50,18 @@ class SettingsTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: isDestructive ? Colors.red : AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: isDestructive ? Colors.red.shade400 : AppColors.textSecondary,
                       ),
                     ),
                   ],

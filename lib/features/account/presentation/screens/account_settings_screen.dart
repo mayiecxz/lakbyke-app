@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/features/account/providers/account_providers.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
+import 'package:lakbyke_mobile/app/presentation/shell_routes.dart';
+import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/features/account/domain/models/user_model.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/features/account/presentation/components/account_info_card.dart';
 import 'package:lakbyke_mobile/features/account/presentation/components/settings_section.dart';
 import 'package:lakbyke_mobile/features/account/presentation/components/settings_tile.dart';
@@ -134,6 +139,66 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   //   }
   // }
 
+  void _showAboutDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('About'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'LakByke\n\n'
+            'Pedal-powered energy conversion for cyclists. '
+            'Track energy, view history, find stations, and manage your account.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openChatbot(BuildContext context) {
+    ref.read(shellNavigatorKeyProvider)?.currentState?.push(
+      buildChatbotPageRoute(
+        const ChatbotScreen(),
+        settings: const RouteSettings(name: ShellRoutes.chatbot),
+      ),
+    );
+  }
+
+  void _handleLogout(BuildContext context) {
+    final navigator = Navigator.of(context);
+    ValidationDialog.show(
+      context,
+      title: 'Confirm Logout',
+      content: const Text('Are you sure you want to logout?'),
+      confirmLabel: 'Logout',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+      onConfirm: () async {
+        try {
+          await ref.read(authServiceProvider).signOut();
+          if (navigator.mounted) {
+            ref.read(appRouterControllerProvider.notifier).goToOnboarding();
+          }
+        } catch (e) {
+          if (navigator.mounted) {
+            ScaffoldMessenger.of(navigator.context).showSnackBar(
+              SnackBar(
+                content: Text('Error during logout: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+    );
+  }
+
   Future<void> _handleChangePassword() async {
     if (!ref.read(authServiceProvider).canChangePassword) {
       if (mounted) {
@@ -224,7 +289,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
                               const SizedBox(height: AppDimensions.paddingLarge),
 
-                              // Security — single Change password entry
+                              // Security — Change password (if email account)
                               if (ref.read(authServiceProvider).canChangePassword)
                                 SettingsSection(
                                   title: 'Security',
@@ -237,6 +302,35 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                                     ),
                                   ],
                                 ),
+
+                              if (ref.read(authServiceProvider).canChangePassword)
+                                const SizedBox(height: AppDimensions.paddingLarge),
+
+                              // About, Chatbot, Logout — typical app actions
+                              SettingsSection(
+                                title: 'Support & account',
+                                children: [
+                                  SettingsTile(
+                                    icon: Icons.info_outline,
+                                    title: 'About',
+                                    subtitle: 'App info and version',
+                                    onTap: () => _showAboutDialog(context),
+                                  ),
+                                  SettingsTile(
+                                    icon: Icons.chat_outlined,
+                                    title: 'Chatbot',
+                                    subtitle: 'Get help and answers',
+                                    onTap: () => _openChatbot(context),
+                                  ),
+                                  SettingsTile(
+                                    icon: Icons.logout,
+                                    title: 'Logout',
+                                    subtitle: 'Sign out of your account',
+                                    onTap: () => _handleLogout(context),
+                                    isDestructive: true,
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
