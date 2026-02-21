@@ -123,7 +123,7 @@ class SidebarPanel extends ConsumerWidget {
                           confirmLabel: 'Logout',
                           cancelLabel: 'Cancel',
                           onConfirm: () async {
-                            await authService.softLogout();
+                            await authService.signOut();
                             if (navigator.mounted) {
                               ref.read(appRouterControllerProvider.notifier).goToOnboarding();
                             }

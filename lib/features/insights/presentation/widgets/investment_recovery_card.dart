@@ -119,12 +119,15 @@ class InvestmentRecoveryCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'Tap for breakdown',
-          style: TextStyle(
-            fontSize: (11 * s).clamp(10.0, 12.0),
-            color: AppColors.textOnPrimary.withValues(alpha: 0.7),
-            fontStyle: FontStyle.italic,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Tap to view breakdown',
+            style: TextStyle(
+              fontSize: (11 * s).clamp(10.0, 12.0),
+              color: AppColors.homeAccent,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ),
       ],

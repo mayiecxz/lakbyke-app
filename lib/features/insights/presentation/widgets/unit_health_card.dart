@@ -116,7 +116,7 @@ class UnitHealthCard extends StatelessWidget {
             'Tap to view recommended maintenance timeline',
             style: TextStyle(
               fontSize: (11 * s).clamp(10.0, 12.0),
-              color: AppColors.textTertiary,
+              color: AppColors.primary,
               fontStyle: FontStyle.italic,
             ),
           ),

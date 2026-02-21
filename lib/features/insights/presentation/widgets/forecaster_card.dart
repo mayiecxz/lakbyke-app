@@ -117,17 +117,17 @@ class ForecasterCard extends StatelessWidget {
         ],
         const SizedBox(height: 12),
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Tap card for breakdown',
+              'Tap to view breakdown',
               style: TextStyle(
                 fontSize: (11 * layout.fontScale).clamp(10.0, 12.0),
-                color: AppColors.textTertiary,
+                color: AppColors.primary,
                 fontStyle: FontStyle.italic,
               ),
             ),
-            const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: () => SemesterSetupModal.show(context),
               style: FilledButton.styleFrom(
@@ -170,17 +170,17 @@ class ForecasterCard extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Tap card for breakdown',
+              'Tap to view breakdown',
               style: TextStyle(
                 fontSize: (11 * layout.fontScale).clamp(10.0, 12.0),
-                color: AppColors.textTertiary,
+                color: AppColors.primary,
                 fontStyle: FontStyle.italic,
               ),
             ),
-            const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: () => SemesterSetupModal.show(context),
               style: FilledButton.styleFrom(

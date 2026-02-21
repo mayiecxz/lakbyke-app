@@ -109,7 +109,7 @@ class RiderPersonaCard extends StatelessWidget {
           'Tap to see all possible badges',
           style: TextStyle(
             fontSize: (11 * s).clamp(10.0, 12.0),
-            color: AppColors.textTertiary,
+            color: AppColors.primary,
             fontStyle: FontStyle.italic,
           ),
         ),
@@ -136,7 +136,7 @@ class RiderPersonaCard extends StatelessWidget {
           'Tap to see all possible badges',
           style: TextStyle(
             fontSize: (11 * s).clamp(10.0, 12.0),
-            color: AppColors.textTertiary,
+            color: AppColors.primary,
             fontStyle: FontStyle.italic,
           ),
         ),
