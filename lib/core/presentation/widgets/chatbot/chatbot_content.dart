@@ -6,10 +6,11 @@ import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/core/presentation/chatbot_theme.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/chatbot/sheet_chat_bubble.dart';
 import 'package:lakbyke_mobile/features/chatbot/data/services/chatbot_prompt_service.dart';
-import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_context_builder.dart';
+import 'package:lakbyke_mobile/features/chatbot/domain/context_builder/chatbot_context_builder.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_model.dart';
 import 'package:lakbyke_mobile/features/chatbot/providers/chatbot_providers.dart';
 import 'package:lakbyke_mobile/features/home/providers/home_providers.dart';
+import 'package:lakbyke_mobile/features/insights/providers/insights_providers.dart';
 
 /// Shared chat UI and logic for [ChatbotScreen] and [ChatbotBottomSheet].
 /// Renders message list, loading indicator, and input bar; owns model and repository usage.
@@ -103,7 +104,11 @@ class _ChatbotContentState extends ConsumerState<ChatbotContent> {
     try {
       if (!mounted) return;
       final homeData = ref.read(homeDataStreamProvider).value;
-      final userStatsContext = ChatbotContextBuilder.buildUserStatsContext(homeData);
+      final insightsModel = ref.read(insightsDataProvider).valueOrNull;
+      final userStatsContext = ChatbotContextBuilder.buildFullUserContext(
+        homeData: homeData,
+        insightsModel: insightsModel,
+      );
       final conversationHistory = _messages
           .map((msg) => {'role': msg.isUser ? 'User' : 'Si Kleta', 'text': msg.text})
           .toList();

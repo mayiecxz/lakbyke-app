@@ -1,5 +1,5 @@
-import 'package:lakbyke_mobile/features/chatbot/bot_instructions/instructions.dart';
-import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_context_builder.dart';
+import 'package:lakbyke_mobile/features/chatbot/domain/bot_instructions/instructions.dart';
+import 'package:lakbyke_mobile/features/chatbot/domain/context_builder/chatbot_context_builder.dart';
 
 /// Prompt builder for the LakByke chatbot: app instructions and optional user stats.
 class ChatbotPromptService {
@@ -32,6 +32,7 @@ class ChatbotPromptService {
     prompt += botInstructionsIdentity;
     prompt += botInstructionsMissionAndScope;
     prompt += ChatbotContextBuilder.buildAppHelpContext();
+    prompt += ChatbotContextBuilder.buildFormulasContext();
 
     if (userStatsContext != null && userStatsContext.isNotEmpty) {
       prompt += botInstructionsUserStatsRule;
