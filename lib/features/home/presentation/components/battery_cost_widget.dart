@@ -14,7 +14,8 @@ class BatteryCostWidget extends StatelessWidget {
     required this.onTap,
   });
 
-  static const double ratePer100 = 30.0;
+  /// Equivalent value (₱) of a full (100%) battery. Used for display and rounding.
+  static const double ratePer100 = 60.0;
 
   static num _roundedCost(int? batteryPercent) {
     if (batteryPercent == null) return 0.0;
@@ -54,8 +55,7 @@ class BatteryCostWidget extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: circleSize,

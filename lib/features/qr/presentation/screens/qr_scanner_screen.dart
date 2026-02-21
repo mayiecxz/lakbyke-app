@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/features/home/providers/home_providers.dart';
 import 'package:lakbyke_mobile/features/qr/domain/models/qr_scan_result.dart';
 import 'package:lakbyke_mobile/features/qr/presentation/components/qr_scan_result_dialog.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
@@ -105,6 +107,27 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
   }
 
   void _showScanResult(QrScanResult scanResult) {
+    final homeData = ref.read(homeDataStreamProvider).valueOrNull;
+    final batteryPercent = homeData?.mountBatteryPercentage;
+    if (batteryPercent != null && batteryPercent < BatteryPolicy.minBatteryPercentToSell) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Battery too low'),
+          content: Text(
+            'Battery must be at least ${BatteryPolicy.minBatteryPercentToSell}% to sell or exchange, to prevent deep discharge. '
+            'Current: ${batteryPercent.toStringAsFixed(0)}%. Charge to ${BatteryPolicy.minBatteryPercentToSell}% or above and try again.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      ).then((_) => _resetScanner());
+      return;
+    }
     final transactionRepo = ref.read(transactionRepositoryProvider);
     showDialog(
       context: context,

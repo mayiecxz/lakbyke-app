@@ -24,35 +24,38 @@ class HomeBatterySection extends StatelessWidget {
     final w = MediaQuery.of(context).size.width;
     final spacing = (w * 0.03).clamp(6.0, 14.0);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _ServiceTagRow(serviceTagAsync: serviceTagAsync),
-                const SizedBox(height: 10),
-                _BatteryStatusRow(homeData: homeData),
-              ],
+    return SizedBox(
+      height: 110,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ServiceTagRow(serviceTagAsync: serviceTagAsync),
+                  const SizedBox(height: 10),
+                  _BatteryStatusRow(homeData: homeData),
+                ],
+              ),
             ),
           ),
-        ),
-        SizedBox(width: spacing),
-        BatteryCostWidget(
-          batteryPercent: batteryPercent,
-          onTap: () => BatteryCostModal.show(context, batteryPercent),
-        ),
-      ],
+          SizedBox(width: spacing),
+          BatteryCostWidget(
+            batteryPercent: batteryPercent,
+            onTap: () => BatteryCostModal.show(context, batteryPercent),
+          ),
+        ],
+      ),
     );
   }
 }

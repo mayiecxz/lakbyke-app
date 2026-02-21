@@ -21,7 +21,7 @@ class CBAConstants {
 
   // === SCENARIOS (Buyback Price) ===
   static const double buybackLow = 10.00;
-  static const double buybackOptimal = 30.00; // THE GOLDEN NUMBER
+  static const double buybackOptimal = 60.00; // Full battery value (₱)
   static const double buybackHigh = 60.00;
 
   // === ENERGY ===

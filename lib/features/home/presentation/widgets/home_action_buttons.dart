@@ -74,7 +74,7 @@ class HomeActionButtons extends ConsumerWidget {
               ),
               ActionButton(
                 icon: Icons.account_balance_wallet,
-                title: 'Total Redeems',
+                title: 'Total \n Redeems',
                 value: homeData == null ? null : formatCompactCurrency(roundDownToMultipleOf5(totalRedeems)),
                 color: AppColors.homePrimary,
                 width: buttonWidth,
