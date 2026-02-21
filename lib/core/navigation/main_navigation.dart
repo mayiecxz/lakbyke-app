@@ -152,7 +152,8 @@ class _MainNavigationContent extends StatelessWidget {
   Widget _buildModernNavBar() {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
-      notchMargin: 10.0,
+      notchMargin: 12.0,
+      clipBehavior: Clip.antiAlias,
       color: Colors.white,
       surfaceTintColor: Colors.white,
       elevation: 10,
@@ -161,62 +162,58 @@ class _MainNavigationContent extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: SafeArea(
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavPill(icon: Icons.directions_bike, label: 'Home', index: 0),
-            _buildNavPill(icon: Icons.map_outlined, label: 'Maps', index: 1),
-            const SizedBox(width: 40),
-            _buildNavPill(icon: Icons.trending_up, label: 'Insights', index: 3),
-            _buildNavPill(icon: Icons.history, label: 'History', index: 4),
+            Expanded(child: _buildNavBlock(icon: Icons.directions_bike, label: 'Home', index: 0)),
+            Expanded(child: _buildNavBlock(icon: Icons.map, label: 'Maps', index: 1)),
+            const SizedBox(width: 80),
+            Expanded(child: _buildNavBlock(icon: Icons.trending_up, label: 'Insights', index: 3)),
+            Expanded(child: _buildNavBlock(icon: Icons.history, label: 'History', index: 4)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavPill({
+  Widget _buildNavBlock({
     required IconData icon,
     required String label,
     required int index,
   }) {
     final isActive = initialIndex == index;
 
-    return Expanded(
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: () => onTabTapped(index),
-        customBorder: const CircleBorder(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              padding: EdgeInsets.symmetric(
-                horizontal: isActive ? 20.0 : 0.0,
-                vertical: 6.0,
-              ),
-              decoration: BoxDecoration(
-                color: isActive ? _activeColor.withOpacity(0.15) : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
+        customBorder: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: isActive ? _activeColor.withOpacity(0.15) : Colors.transparent,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
                 icon,
                 color: isActive ? _activeColor : Colors.grey.shade500,
                 size: 26,
+                fill: 1.0,
               ),
-            ),
-            const SizedBox(height: 4),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? _activeColor : Colors.grey.shade500,
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                  color: isActive ? _activeColor : Colors.grey.shade500,
+                ),
+                child: Text(label),
               ),
-              child: Text(label),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

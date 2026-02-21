@@ -1,18 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_model.dart';
 
 /// Repository for chatbot data persistence (chat history, messages).
+/// Conversation is saved per user: messages are stored under chatHistory/{userId}/messages
+/// where [userId] is the current Firebase Auth UID, so each signed-in user has isolated history.
 class ChatbotRepository {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Get current user ID
+  /// Current user ID (Firebase Auth UID). Chat history is isolated per user.
   String? getCurrentUserId() {
     return _auth.currentUser?.uid;
   }
 
-  // Save a chat message to Firebase
+  /// Saves a chat message to Firebase for the current user.
   Future<void> saveMessage(String text, bool isUser, DateTime time) async {
     try {
       final userId = getCurrentUserId();
@@ -20,21 +23,21 @@ class ChatbotRepository {
         return;
       }
 
-      // Create a unique message ID using timestamp and random number
       final messageId = '${time.millisecondsSinceEpoch}_${DateTime.now().microsecond}';
       
-      // Save message to chatHistory/{userId}/messages/{messageId}
+      // Per-user path: chatHistory/{userId}/messages/{messageId}
       await _database.child('chatHistory/$userId/messages/$messageId').set({
         'text': text,
         'isUser': isUser,
         'time': time.millisecondsSinceEpoch,
       });
-    } catch (e) {
-      // Error saving message to Firebase
+    } catch (e, st) {
+      debugPrint('ChatbotRepository.saveMessage: $e');
+      debugPrint(st.toString());
     }
   }
 
-  // Load chat history from Firebase
+  /// Loads chat history from Firebase for the current user only.
   Future<List<ChatMessage>> loadChatHistory() async {
     try {
       final userId = getCurrentUserId();
@@ -68,7 +71,7 @@ class ChatbotRepository {
                 time: DateTime.fromMillisecondsSinceEpoch(timestamp),
               ));
             } catch (e) {
-              // Error parsing message
+              debugPrint('ChatbotRepository.loadChatHistory: parse error for $key: $e');
             }
           }
         });
@@ -78,7 +81,9 @@ class ChatbotRepository {
       messages.sort((a, b) => a.time.compareTo(b.time));
 
       return messages;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('ChatbotRepository.loadChatHistory: $e');
+      debugPrint(st.toString());
       return [];
     }
   }
@@ -87,8 +92,9 @@ class ChatbotRepository {
   Future<void> deleteChatHistoryForUser(String userId) async {
     try {
       await _database.child('chatHistory/$userId/messages').remove();
-    } catch (e) {
-      // Error deleting chat history
+    } catch (e, st) {
+      debugPrint('ChatbotRepository.deleteChatHistoryForUser: $e');
+      debugPrint(st.toString());
     }
   }
 

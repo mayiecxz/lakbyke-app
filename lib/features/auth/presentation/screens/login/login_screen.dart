@@ -152,6 +152,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
             );
             await Future.delayed(const Duration(milliseconds: 400));
             if (mounted) {
+              await ref.read(authServiceProvider).clearLastLogoutTimestamp();
               ref.read(appRouterControllerProvider.notifier).goToDashboard();
             }
           }
@@ -223,6 +224,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
             );
             await Future.delayed(const Duration(milliseconds: 400));
             if (mounted) {
+              await ref.read(authServiceProvider).clearLastLogoutTimestamp();
               ref.read(appRouterControllerProvider.notifier).goToDashboard();
             }
           }

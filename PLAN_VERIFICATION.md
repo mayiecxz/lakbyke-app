@@ -41,9 +41,9 @@
 | Single homeDataStreamProvider | ✅ | One Firebase listener; HomeScreen and BikeDataNotifier use it |
 | Migrate HomeScreen to homeDataStreamProvider | ✅ | home_screen.dart uses ref.watch(homeDataStreamProvider) |
 | Convert BikeData to provider consuming same stream | ✅ | bike_data_provider.dart (BikeDataNotifier) |
-| Remove BikeData extends ChangeNotifier | ⚠️ | Old chatbot_model.dart (BikeData) still present; chatbot screens still import it for ChatMessage/types – can be removed once chatbot uses bikeDataProvider only |
+| Remove BikeData extends ChangeNotifier | ✅ | BikeData removed from chatbot_model.dart; features/chatbot/domain/models/chatbot_model.dart now only has ChatMessage; bike data lives in bike_data_provider.dart |
 
-**Verdict:** Compliant. Single stream achieved. Old BikeData file remains for types/legacy refs until chatbot fully migrated.
+**Verdict:** Compliant. Single stream achieved. Chatbot model file is domain-only (ChatMessage).
 
 ---
 
@@ -68,9 +68,9 @@
 | Insights: move InsightsModel logic to repository + provider | ⚠️ | insights_providers.dart created but insights_screen still uses InsightsModel(); not wired |
 | Maps: LakbykeStationsService → repository | ❌ | Still in services/; maps_screen uses it |
 | QR scanning feature | ⚠️ | qr_scanner_screen still uses TransactionService() |
-| Chatbot: ChatbotService → ChatbotRepository | ❌ | ChatbotService still used by main, header, sidebar, both chatbot UIs |
+| Chatbot: ChatbotService → ChatbotRepository | ✅ | Chatbot uses ChatbotRepository and chatbotRepositoryProvider only; ChatbotService removed |
 
-**Verdict:** Partial. History and home are fully migrated; insights/maps/QR/chatbot still use old services.
+**Verdict:** Partial. History, home, and chatbot are fully migrated; insights/maps/QR still use old services.
 
 ---
 
@@ -78,8 +78,8 @@
 
 | Requirement | Status | Notes |
 |-------------|--------|-------|
-| Delete old lib/services/ folder | ❌ | Still in use by account, auth, chatbot, header, sidebar, QR, insights, main, home_repository |
-| Delete old lib/models/ non-domain files | ❌ | chatbot_model, insights_model still referenced |
+| Delete old lib/services/ folder | ❌ | Still in use by account, auth, header, sidebar, QR, insights, main, home_repository (chatbot uses ChatbotRepository only) |
+| Delete old lib/models/ non-domain files | ⚠️ | features/chatbot/domain/models/chatbot_model.dart is domain (ChatMessage only); insights_model still referenced elsewhere |
 | Run flutter analyze, fix lints | ✅ | Run periodically; 0 errors in features |
 | Performance testing on device | Pending | Not automated |
 
@@ -131,4 +131,4 @@
 - **History detail modals:** `getDetailedRecordsForPeriod` / `getDetailedTransactionsForPeriod` added to `KwhRepository` and `TransactionRepository`; all history screens use repositories only (no `_kwhService` / `_transactionService`).
 - **Empty directory:** `lib/screens/login/` removed after deleting its only file.
 
-**Conclusion:** The project follows the plan for the core refactor (setup, auth repository/providers, home single stream, history). Login entry point uses features/auth. Remaining gaps: insights/maps/QR/chatbot still use old services; lib/services/ retained until those are migrated.
+**Conclusion:** The project follows the plan for the core refactor (setup, auth repository/providers, home single stream, history, chatbot). Login entry point uses features/auth. Chatbot uses ChatbotRepository only. Remaining gaps: insights/maps/QR still use old services; lib/services/ retained until those are migrated.

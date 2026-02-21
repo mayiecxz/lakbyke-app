@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
+import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
+import 'package:lakbyke_mobile/app/presentation/shell_routes.dart'
+    show buildChatbotPageRoute, ShellRoutes;
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/responsive_image.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/validation_dialog.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
-import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
-import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.dart';
-import 'package:lakbyke_mobile/app/presentation/shell_routes.dart'
-    show buildChatbotPageRoute, buildShellPageRoute, ShellRoutes;
 import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
 
 /// Inner panel of the sidebar: logo, close button, and menu items.
@@ -123,7 +123,7 @@ class SidebarPanel extends ConsumerWidget {
                           confirmLabel: 'Logout',
                           cancelLabel: 'Cancel',
                           onConfirm: () async {
-                            await authService.signOut();
+                            await authService.softLogout();
                             if (navigator.mounted) {
                               ref.read(appRouterControllerProvider.notifier).goToOnboarding();
                             }

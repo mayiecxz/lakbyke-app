@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-const _userBubbleColor = Color(0xFF0F8A8A);
-const _botBubbleColor = Color(0xFFE8F5F5);
-const _bubbleRadius = 18.0;
-const _avatarSize = 32.0;
+import 'package:lakbyke_mobile/core/presentation/chatbot_theme.dart';
 
 /// Single chat message bubble for the chatbot bottom sheet (user or bot).
 class SheetChatBubble extends StatelessWidget {
@@ -21,12 +17,12 @@ class SheetChatBubble extends StatelessWidget {
 
   Widget _avatar(bool isUser) {
     return CircleAvatar(
-      radius: _avatarSize / 2,
-      backgroundColor: isUser ? _userBubbleColor.withValues(alpha: 0.9) : _botBubbleColor,
+      radius: ChatbotTheme.avatarSize / 2,
+      backgroundColor: isUser ? ChatbotTheme.userBubbleColor.withValues(alpha: 0.9) : ChatbotTheme.botBubbleColor,
       child: Icon(
         isUser ? Icons.person : Icons.smart_toy_rounded,
         size: 18,
-        color: isUser ? Colors.white : _userBubbleColor,
+        color: isUser ? Colors.white : ChatbotTheme.userBubbleColor,
       ),
     );
   }
@@ -45,12 +41,12 @@ class SheetChatBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isUser ? _userBubbleColor : _botBubbleColor,
+                color: isUser ? ChatbotTheme.userBubbleColor : ChatbotTheme.botBubbleColor,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(_bubbleRadius),
-                  topRight: const Radius.circular(_bubbleRadius),
-                  bottomLeft: Radius.circular(isUser ? _bubbleRadius : 6),
-                  bottomRight: Radius.circular(isUser ? 6 : _bubbleRadius),
+                  topLeft: const Radius.circular(ChatbotTheme.bubbleRadius),
+                  topRight: const Radius.circular(ChatbotTheme.bubbleRadius),
+                  bottomLeft: Radius.circular(isUser ? ChatbotTheme.bubbleRadius : 6),
+                  bottomRight: Radius.circular(isUser ? 6 : ChatbotTheme.bubbleRadius),
                 ),
                 boxShadow: [
                   BoxShadow(

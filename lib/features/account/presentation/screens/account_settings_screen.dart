@@ -181,7 +181,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
       isDestructive: true,
       onConfirm: () async {
         try {
-          await ref.read(authServiceProvider).signOut();
+          await ref.read(authServiceProvider).softLogout();
           if (navigator.mounted) {
             ref.read(appRouterControllerProvider.notifier).goToOnboarding();
           }

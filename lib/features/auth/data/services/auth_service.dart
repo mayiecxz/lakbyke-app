@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:lakbyke_mobile/features/chatbot/data/repositories/chatbot_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Result of Google sign-in: success with user, user canceled, or failure with message.
 sealed class GoogleSignInResult {}
@@ -19,12 +20,19 @@ class GoogleSignInFailure extends GoogleSignInResult {
   GoogleSignInFailure(this.message);
 }
 
+/// Key and duration for "don't log in again within 1 week after logout".
+const String _keyLastLogoutTimestamp = 'last_logout_timestamp';
+const int _oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ChatbotRepository? _chatbotRepository;
   late final GoogleSignIn _googleSignIn;
   StreamSubscription<User?>? _authStateSubscription;
   User? _previousUser; // Track previous user state
+
+  /// True if the user tapped Logout in this app session (so we don't restore to dashboard immediately).
+  bool userChoseLogoutThisSession = false;
 
   AuthService({ChatbotRepository? chatbotRepository}) : _chatbotRepository = chatbotRepository {
     // Initialize GoogleSignIn with the appropriate client ID based on platform.
@@ -149,7 +157,7 @@ class AuthService {
     );
   }
 
-  // Sign out
+  // Sign out (clears Firebase and Google session)
   Future<void> signOut() async {
     try {
       final chatbotService = _chatbotRepository ?? ChatbotRepository();
@@ -159,9 +167,42 @@ class AuthService {
       if (!kIsWeb) {
         await _googleSignIn.signOut();
       }
+      await clearLastLogoutTimestamp();
     } catch (e) {
       // Error signing out
     }
+  }
+
+  /// Soft logout: record timestamp and navigate to onboarding without signing out of Firebase.
+  /// If the user reopens the app within 1 week, they are taken back to the dashboard.
+  Future<void> softLogout() async {
+    userChoseLogoutThisSession = true;
+    await setLastLogoutTimestamp(DateTime.now());
+  }
+
+  /// Returns last logout time in milliseconds since epoch, or null if never stored.
+  Future<int?> getLastLogoutTimestamp() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getInt(_keyLastLogoutTimestamp);
+    return v;
+  }
+
+  /// Stores last logout time (used by [softLogout]).
+  Future<void> setLastLogoutTimestamp(DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastLogoutTimestamp, time.millisecondsSinceEpoch);
+  }
+
+  /// Clears stored last logout timestamp.
+  Future<void> clearLastLogoutTimestamp() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyLastLogoutTimestamp);
+  }
+
+  /// True if [timestampMs] is within the last 1 week from [now].
+  static bool isWithinOneWeek(int timestampMs, [int? nowMs]) {
+    final now = nowMs ?? DateTime.now().millisecondsSinceEpoch;
+    return (now - timestampMs) < _oneWeekMs;
   }
 
   // Get current user
