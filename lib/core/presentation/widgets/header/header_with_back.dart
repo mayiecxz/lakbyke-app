@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header/header.dart';
 
 /// Header bar with back button for sub-screens (e.g. Account Settings).
 /// Use as overlay in the same dashboard container layout.

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/formatting/formatting.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header/header.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
 import 'package:intl/intl.dart';
 import 'package:lakbyke_mobile/features/history/presentation/screens/transaction_detail_screen.dart';

@@ -5,8 +5,8 @@ import 'package:lakbyke_mobile/app/presentation/controllers/shell_navigator_key.
 import 'package:lakbyke_mobile/app/presentation/shell_routes.dart'
     show buildChatbotPageRoute, ShellRoutes;
 import 'package:lakbyke_mobile/core/constants/constants.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/responsive_image.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/validation_dialog.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/modals/validation_dialog.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/responsive/responsive_image.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
 import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
 

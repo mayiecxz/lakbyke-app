@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/sidebar_panel.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/sidebar/sidebar_panel.dart';
 
 /// Full-screen dialog content for the sidebar (wraps [SidebarPanel]).
 class SidebarBody extends ConsumerWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/core/presentation/chatbot_theme.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/chatbot_content.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/chatbot/chatbot_content.dart';
 
 /// Chatbot bottom sheet: modern UI, app-help only, API key from env.
 class ChatbotBottomSheet extends StatelessWidget {
@@ -61,7 +61,7 @@ class ChatbotBottomSheet extends StatelessWidget {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: ChatbotTheme.userBubbleColor.withValues(alpha: 0.3),
-                  child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 22),
+                  backgroundImage: const AssetImage(ChatbotTheme.botProfileAsset),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(

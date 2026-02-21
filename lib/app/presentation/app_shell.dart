@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/app/domain/models/app_route.dart';
 import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
 import 'package:lakbyke_mobile/app/presentation/authenticated_shell.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/animated_screen_switcher.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/shared/animated_screen_switcher.dart';
 import 'package:lakbyke_mobile/app/presentation/screens/login_route_screen.dart';
 import 'package:lakbyke_mobile/features/auth/data/services/auth_service.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';

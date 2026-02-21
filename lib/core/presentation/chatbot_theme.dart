@@ -11,4 +11,7 @@ abstract final class ChatbotTheme {
 
   static const double bubbleRadius = 18.0;
   static const double avatarSize = 32.0;
+
+  /// Bot profile image (square-cropped in UI via CircleAvatar + BoxFit.cover).
+  static const String botProfileAsset = 'assets/images/chatbot_profile.png';
 }

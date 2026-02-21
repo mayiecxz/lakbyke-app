@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:lakbyke_mobile/features/history/providers/history_providers.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/transaction_detail_modal.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/index.dart';
 
 /// Detail screen showing individual transactions for a selected period.

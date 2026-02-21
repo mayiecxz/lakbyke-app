@@ -4,7 +4,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:intl/intl.dart';
 import 'package:lakbyke_mobile/config/chatbot_config.dart';
 import 'package:lakbyke_mobile/core/presentation/chatbot_theme.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/sheet_chat_bubble.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/chatbot/sheet_chat_bubble.dart';
 import 'package:lakbyke_mobile/features/chatbot/data/services/chatbot_prompt_service.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_context_builder.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/models/chatbot_model.dart';
@@ -57,7 +57,7 @@ class _ChatbotContentState extends ConsumerState<ChatbotContent> {
     final history = await repo.loadChatHistory();
     if (!mounted) return;
     if (history.isEmpty) {
-      _addMessage("Hi! I'm your LakByke support assistant. Ask about the app—Home, Maps, QR, History, Insights, or Account.", false);
+      _addMessage("Ako nga pala si Kleta! I'm your LakByke support assistant. Ask about the app—Home, Maps, QR, History, Insights, or Account.", false);
     } else {
       setState(() => _messages.addAll(history));
       WidgetsBinding.instance.addPostFrameCallback((_) {

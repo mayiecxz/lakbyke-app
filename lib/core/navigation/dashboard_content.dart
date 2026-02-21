@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header/header.dart';
 import 'package:lakbyke_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:lakbyke_mobile/features/maps/presentation/screens/maps_screen.dart';
 import 'package:lakbyke_mobile/features/qr/presentation/screens/qr_scanner_screen.dart';

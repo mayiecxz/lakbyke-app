@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/app_loading_spinner.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/loading/app_loading_spinner.dart';
 
 /// Full-screen loading overlay. Use for initial screen load (e.g. home, history).
 class AppLoadingOverlay extends StatelessWidget {

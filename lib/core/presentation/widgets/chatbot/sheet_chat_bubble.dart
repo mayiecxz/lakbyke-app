@@ -19,11 +19,10 @@ class SheetChatBubble extends StatelessWidget {
     return CircleAvatar(
       radius: ChatbotTheme.avatarSize / 2,
       backgroundColor: isUser ? ChatbotTheme.userBubbleColor.withValues(alpha: 0.9) : ChatbotTheme.botBubbleColor,
-      child: Icon(
-        isUser ? Icons.person : Icons.smart_toy_rounded,
-        size: 18,
-        color: isUser ? Colors.white : ChatbotTheme.userBubbleColor,
-      ),
+      backgroundImage: isUser ? null : const AssetImage(ChatbotTheme.botProfileAsset),
+      child: isUser
+          ? const Icon(Icons.person, size: 18, color: Colors.white)
+          : null,
     );
   }
 

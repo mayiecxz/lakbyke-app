@@ -322,7 +322,7 @@ class TransactionDetailModal extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, dynamic value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -336,7 +336,7 @@ class TransactionDetailModal extends StatelessWidget {
             ),
           ),
           Text(
-            value,
+            value.toString(),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,

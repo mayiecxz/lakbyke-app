@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/core/presentation/chatbot_theme.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/chatbot_content.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/header.dart' show kHeaderContentTopPadding;
-import 'package:lakbyke_mobile/core/presentation/widgets/header_with_back.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/chatbot/chatbot_content.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/header/header.dart' show kHeaderContentTopPadding;
+import 'package:lakbyke_mobile/core/presentation/widgets/header/header_with_back.dart';
 
 class ChatbotScreen extends StatelessWidget {
   const ChatbotScreen({super.key});

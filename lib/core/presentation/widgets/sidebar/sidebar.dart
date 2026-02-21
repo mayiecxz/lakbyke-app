@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/presentation/widgets/sidebar_body.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/sidebar/sidebar_body.dart';
 
 class Sidebar extends StatelessWidget {
   const Sidebar({super.key});
