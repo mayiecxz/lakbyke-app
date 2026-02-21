@@ -23,18 +23,25 @@ class ForecasterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasData = model.remainingSchoolDays > 0 && model.dailyAverageEarnings >= 0;
 
-    return Container(
-      width: double.infinity,
-      padding: layout.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => SemesterBreakdownDialog.show(context, model),
         borderRadius: BorderRadius.circular(layout.cardRadius),
-        border: Border.all(
-          color: AppColors.homePrimary.withValues(alpha: 0.2),
-          width: 1,
+        child: Container(
+          width: double.infinity,
+          padding: layout.cardPadding,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(layout.cardRadius),
+            border: Border.all(
+              color: AppColors.homePrimary.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: hasData ? _buildContent(context) : _buildEmptyState(context),
         ),
       ),
-      child: hasData ? _buildContent(context) : _buildEmptyState(context),
     );
   }
 
@@ -112,16 +119,15 @@ class ForecasterCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            OutlinedButton.icon(
-              onPressed: () => SemesterBreakdownDialog.show(context, model),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.homePrimary,
-                side: const BorderSide(color: AppColors.homePrimary),
+            Text(
+              'Tap card for breakdown',
+              style: TextStyle(
+                fontSize: (11 * layout.fontScale).clamp(10.0, 12.0),
+                color: AppColors.textTertiary,
+                fontStyle: FontStyle.italic,
               ),
-              icon: const Icon(Icons.info_outline_rounded, size: 18),
-              label: const Text('View breakdown'),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: () => SemesterSetupModal.show(context),
               style: FilledButton.styleFrom(
@@ -166,16 +172,15 @@ class ForecasterCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            OutlinedButton.icon(
-              onPressed: null,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.homePrimary,
-                side: const BorderSide(color: AppColors.homePrimary),
+            Text(
+              'Tap card for breakdown',
+              style: TextStyle(
+                fontSize: (11 * layout.fontScale).clamp(10.0, 12.0),
+                color: AppColors.textTertiary,
+                fontStyle: FontStyle.italic,
               ),
-              icon: const Icon(Icons.info_outline_rounded, size: 18),
-              label: const Text('View breakdown'),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: () => SemesterSetupModal.show(context),
               style: FilledButton.styleFrom(

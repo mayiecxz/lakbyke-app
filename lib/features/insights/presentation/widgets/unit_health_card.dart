@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/core/constants/colors.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/maintenance_timeline_modal.dart';
 
 /// Section B: Unit health status, health bar (0–2000 km), maintenance tier copy.
+/// Tappable to open recommended maintenance timeline modal.
 class UnitHealthCard extends StatelessWidget {
   const UnitHealthCard({
     super.key,
@@ -22,18 +24,23 @@ class UnitHealthCard extends StatelessWidget {
     const maxKm = 2000.0;
     final progress = (model.totalDistanceKm / maxKm).clamp(0.0, 1.0);
 
-    return Container(
-      width: double.infinity,
-      padding: layout.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => MaintenanceTimelineModal.show(context, model),
         borderRadius: BorderRadius.circular(layout.cardRadius),
-        border: Border.all(
-          color: statusColor.withValues(alpha: 0.35),
-          width: 1,
-        ),
-      ),
-      child: Column(
+        child: Container(
+          width: double.infinity,
+          padding: layout.cardPadding,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(layout.cardRadius),
+            border: Border.all(
+              color: statusColor.withValues(alpha: 0.35),
+              width: 1,
+            ),
+          ),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -104,8 +111,19 @@ class UnitHealthCard extends StatelessWidget {
               height: 1.4,
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap to view recommended maintenance timeline',
+            style: TextStyle(
+              fontSize: (11 * s).clamp(10.0, 12.0),
+              color: AppColors.textTertiary,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
         ],
       ),
+    ),
+    ),
     );
   }
 

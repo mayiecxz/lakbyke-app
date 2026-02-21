@@ -4,8 +4,10 @@ import 'package:lakbyke_mobile/core/constants/colors.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_layout.dart';
 import 'package:lakbyke_mobile/features/insights/presentation/widgets/insights_info_banner.dart';
+import 'package:lakbyke_mobile/features/insights/presentation/widgets/badge_showcase_modal.dart';
 
 /// Section C: Rider persona (Early Bird / Peak Provider / Sunset Cruiser) and advice.
+/// Tappable to open badge showcase modal with silhouettes of locked badges.
 class RiderPersonaCard extends StatelessWidget {
   const RiderPersonaCard({
     super.key,
@@ -18,18 +20,27 @@ class RiderPersonaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: layout.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => BadgeShowcaseModal.show(context, model),
         borderRadius: BorderRadius.circular(layout.cardRadius),
-        border: Border.all(
-          color: _personaAccentColor().withValues(alpha: 0.4),
-          width: 1,
+        child: Container(
+          width: double.infinity,
+          padding: layout.cardPadding,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(layout.cardRadius),
+            border: Border.all(
+              color: _personaAccentColor().withValues(alpha: 0.4),
+              width: 1,
+            ),
+          ),
+          child: model.hasEnoughDataForPersona
+              ? _buildContent(context)
+              : _buildEmptyState(context),
         ),
       ),
-      child: model.hasEnoughDataForPersona ? _buildContent(context) : _buildEmptyState(context),
     );
   }
 
@@ -93,18 +104,43 @@ class RiderPersonaCard extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap to see all possible badges',
+          style: TextStyle(
+            fontSize: (11 * s).clamp(10.0, 12.0),
+            color: AppColors.textTertiary,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return InsightsInfoBanner(
-      layout: layout,
-      icon: Icons.person_outline_rounded,
-      message: 'Complete at least 3 rides to unlock your Rider Persona.',
-      backgroundColor: AppColors.homeAccent.withValues(alpha: 0.12),
-      iconColor: AppColors.homePrimary,
-      textColor: AppColors.darkText,
+    final s = layout.fontScale;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InsightsInfoBanner(
+          layout: layout,
+          icon: Icons.person_outline_rounded,
+          message: 'Complete at least 3 rides to unlock your Rider Persona.',
+          backgroundColor: AppColors.homeAccent.withValues(alpha: 0.12),
+          iconColor: AppColors.homePrimary,
+          textColor: AppColors.darkText,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap to see all possible badges',
+          style: TextStyle(
+            fontSize: (11 * s).clamp(10.0, 12.0),
+            color: AppColors.textTertiary,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
     );
   }
 

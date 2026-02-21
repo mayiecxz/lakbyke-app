@@ -22,21 +22,28 @@ class InvestmentRecoveryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasData = model.totalEarnings > 0 || model.dailyAverageEarnings > 0;
 
-    return Container(
-      width: double.infinity,
-      padding: layout.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.homePrimary,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: hasData ? () => InvestmentRecoveryBreakdownDialog.show(context, model) : null,
         borderRadius: BorderRadius.circular(layout.cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.homeAccent.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        child: Container(
+          width: double.infinity,
+          padding: layout.cardPadding,
+          decoration: BoxDecoration(
+            color: AppColors.homePrimary,
+            borderRadius: BorderRadius.circular(layout.cardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.homeAccent.withValues(alpha: 0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
+          child: hasData ? _buildContent(context) : _buildEmptyState(context),
+        ),
       ),
-      child: hasData ? _buildContent(context) : _buildEmptyState(context),
     );
   }
 
@@ -111,15 +118,14 @@ class InvestmentRecoveryCard extends StatelessWidget {
             height: 1.35,
           ),
         ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: () => InvestmentRecoveryBreakdownDialog.show(context, model),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.homeAccent,
-            side: const BorderSide(color: AppColors.homeAccent),
+        const SizedBox(height: 8),
+        Text(
+          'Tap for breakdown',
+          style: TextStyle(
+            fontSize: (11 * s).clamp(10.0, 12.0),
+            color: AppColors.textOnPrimary.withValues(alpha: 0.7),
+            fontStyle: FontStyle.italic,
           ),
-          icon: const Icon(Icons.info_outline_rounded, size: 18),
-          label: const Text('View breakdown'),
         ),
       ],
     );

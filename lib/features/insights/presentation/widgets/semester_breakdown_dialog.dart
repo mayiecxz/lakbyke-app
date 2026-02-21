@@ -6,44 +6,63 @@ import 'package:lakbyke_mobile/core/constants/colors.dart';
 import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 
-/// Dialog that shows how projected semester earnings is computed.
+/// Bottom sheet that shows how projected semester earnings is computed.
 class SemesterBreakdownDialog extends StatelessWidget {
   const SemesterBreakdownDialog({super.key, required this.model});
 
   final InsightsModel model;
 
   static Future<void> show(BuildContext context, InsightsModel model) {
-    return showDialog<void>(
+    return showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => SemesterBreakdownDialog(model: model),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(
-        'How projected semester earnings is computed',
-        style: TextStyle(color: AppColors.homePrimary, fontWeight: FontWeight.bold),
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      content: SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        24,
+        24,
+        24 + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text(
+              'How projected semester earnings is computed',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.homePrimary,
+                  ),
+            ),
+            const SizedBox(height: 20),
             _row(
+              context,
               'Projected earnings',
               'Daily average × Remaining school days',
               '${formatCompactCurrency(model.dailyAverageEarnings)} × ${model.remainingSchoolDays} = ${formatCompactCurrency(model.projectedSemesterEarnings)}',
             ),
             const SizedBox(height: 12),
             _row(
+              context,
               'Daily average',
               'From your total earnings and days with activity',
               formatCompactCurrency(model.dailyAverageEarnings),
             ),
             const SizedBox(height: 12),
             _row(
+              context,
               'Remaining school days',
               'Weekdays (Mon–Fri) from today until semester end',
               '${model.remainingSchoolDays} (end: ${DateFormat('MMM d, yyyy').format(model.semesterEndDate)})',
@@ -51,24 +70,24 @@ class SemesterBreakdownDialog extends StatelessWidget {
             if (model.bonusEarningsFor15MinMore > 0) ...[
               const SizedBox(height: 12),
               _row(
+                context,
                 '+15 min bonus',
                 'Extra if you ride 15 mins more per day',
                 formatCompactCurrency(model.bonusEarningsFor15MinMore),
               ),
             ],
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-      ],
     );
   }
 
-  Widget _row(String label, String formula, String value) {
+  Widget _row(BuildContext context, String label, String formula, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
