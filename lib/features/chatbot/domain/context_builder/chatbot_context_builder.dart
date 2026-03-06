@@ -1,5 +1,6 @@
 import 'package:lakbyke_mobile/features/chatbot/domain/bot_instructions/instructions.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/context_builder/contexts/formulas_context.dart';
+import 'package:lakbyke_mobile/features/chatbot/domain/context_builder/contexts/formulas_explanation_context.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/context_builder/contexts/home_context.dart';
 import 'package:lakbyke_mobile/features/chatbot/domain/context_builder/contexts/insights_context.dart';
 import 'package:lakbyke_mobile/features/home/domain/models/home_data.dart';
@@ -13,6 +14,11 @@ class ChatbotContextBuilder {
 
   /// Equations and formulas for hypothetical computations (battery value, ROI, breakeven, etc.).
   static String buildFormulasContext() => FormulasContext.build();
+
+  /// Narrative explanation and source mapping for the formulas context
+  /// (how each constant and formula ties back to the LakByke CBA and IMRaD documents).
+  static String buildFormulasExplanationContext() =>
+      FormulasExplanationContext.build();
 
   /// Home/dashboard context: battery %, today's metrics (including live effort), totals, equivalent battery price.
   /// Returns empty string if [data] is null.

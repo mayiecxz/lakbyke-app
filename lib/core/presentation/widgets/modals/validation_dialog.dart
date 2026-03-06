@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/modals/app_modal.dart';
 
 class ValidationDialog extends StatelessWidget {
   final String title;
@@ -41,52 +42,17 @@ class ValidationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxWidth = MediaQuery.of(context).size.width * 0.9;
-    final dialogWidth = maxWidth > 500 ? 500.0 : maxWidth;
-
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: dialogWidth),
-        child: Padding(
-          padding: const EdgeInsets.all(18.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Flexible(child: content),
-              const SizedBox(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(cancelLabel),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(true);
-                      if (onConfirm != null) onConfirm!();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDestructive ? Colors.red : null,
-                      foregroundColor: isDestructive ? Colors.white : null,
-                    ),
-                    child: Text(confirmLabel),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return AppModal(
+      title: title,
+      cancelLabel: cancelLabel,
+      confirmLabel: confirmLabel,
+      isDestructive: isDestructive,
+      onCancel: () => Navigator.of(context).pop(false),
+      onConfirm: () {
+        Navigator.of(context).pop(true);
+        onConfirm?.call();
+      },
+      child: content,
     );
   }
 }

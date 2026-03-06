@@ -8,6 +8,7 @@ abstract final class ChatbotConfig {
       SecretsLoader.cachedKey ??
       String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
+  /// Gemma 3 27B instruction-tuned, via Gemini API (same key as Gemini).
   static const String modelName = 'gemma-3-27b-it';
 
   static bool get isConfigured => geminiApiKey.trim().isNotEmpty;

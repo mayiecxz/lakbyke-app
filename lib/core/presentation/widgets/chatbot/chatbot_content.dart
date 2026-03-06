@@ -42,6 +42,13 @@ class _ChatbotContentState extends ConsumerState<ChatbotContent> {
     });
   }
 
+  /// First line of the error message, trimmed and length-capped for display in chat.
+  static String _shortError(String fullError) {
+    final firstLine = fullError.split(RegExp(r'\n')).first.trim();
+    if (firstLine.length <= 200) return firstLine;
+    return '${firstLine.substring(0, 197)}...';
+  }
+
   static String _cleanText(String text) {
     String cleaned = text.replaceAll(
       RegExp(r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]', unicode: true),
@@ -126,12 +133,16 @@ class _ChatbotContentState extends ConsumerState<ChatbotContent> {
       } else {
         _addMessage("Couldn't generate a reply. Try rephrasing or check your connection.", false);
       }
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
+      debugPrint('ChatbotContent._sendMessage error: $e');
+      debugPrint(st.toString());
       final msg = e.toString();
-      final isApiError = msg.contains('404') || msg.contains('API key') || msg.contains('invalid') || msg.contains('model');
+      // Show the actual API error in chat so user sees "leaked", "not found", etc.
+      final String displayError = _shortError(msg);
+      final isApiError = msg.contains('404') || msg.contains('API key') || msg.contains('invalid') || msg.contains('model') || msg.contains('leaked');
       _addMessage(
-        isApiError ? "Chat error: Check API key and model availability." : "Error: Check your connection and try again.",
+        isApiError ? 'Chat error: $displayError' : 'Error: ${displayError.isEmpty ? "Check your connection and try again." : displayError}',
         false,
       );
     } finally {

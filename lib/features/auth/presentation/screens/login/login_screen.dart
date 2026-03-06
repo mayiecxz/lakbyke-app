@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/modals/app_modal.dart';
 import 'package:lakbyke_mobile/app/presentation/controllers/app_router_controller.dart';
 import 'package:lakbyke_mobile/features/auth/data/repositories/auth_repository.dart';
 import 'package:lakbyke_mobile/features/auth/providers/auth_providers.dart';
@@ -388,47 +389,22 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.lock_reset, color: Color(0xFF70D2C8)),
-            SizedBox(width: 8),
-            Text('Reset Password'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'We\'ll send a password reset link to:',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              email,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF70D2C8),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+      builder: (context) => AppModal(
+        icon: Icons.lock_reset_rounded,
+        title: 'Reset Password',
+        subtitle: 'We\'ll send a password reset link to the email below.',
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Send Reset Link',
+        onCancel: () => Navigator.of(context).pop(false),
+        onConfirm: () => Navigator.of(context).pop(true),
+        child: Text(
+          email,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF70D2C8),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Send Reset Link'),
-          ),
-        ],
+        ),
       ),
     );
 

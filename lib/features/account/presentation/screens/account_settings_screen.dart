@@ -13,6 +13,8 @@ import 'package:lakbyke_mobile/features/account/presentation/components/account_
 import 'package:lakbyke_mobile/features/account/presentation/components/settings_section.dart';
 import 'package:lakbyke_mobile/features/account/presentation/components/settings_tile.dart';
 import 'package:lakbyke_mobile/features/account/presentation/components/change_password_dialog.dart';
+import 'package:lakbyke_mobile/features/account/domain/about_constants.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/modals/app_modal.dart';
 
 class AccountSettingsScreen extends ConsumerStatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -141,21 +143,15 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   void _showAboutDialog(BuildContext context) {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('About'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'LakByke\n\n'
-            'Pedal-powered energy conversion for cyclists. '
-            'Track energy, view history, find stations, and manage your account.',
-          ),
+      builder: (context) => AppModal(
+        icon: Icons.info_outline_rounded,
+        title: 'About LakByke',
+        cancelLabel: null,
+        confirmLabel: 'OK',
+        onConfirm: () => Navigator.of(context).pop(),
+        child: SingleChildScrollView(
+          child: Text(lakbykeAboutFullText),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }

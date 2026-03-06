@@ -1,56 +1,89 @@
 /// Static equations and formulas for the chatbot to use for hypothetical computations.
-/// All values match the app's logic; use only these when answering "what if" or calculation questions.
+/// Values are sourced from app policy constants and the LakByke IMRaD study.
 class FormulasContext {
   FormulasContext._();
 
-  /// Returns the full EQUATIONS & FORMULAS block (no parameters).
-  static String build() {
-    return r'''EQUATIONS & FORMULAS (use for hypothetical computations; use only these values):
-
-1. Battery value (equivalent price of charge):
-   rawValue = (batteryPercent / 100) × 30
-   payout = round down to nearest ₱5: floor(rawValue / 5) × 5
-   Constant: ₱30 per 100% charge (72 Wh).
-
-2. ROI progress (investment recovery %):
-   roiProgressPercent = (totalEarnings / initialInvestment) × 100
-
-3. Remaining to breakeven:
-   remainingToBreakeven = max(0, initialInvestment - totalEarnings)
-
-4. Daily average earnings:
-   dailyAverageEarnings = totalEarnings / daysWithActivity (0 if daysWithActivity is 0)
-
-5. Projected semester earnings:
-   projectedSemesterEarnings = dailyAverageEarnings × remainingSchoolDays
-
-6. Bonus for 15 minutes more per day (hypothetical):
-   avgSessionMinutes = (totalDurationHours × 60) / totalSessions
-   earningRatePerMinute = dailyAverageEarnings / avgSessionMinutes
-   bonus = earningRatePerMinute × 15 × remainingSchoolDays
-
-7. Days to breakeven / breakeven date:
-   daysToBreakeven = ceil(remainingDebt / dailyAvg)
-   Breakeven date = today + daysToBreakeven (null if already recovered or dailyAvg ≤ 0).
-
-8. Remaining school days:
-   Count of weekdays (Monday–Friday) from given date to semester end (inclusive).
-
-9. Payout rounding rule:
-   All peso payouts rounded down to nearest ₱5: payout = (value / 5) rounded down, then × 5.
-
-10. CBA constants (for hypotheticals and "is it worth it?"):
-    Cyclist: initial investment ₱3,792; yearly maintenance ₱700 (~₱1.91/day); breakeven ~8 months at optimal rate.
-    Station: initial investment ₱10,844; yearly maintenance ₱1,360 (~₱3.72/day); breakeven ~4 months.
-    Buyback per full 72 Wh: low ₱10, optimal ₱30, high ₱60.
-    Battery: 1 unit = 72 Wh.
-
-11. Unit health classification:
-    totalDistanceKm < 500 → Excellent; 500 ≤ totalDistanceKm < 2000 → Bolt check; ≥ 2000 → Motor inspection.
-
-12. Rider persona by average ride hour:
-    Average ride hour in [6, 10) → Early Bird; [10, 15) → Peak Provider; [15, 20) → Sunset Cruiser.
+  // System prompt and strict AI guardrails. Place this FIRST so the AI knows how to behave.
+  static const String _aiPromptingRules = r'''
+### AI SYSTEM INSTRUCTIONS & GUARDRAILS ###
+1. STRICT ADHERENCE: You must ONLY use the exact values, constants, and formulas provided in the "COMPUTATIONAL SPECIFICATIONS" section below.
+2. NO HALLUCINATION: Never invent, guess, or pull constants, conversion factors, or formulas from outside this context.
+3. MISSING DATA: If a computation requires inputs not provided by the user or the context, you must explicitly ask the user for the missing value. Do not assume.
+4. ESTIMATES VS. LIVE DATA: Clearly label calculated predictions as "hypothetical estimates." Never present them as live or measured current values.
+5. RANGES: For range-based constants (e.g., 40–45 W or 1.5–2.0 Wh), calculate using both min and max to provide a range-based answer.
+6. UNITS: Always append explicit units to your final outputs (e.g., Wh, W, km/h, km, ₱, hours, minutes).
+7. SOURCE TRUTH: The data reflects a 12V 6Ah (72Wh) LiFePO4 portable battery context, LakByke CBA policy constants, and empirical LakByke IMRaD figures.
 
 ''';
-  }
+
+  // Pure math, variables, and formulas. Cleaned up to read like strict logic.
+  static const String _computationSpec = r'''
+### COMPUTATIONAL SPECIFICATIONS ###
+
+[0. SOURCE BASIS]
+- App CBA policy constants: bot_instructions/cba.dart (buyback tiers and breakeven guidance used by the chatbot).
+- Study document: LakByke IMRaD 2.2.1 (scope, battery specs, and empirical operating figures).
+
+[1. CORE BATTERY & PAYOUT LOGIC]
+Battery_Capacity_Wh = 72
+Base_Payout_Rate_Per_100_Percent_Pesos = 30.00
+rawValue_Pesos = (batteryPercent / 100) * Base_Payout_Rate_Per_100_Percent_Pesos
+Payout_Rounding_Rule_Pesos = floor(rawValue_Pesos / 5) * 5
+
+[2. ROI & EARNINGS FORMULAS]
+roiProgressPercent = (totalEarnings / initialInvestment) * 100
+remainingToBreakeven_Pesos = max(0, initialInvestment - totalEarnings)
+dailyAverageEarnings_Pesos = totalEarnings / max(1, daysWithActivity)
+projectedSemesterEarnings_Pesos = dailyAverageEarnings_Pesos * remainingSchoolDays
+daysToBreakeven = ceil(remainingDebt / max(1, dailyAverageEarnings_Pesos))
+breakevenDate = today + daysToBreakeven (null if remainingDebt <= 0 or dailyAverageEarnings_Pesos <= 0)
+
+[3. BONUS FOR 15 MINUTES MORE PER DAY]
+avgSessionMinutes = (totalDurationHours * 60) / totalSessions
+earningRatePerMinute_Pesos = dailyAverageEarnings_Pesos / avgSessionMinutes
+bonusFromExtra15Min_Pesos = earningRatePerMinute_Pesos * 15 * remainingSchoolDays
+
+[4. SCHOOL DAYS & ROUNDING]
+remainingSchoolDays = count of weekdays (Monday–Friday) from given date to semester end (inclusive)
+Peso_Payout_Rounding(value) = floor(value / 5) * 5
+
+[5. LAKBYKE CBA CONSTANTS]
+Cyclist_Initial_Investment_Pesos = 3792
+Cyclist_Yearly_Maintenance_Pesos = 700        // ≈ ₱1.91/day
+Cyclist_Est_Breakeven_Months = 8
+Station_Initial_Investment_Pesos = 10844
+Station_Yearly_Maintenance_Pesos = 1360       // ≈ ₱3.72/day
+Station_Est_Breakeven_Months = 4
+Buyback_Tiers_Pesos = { Low: 10, Optimal: 30, High: 60 }
+
+[6. EMPIRICAL KINETIC CONVERSIONS]
+Average_Speed_Kmh = 15
+Mechanical_Power_W = 70
+Net_Stored_Power_W_Range = [40, 45]
+Energy_Generated_Per_Hour_Wh = 40
+Revenue_Per_Km_Pesos = 4.00
+Max_Revenue_Per_Hour_Pesos = 60.00          // 15 km/h * ₱4/km
+Revenue_From_Distance_Pesos = distanceKm * Revenue_Per_Km_Pesos
+
+[7. CHARGING EQUIVALENTS & TIME]
+Hours_To_Full_Charge = Battery_Capacity_Wh / Energy_Generated_Per_Hour_Wh   // ≈ 1.8 h or 108 min
+Ten_Min_Phone_Charge_Wh_Range = [1.5, 2.0]
+Phone_Charges_Per_Hour_Pedaling_Range = [20, 27]
+
+[8. CLASSIFICATIONS]
+Unit_Health_Distance_Km = {
+  Excellent: totalDistanceKm < 500,
+  Bolt_Check: 500 <= totalDistanceKm < 2000,
+  Motor_Inspection: totalDistanceKm >= 2000
+}
+
+Rider_Persona_Avg_Hour = {
+  Early_Bird:   06:00-09:59,
+  Peak_Provider: 10:00-14:59,
+  Sunset_Cruiser: 15:00-19:59
+}
+''';
+
+  /// Returns the combined context for the chatbot: guardrails first, then computation spec.
+  static String build() => _aiPromptingRules + _computationSpec;
 }
