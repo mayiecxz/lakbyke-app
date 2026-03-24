@@ -10,6 +10,7 @@ import 'package:lakbyke_mobile/core/navigation/dashboard_content.dart';
 import 'package:lakbyke_mobile/features/account/presentation/screens/account_settings_screen.dart';
 import 'package:lakbyke_mobile/features/chatbot/presentation/screens/chatbot_screen.dart';
 import 'package:lakbyke_mobile/features/history/presentation/screens/transaction_detail_screen.dart';
+import 'package:lakbyke_mobile/core/presentation/widgets/chatbot/chat_fab.dart';
 import 'package:lakbyke_mobile/features/history/presentation/screens/kwh_detail_screen.dart';
 
 /// Persistent shell for authenticated app: Scaffold with bottom nav + FAB;
@@ -102,25 +103,12 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell> {
     ref.read(appRouterControllerProvider.notifier).setDashboardTab(index);
   }
 
-  void _onFabPressed() {
-    final nav = _navigatorKey.currentState;
-    if (nav != null && nav.canPop()) {
-      nav.popUntil((route) => route.settings.name == ShellRoutes.dashboard);
-    }
-    ref.read(appRouterControllerProvider.notifier).setDashboardTab(2);
-  }
-
-  static const double _fabExtraBottom = 12;
-
   @override
   Widget build(BuildContext context) {
     final route = ref.watch(appRouterControllerProvider);
     final topRouteName = ref.watch(shellRouteNameProvider);
     final isChatbotFullScreen = topRouteName == ShellRoutes.chatbot;
     final tabIndex = route is AppRouteAuthenticated ? route.tabIndex : 0;
-    final isFabActive = tabIndex == 2;
-    final fabBorderColor = isFabActive ? _accentColor : Colors.grey;
-    final fabIconColor = isFabActive ? _accentColor : Colors.grey;
 
     // Header and bottom nav are scaffold slots outside the Navigator, so they stay
     // fixed and are not affected by route or tab transitions (only body content changes).
@@ -134,29 +122,13 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell> {
       ),
       floatingActionButton: isChatbotFullScreen
           ? null
-          : SizedBox(
-        height: 70,
-        width: 70,
-        child: FloatingActionButton(
-          onPressed: _onFabPressed,
-          elevation: 4,
-          backgroundColor: Colors.white,
-          shape: CircleBorder(
-            side: BorderSide(
-              color: fabBorderColor,
-              width: isFabActive ? 4 : 2,
+          : ChatFAB(
+              backgroundColor: _accentColor,
+              foregroundColor: Colors.white,
             ),
-          ),
-          child: Icon(
-            Icons.qr_code_scanner,
-            size: 32,
-            color: fabIconColor,
-          ),
-        ),
-      ),
       floatingActionButtonLocation: isChatbotFullScreen
           ? null
-          : _LowerCenterDocked(_fabExtraBottom),
+          : FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: isChatbotFullScreen
           ? null
           : _buildBottomNav(tabIndex),
@@ -165,8 +137,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell> {
 
   Widget _buildBottomNav(int currentIndex) {
     return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 10.0,
+      shape: const _RectangularNotchedShape(),
       color: Colors.white,
       surfaceTintColor: Colors.white,
       elevation: 10,
@@ -179,7 +150,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell> {
           children: [
             _buildNavPill(icon: Icons.directions_bike, label: 'Home', index: 0),
             _buildNavPill(icon: Icons.map_outlined, label: 'Maps', index: 1),
-            const SizedBox(width: 40),
+            _buildNavPill(icon: Icons.qr_code_scanner, label: 'Scan', index: 2),
             _buildNavPill(icon: Icons.trending_up, label: 'Insights', index: 3),
             _buildNavPill(icon: Icons.history, label: 'History', index: 4),
           ],
@@ -239,20 +210,12 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell> {
   }
 }
 
-/// Positions the FAB in the center dock, slightly lower than default.
-class _LowerCenterDocked extends FloatingActionButtonLocation {
-  const _LowerCenterDocked(this.extraBottom);
-
-  final double extraBottom;
+/// BottomAppBar shape with no notch (five equal nav pills, FAB floats separately).
+class _RectangularNotchedShape implements NotchedShape {
+  const _RectangularNotchedShape();
 
   @override
-  Offset getOffset(ScaffoldPrelayoutGeometry geometry) {
-    final centerX = (geometry.scaffoldSize.width -
-            geometry.floatingActionButtonSize.width) /
-        2.0;
-    final y = geometry.contentBottom -
-        geometry.floatingActionButtonSize.height / 2.0 +
-        extraBottom;
-    return Offset(centerX, y);
+  Path getOuterPath(Rect host, Rect? guest) {
+    return Path()..addRect(host);
   }
 }

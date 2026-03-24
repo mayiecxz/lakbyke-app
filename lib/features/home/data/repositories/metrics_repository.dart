@@ -75,6 +75,41 @@ class MetricsRepository {
     return {'distance': distance, 'wh': wh};
   }
 
+  /// Sum distance and Wh for all sessions in the same calendar month as [refDate].
+  Map<String, double> _sumForMonth(
+    Map<String, dynamic> targetDeviceData,
+    DateTime refDate,
+  ) {
+    double distance = 0.0;
+    double wh = 0.0;
+
+    for (final entry in targetDeviceData.entries) {
+      if (entry.value is! Map) continue;
+      final sessionData = Map<String, dynamic>.from(entry.value as Map);
+      final timestamp = sessionData['timestamp'];
+      if (timestamp is String) {
+        try {
+          final time = DateTime.parse(timestamp);
+          if (time.year == refDate.year && time.month == refDate.month) {
+            final d = sessionData['totalDistanceKm'];
+            if (d != null) {
+              distance += (d is num)
+                  ? d.toDouble()
+                  : (double.tryParse(d.toString()) ?? 0.0);
+            }
+            final w = sessionData['totalWh'];
+            if (w != null) {
+              wh += (w is num)
+                  ? w.toDouble()
+                  : (double.tryParse(w.toString()) ?? 0.0);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    return {'distance': distance, 'wh': wh};
+  }
+
   /// Get today's totals (distance, Wh) from deviceEnergyData.
   Future<Map<String, double>> getTodayData() async {
     try {
@@ -141,6 +176,43 @@ class MetricsRepository {
       };
     } catch (e) {
       return {'yesterdayDistance': 0.0, 'yesterdayWh': 0.0};
+    }
+  }
+
+  /// Get current calendar month totals (distance, Wh) from deviceEnergyData.
+  Future<Map<String, dynamic>> getCurrentMonthData() async {
+    try {
+      final serviceTag = await getServiceTag();
+      if (serviceTag == null) {
+        return {'monthDistance': 0.0, 'monthWh': 0.0};
+      }
+
+      final cleanServiceTag =
+          serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
+      final snapshot = await _database.ref('deviceEnergyData').get();
+      if (!snapshot.exists) {
+        return {'monthDistance': 0.0, 'monthWh': 0.0};
+      }
+
+      final data = snapshot.value;
+      if (data is! Map) {
+        return {'monthDistance': 0.0, 'monthWh': 0.0};
+      }
+
+      final deviceData = Map<String, dynamic>.from(data);
+      final targetDeviceData =
+          _findDeviceData(deviceData, serviceTag, cleanServiceTag);
+      if (targetDeviceData == null) {
+        return {'monthDistance': 0.0, 'monthWh': 0.0};
+      }
+
+      final result = _sumForMonth(targetDeviceData, DateTime.now());
+      return {
+        'monthDistance': result['distance']!,
+        'monthWh': result['wh']!,
+      };
+    } catch (e) {
+      return {'monthDistance': 0.0, 'monthWh': 0.0};
     }
   }
 }

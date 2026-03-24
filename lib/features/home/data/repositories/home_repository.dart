@@ -95,10 +95,15 @@ class HomeRepository {
         }
 
         // Extract latest session data
+        final bool isFlatStructure = targetDeviceData.containsKey('timestamp');
         Map<String, dynamic> latestSession = {};
-        if (targetDeviceData.containsKey('timestamp')) {
-          // Flat structure (live data)
-          latestSession = targetDeviceData;
+        if (isFlatStructure) {
+          // Flat structure (live dashboard snapshot): deviceEnergyData -> MNT0001 -> { timestamp, totalDistanceKm, totalWh, ... }
+          latestSession = Map<String, dynamic>.from(targetDeviceData);
+          // Support both totalDistanceKM and totalDistanceKm
+          if (latestSession.containsKey('totalDistanceKM') && !latestSession.containsKey('totalDistanceKm')) {
+            latestSession['totalDistanceKm'] = latestSession['totalDistanceKM'];
+          }
         } else {
           // Session-based structure - find latest
           DateTime? latestTime;
@@ -123,24 +128,50 @@ class HomeRepository {
         double todayDistance = 0.0;
         double todayWh = 0.0;
 
-        for (final entry in targetDeviceData.entries) {
-          if (entry.value is! Map) continue;
-          final sessionData = Map<String, dynamic>.from(entry.value as Map);
-          final timestamp = sessionData['timestamp'];
-          if (timestamp is String) {
+        if (isFlatStructure) {
+          // Single record: use its totalDistanceKm/totalWh as today's values when the record date is today
+          final timestampStr = latestSession['timestamp'];
+          if (timestampStr is String) {
             try {
-              final time = DateTime.parse(timestamp);
+              final time = DateTime.parse(timestampStr);
               if (time.year == now.year && time.month == now.month && time.day == now.day) {
-                final distance = sessionData['totalDistanceKm'];
+                final distance = latestSession['totalDistanceKm'] ?? latestSession['totalDistanceKM'];
+                final wh = latestSession['totalWh'];
                 if (distance != null) {
-                  todayDistance += (distance is num) ? distance.toDouble() : (double.tryParse(distance.toString()) ?? 0.0);
+                  todayDistance = (distance is num) ? distance.toDouble() : (double.tryParse(distance.toString()) ?? 0.0);
                 }
-                final wh = sessionData['totalWh'];
                 if (wh != null) {
-                  todayWh += (wh is num) ? wh.toDouble() : (double.tryParse(wh.toString()) ?? 0.0);
+                  todayWh = (wh is num) ? wh.toDouble() : (double.tryParse(wh.toString()) ?? 0.0);
                 }
               }
             } catch (_) {}
+          }
+          // Use record timestamp for live effort freshness
+          if (latestSession['timestamp'] is String && latestSession['liveEffortTimestamp'] == null) {
+            try {
+              latestSession['liveEffortTimestamp'] = DateTime.parse(latestSession['timestamp'] as String);
+            } catch (_) {}
+          }
+        } else {
+          for (final entry in targetDeviceData.entries) {
+            if (entry.value is! Map) continue;
+            final sessionData = Map<String, dynamic>.from(entry.value as Map);
+            final timestamp = sessionData['timestamp'];
+            if (timestamp is String) {
+              try {
+                final time = DateTime.parse(timestamp);
+                if (time.year == now.year && time.month == now.month && time.day == now.day) {
+                  final distance = sessionData['totalDistanceKm'] ?? sessionData['totalDistanceKM'];
+                  if (distance != null) {
+                    todayDistance += (distance is num) ? distance.toDouble() : (double.tryParse(distance.toString()) ?? 0.0);
+                  }
+                  final wh = sessionData['totalWh'];
+                  if (wh != null) {
+                    todayWh += (wh is num) ? wh.toDouble() : (double.tryParse(wh.toString()) ?? 0.0);
+                  }
+                }
+              } catch (_) {}
+            }
           }
         }
 
@@ -190,4 +221,8 @@ class HomeRepository {
   /// Delegate yesterday's data to MetricsRepository
   Future<Map<String, dynamic>> getYesterdayData() =>
       _metricsRepository.getYesterdayData();
+
+  /// Delegate current month's data to MetricsRepository
+  Future<Map<String, dynamic>> getCurrentMonthData() =>
+      _metricsRepository.getCurrentMonthData();
 }

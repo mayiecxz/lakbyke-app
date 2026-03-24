@@ -22,7 +22,8 @@ class ChatbotBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final bottomSheetHeight = screenHeight * 0.88;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final bottomSheetHeight = screenHeight * 0.8;
 
     return Container(
       height: bottomSheetHeight,
@@ -32,19 +33,8 @@ class ChatbotBottomSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Drag handle
+          // Header aligned to top: dark bar extends to topmost edge, content below status bar
           Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Header: Chat with LakByke Assistant
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0xFF1A1A1A),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -56,30 +46,68 @@ class ChatbotBottomSheet extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: ChatbotTheme.userBubbleColor.withValues(alpha: 0.3),
-                  backgroundImage: const AssetImage(ChatbotTheme.botProfileAsset),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: topPadding + 10,
+                left: 16,
+                right: 16,
+                bottom: 12,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Text("Chat with", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text("LakByke Assistant", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: ChatbotTheme.userBubbleColor.withValues(alpha: 0.3),
+                        backgroundImage: const AssetImage(ChatbotTheme.botProfileAsset),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chat with our chatbot',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Kleta',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                        tooltip: 'Close',
+                      ),
                     ],
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: "Close",
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Expanded(child: const ChatbotContent()),

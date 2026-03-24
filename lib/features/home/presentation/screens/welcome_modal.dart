@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:lakbyke_mobile/core/constants/constants.dart';
 import 'package:lakbyke_mobile/core/formatting/formatting.dart';
 
-/// Welcome modal that displays yesterday's achievements with environmental benefits
+/// Welcome modal that displays current month's achievements with environmental benefits
 class WelcomeModal extends StatelessWidget {
-  final double yesterdayDistance;
-  final double yesterdayWh;
+  final double monthDistance;
+  final double monthWh;
   final VoidCallback onClose;
 
   const WelcomeModal({
     super.key,
-    required this.yesterdayDistance,
-    required this.yesterdayWh,
+    required this.monthDistance,
+    required this.monthWh,
     required this.onClose,
   });
 
@@ -33,15 +33,15 @@ class WelcomeModal extends StatelessWidget {
     if (distanceKm >= 1.0) {
       if (treeEquivalent >= 1.0) {
         final trees = treeEquivalent.toStringAsFixed(1);
-        return 'You pedaled $distStr km yesterday—that avoids as much CO₂ as $trees tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
+        return 'You pedaled $distStr km this month—that avoids as much CO₂ as $trees tree${trees == '1.0' ? '' : 's'} absorb${trees == '1.0' ? 's' : ''} in a year!';
       } else if (treeEquivalent >= 0.1) {
         final treePercent = (treeEquivalent * 100).toStringAsFixed(0);
-        return 'You pedaled $distStr km yesterday—avoiding CO₂ equivalent to $treePercent% of a tree\'s annual absorption!';
+        return 'You pedaled $distStr km this month—avoiding CO₂ equivalent to $treePercent% of a tree\'s annual absorption!';
       } else {
-        return 'You pedaled $distStr km yesterday, saving $co2Str kg of CO₂!';
+        return 'You pedaled $distStr km this month, saving $co2Str kg of CO₂!';
       }
     } else {
-      return 'You pedaled ${distanceKm.toStringAsFixed(2)} km yesterday—every pedal counts!';
+      return 'You pedaled ${distanceKm.toStringAsFixed(2)} km this month—every pedal counts!';
     }
   }
 
@@ -58,13 +58,13 @@ class WelcomeModal extends StatelessWidget {
     if (wh >= 16) {
       if (phoneCharges >= 1.0) {
         final charges = phoneCharges >= 1000 ? formatCompactNumber(phoneCharges, 1) : phoneCharges.toStringAsFixed(1);
-        return 'You generated $energyStr yesterday—that\'s enough to charge a smartphone $charges time${charges == '1.0' ? '' : 's'}! 📱';
+        return 'You generated $energyStr this month—that\'s enough to charge a smartphone $charges time${charges == '1.0' ? '' : 's'}! 📱';
       } else {
         final percent = (phoneCharges * 100).toStringAsFixed(0);
-        return 'You generated $energyStr yesterday—that\'s $percent% of a smartphone charge!';
+        return 'You generated $energyStr this month—that\'s $percent% of a smartphone charge!';
       }
     } else if (wh > 0) {
-      return 'You generated $energyStr yesterday—powering towards a greener future!';
+      return 'You generated $energyStr this month—powering towards a greener future!';
     } else {
       return '';
     }
@@ -85,12 +85,12 @@ class WelcomeModal extends StatelessWidget {
     if (distanceKm >= 1.0) {
       if (minMoneySaved >= 15.0) {
         if (maxMoneySaved - minMoneySaved < 10) {
-          return 'You saved at least ${formatCompactCurrency(minMoneySaved)} yesterday by pedaling instead of taking public transport! 💰';
+          return 'You saved at least ${formatCompactCurrency(minMoneySaved)} this month by pedaling instead of taking public transport! 💰';
         } else {
-          return 'You saved ${formatCompactCurrency(minMoneySaved)}-${formatCompactCurrency(maxMoneySaved)} yesterday by pedaling instead of taking public transport! 💰';
+          return 'You saved ${formatCompactCurrency(minMoneySaved)}-${formatCompactCurrency(maxMoneySaved)} this month by pedaling instead of taking public transport! 💰';
         }
       } else {
-        return 'You saved at least ${formatCompactCurrency(minMoneySaved)} yesterday—every peso counts! 💵';
+        return 'You saved at least ${formatCompactCurrency(minMoneySaved)} this month—every peso counts! 💵';
       }
     } else {
       return '';
@@ -109,11 +109,11 @@ class WelcomeModal extends StatelessWidget {
     if (distanceKm >= 1.0) {
       final calories = caloriesBurned >= 1000 ? formatCompactNumber(caloriesBurned, 0) : caloriesBurned.toStringAsFixed(0);
       if (caloriesBurned >= 100) {
-        return 'You burned ~$calories calories yesterday—that\'s a solid workout! 💪';
+        return 'You burned ~$calories calories this month—that\'s a solid workout! 💪';
       } else if (caloriesBurned >= 50) {
-        return 'You burned ~$calories calories yesterday—great start! 🏃';
+        return 'You burned ~$calories calories this month—great start! 🏃';
       } else {
-        return 'You burned ~$calories calories yesterday—every bit helps! ⚡';
+        return 'You burned ~$calories calories this month—every bit helps! ⚡';
       }
     } else {
       return '';
@@ -122,11 +122,11 @@ class WelcomeModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final distanceMessage = _getDistanceBenefit(yesterdayDistance);
-    final energyMessage = _getEnergyBenefit(yesterdayWh);
-    final moneyMessage = _getMoneySavedBenefit(yesterdayDistance);
-    final caloriesMessage = _getCaloriesBurnedBenefit(yesterdayDistance);
-    final hasData = yesterdayDistance > 0 || yesterdayWh > 0;
+    final distanceMessage = _getDistanceBenefit(monthDistance);
+    final energyMessage = _getEnergyBenefit(monthWh);
+    final moneyMessage = _getMoneySavedBenefit(monthDistance);
+    final caloriesMessage = _getCaloriesBurnedBenefit(monthDistance);
+    final hasData = monthDistance > 0 || monthWh > 0;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -366,16 +366,16 @@ class WelcomeModal extends StatelessWidget {
 
   static Future<void> show(
     BuildContext context, {
-    required double yesterdayDistance,
-    required double yesterdayWh,
+    required double monthDistance,
+    required double monthWh,
   }) {
     return showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (context) => WelcomeModal(
-        yesterdayDistance: yesterdayDistance,
-        yesterdayWh: yesterdayWh,
+        monthDistance: monthDistance,
+        monthWh: monthWh,
         onClose: () => Navigator.of(context).pop(),
       ),
     );

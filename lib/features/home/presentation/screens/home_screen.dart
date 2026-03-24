@@ -20,7 +20,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Show welcome modal after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showWelcomeModal();
     });
@@ -33,16 +32,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!mounted) return;
     
     try {
-      final yesterdayData = await ref.read(yesterdayDataProvider.future);
-      final yesterdayDistance = yesterdayData['yesterdayDistance'] as double? ?? 0.0;
-      final yesterdayWh = yesterdayData['yesterdayWh'] as double? ?? 0.0;
+      final monthData = await ref.read(currentMonthDataProvider.future);
+      final monthDistance = monthData['monthDistance'] as double? ?? 0.0;
+      final monthWh = monthData['monthWh'] as double? ?? 0.0;
       
       if (mounted) {
         _welcomeModalShown = true;
         WelcomeModal.show(
           context,
-          yesterdayDistance: yesterdayDistance,
-          yesterdayWh: yesterdayWh,
+          monthDistance: monthDistance,
+          monthWh: monthWh,
         );
       }
     } catch (e) {

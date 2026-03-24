@@ -52,7 +52,7 @@ class KwhRepository {
       if (serviceTag == null || serviceTag.isEmpty) return [];
 
       final cleanServiceTag = serviceTag.replaceAll(' ', '').replaceAll('-', '').toUpperCase();
-      final snapshot = await _database.ref('deviceEnergyData').get();
+      final snapshot = await _database.ref('deviceEnergyHistory').get();
 
       if (!snapshot.exists) return [];
 
@@ -84,9 +84,11 @@ class KwhRepository {
             final timestamp = _parseTimestamp(timestampStr);
             if (timestamp != null) {
               session['timestamp'] = timestamp;
-              
+              // Support both totalDistanceKM and totalDistanceKm (Firebase key casing)
+              final distance = session['totalDistanceKM'] ?? session['totalDistanceKm'];
+              session['totalDistanceKm'] = distance;
               final totalWh = session['totalWh'];
-              final totalDistanceKm = session['totalDistanceKm'];
+              final totalDistanceKm = distance;
               
               if (totalWh != null || totalDistanceKm != null) {
                 historyRecords.add(session);

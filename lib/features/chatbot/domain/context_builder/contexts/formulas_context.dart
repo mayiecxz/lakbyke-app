@@ -70,6 +70,14 @@ Hours_To_Full_Charge = Battery_Capacity_Wh / Energy_Generated_Per_Hour_Wh   // â
 Ten_Min_Phone_Charge_Wh_Range = [1.5, 2.0]
 Phone_Charges_Per_Hour_Pedaling_Range = [20, 27]
 
+[7b. TIME & DISTANCE TO FULL FROM CURRENT BATTERY %]
+Use batteryPercent from CURRENT USER DATA when present; if missing, say N/A or direct user to app.
+Remaining_Wh = (100 - batteryPercent) / 100 * Battery_Capacity_Wh
+Hours_To_Full_From_Current = Remaining_Wh / Energy_Generated_Per_Hour_Wh
+Minutes_To_Full_From_Current = Hours_To_Full_From_Current * 60
+Distance_To_Full_Km = Hours_To_Full_From_Current * Average_Speed_Kmh
+When the user asks "how long to bike to full charge," "gaano katagal pa," or "how far to bike to full," use batteryPercent from CURRENT USER DATA and these formulas; if battery is missing, say so and direct to the app.
+
 [8. CLASSIFICATIONS]
 Unit_Health_Distance_Km = {
   Excellent: totalDistanceKm < 500,

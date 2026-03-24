@@ -25,7 +25,7 @@ class HomeBatterySection extends StatelessWidget {
     final spacing = (w * 0.03).clamp(6.0, 14.0);
 
     return SizedBox(
-      height: 110,
+      height: 130,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -40,11 +40,10 @@ class HomeBatterySection extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   _ServiceTagRow(serviceTagAsync: serviceTagAsync),
                   const SizedBox(height: 10),
-                  _BatteryStatusRow(homeData: homeData),
+                  Expanded(child: _BatteryStatusRow(homeData: homeData)),
                 ],
               ),
             ),

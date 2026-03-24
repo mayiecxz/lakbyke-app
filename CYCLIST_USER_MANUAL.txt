@@ -1,0 +1,120 @@
+LakByke Cyclist — User Manual (v1.0)
+Date: 2026-03-10
+
+Welcome
+-------
+This app connects you to your LakByke hardware and stations. Use it to log in, view live telemetry from your unit, find nearby stations on the map, scan QR codes to complete battery swaps or sales, and view your ride and earnings history.
+
+Quick Start (Rider)
+-------------------
+1. Install the LakByke Cyclist app on your device (Android/iOS/web).
+2. Open the app and follow Onboarding steps. If asked, scan the service tag QR from your LakByke device or station.
+3. Sign up (if new) or Login. You can use Email/Password or Google Sign-In.
+4. Verify your email (if using email sign-up): check your inbox and confirm before logging in.
+5. After login you'll arrive at the Dashboard with five tabs: Home, Maps, Scan, Insights, History.
+
+Account & Login
+----------------
+- Sign up: follow the app's signup flow. You may need a service tag (QR) to register.
+- Login: enter email and password or use Google Sign-In.
+- Email verification: If you signed up with email, verify the email before using the app.
+- Role check: Only cyclist accounts are allowed. If you see "Access Denied," contact support.
+- Remember me: check the box to keep your email on the login screen.
+
+Dashboard Overview (Tabs)
+--------------------------
+1. Home (Bike telemetry)
+   - Shows live info from your LakByke unit: battery, speed, motor status, energy generated.
+   - Use this while riding to monitor your unit.
+2. Maps
+   - View LakByke stations on the map.
+   - Find the nearest station and get directions using Google Maps.
+   - Tap a station marker for address and details.
+3. Scan (QR)
+   - Scan station or transaction QR codes to start or complete battery swap/sale.
+   - Follow on-screen prompts after scanning; confirm before completing any transaction.
+4. Insights
+   - View your earnings, rider persona, and ROI information.
+   - Insights are built from your recorded transactions and rides.
+5. History
+   - See past transactions and energy (kWh) history.
+   - Tap items to see details and receipts.
+
+Using Maps & Getting Directions
+-------------------------------
+- Allow location permission when prompted so the app can find your position.
+- Open Maps to see nearby stations. The app highlights the nearest station.
+- Tap "Get Directions" to open directions (uses Google Maps). Follow the route to the station.
+
+QR Transactions (Battery Swap / Sell)
+------------------------------------
+1. Go to the station and open the Scan tab.
+2. Use the camera to scan the station or transaction QR shown on the station or provided by staff.
+3. After scanning, confirm the transaction details shown by the app (amount, type: swap/sell).
+4. Complete the transaction. The app records the transaction and shows a confirmation message.
+5. Keep the confirmation until staff verify the swap/sale (if required).
+
+Ride & Telemetry (Home tab)
+----------------------------
+- The Home tab displays live readings from your LakByke unit.
+- Pay attention to battery percentage and motor status during rides.
+- If the device reports low battery, stop and charge or go to a station for a swap.
+
+Insights & Earnings
+-------------------
+- Insights summarize your earnings, energy generated, and rider persona.
+- Rider Persona is based on your recent rides (time-of-day patterns).
+- Investment Recovery (ROI) shows progress toward recovering certain costs—use it to track earnings over time.
+
+History & Receipts
+------------------
+- History stores transactions, exchanges, and energy records.
+- You can view details for each record and use them for dispute resolution or personal bookkeeping.
+
+Chatbot Help & FAQ
+------------------
+- Tap the chat FAB for in-app help and instructions.
+- The chatbot gives guidance about app features, common questions, and safety tips.
+- The chatbot does not access live device data for privacy; it provides help and app instructions only.
+
+Safety & Battery Guidance
+-------------------------
+- Only swap or sell batteries when the station or staff instructs you.
+- Minimum battery state: Some stations require a minimum battery percentage to accept a sale/exchange. If your battery is too low, charge before selling.
+- Avoid deep discharge: frequent deep discharges reduce battery lifespan.
+- Use protective gear while riding.
+
+Troubleshooting (Common issues)
+-------------------------------
+- Can't sign in: Check email/password or use Google Sign-In. If email sign-up, ensure you verified your email.
+- "Account not found": Ensure you registered with the right email and that the account has role `cyclist`.
+- Map not showing stations: Ensure location permission is granted and device has network.
+- QR scan fails: Check camera permission and lighting; ensure QR is complete and not damaged.
+- Telemetry not updating: Verify your LakByke unit is powered on and connected. Restart the unit and app if needed.
+- System errors: Take a screenshot of the error and contact support (see below).
+
+Privacy & Data
+--------------
+- The app uses Firebase to store account and transaction data.
+- Only data necessary for operation and transactions is recorded.
+- Chatbot history may be deleted when you sign out or as outlined by the app settings.
+- For privacy concerns, contact support.
+
+Support & Contacts
+------------------
+- In-app Chatbot: fast help and instructions.
+- If issue persists, contact LakByke support: support@lakbyke.example (replace with actual address) or call your local service number.
+- For urgent hardware faults, contact the station operator or LakByke technical support.
+
+Appendix: Quick Checklist (for riders)
+--------------------------------------
+- Make sure you have a registered account and verified email.
+- Keep your phone charged when riding.
+- Always check battery percentage before attempting a sale.
+- Bring proof (transaction confirmation) until station staff verify the swap/sale.
+
+Appendix: Technician Notes (short)
+----------------------------------
+(Only for field technicians — riders can ignore.)
+- App uses Firebase Realtime Database and Google Maps API.
+- If testing features locally, ensure `google-services.json` and API keys are installed as per project README.

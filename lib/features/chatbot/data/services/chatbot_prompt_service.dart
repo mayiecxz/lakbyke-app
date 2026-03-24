@@ -33,6 +33,7 @@ class ChatbotPromptService {
     prompt += botInstructionsMissionAndScope;
     prompt += ChatbotContextBuilder.buildAppHelpContext();
     prompt += ChatbotContextBuilder.buildFormulasContext();
+    prompt += ChatbotContextBuilder.buildFormulasExplanationContext();
 
     if (userStatsContext != null && userStatsContext.isNotEmpty) {
       prompt += botInstructionsUserStatsRule;

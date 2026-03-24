@@ -37,3 +37,9 @@ final yesterdayDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.watch(homeRepositoryProvider);
   return repo.getYesterdayData();
 });
+
+/// Provider for current month's data (for welcome modal)
+final currentMonthDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final repo = ref.watch(homeRepositoryProvider);
+  return repo.getCurrentMonthData();
+});

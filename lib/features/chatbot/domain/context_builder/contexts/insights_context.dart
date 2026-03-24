@@ -11,6 +11,8 @@ class InsightsContext {
     final parts = <String>[];
 
     // Current investment recovery progress
+    parts.add('Total earnings: ${formatCompactCurrency(model.totalEarnings)}');
+    parts.add('Daily average earnings: ${formatCompactCurrency(model.dailyAverageEarnings)}');
     parts.add('Investment recovery: ${model.roiProgressFormatted}%');
     parts.add('Remaining to breakeven: ${formatCompactCurrency(model.remainingToBreakeven)}');
     parts.add('Breakeven: ${model.breakevenDateFormatted}');
