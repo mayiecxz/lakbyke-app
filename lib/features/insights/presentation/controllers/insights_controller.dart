@@ -10,8 +10,12 @@ class InsightsNotifier extends AsyncNotifier<InsightsModel> {
   Future<InsightsModel> build() async {
     final repo = ref.read(insightsRepositoryProvider);
     await repo.loadInsightsData();
+    // Grab BOTH the start and end dates from the providers
+    final semesterStart = await ref.watch(effectiveSemesterStartProvider.future);
     final semesterEnd = await ref.watch(effectiveSemesterEndProvider.future);
-    return repo.toModel(semesterEnd: semesterEnd);
+
+    // Pass both dates to the repository
+    return repo.toModel(semesterStart: semesterStart, semesterEnd: semesterEnd);
   }
 
   /// Call to refresh (e.g. pull-to-refresh).

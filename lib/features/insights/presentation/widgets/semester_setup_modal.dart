@@ -29,6 +29,11 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
   DateTime? _semesterEnd;
   bool _loading = true;
   bool _saving = false;
+  
+  // Validation getter: true only if both dates exist AND start is strictly before end
+  bool get _isValid => _semesterStart != null && 
+                       _semesterEnd != null && 
+                       _semesterStart!.isBefore(_semesterEnd!);
 
   @override
   void initState() {
@@ -53,7 +58,10 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
       context: context,
       initialDate: _semesterStart ?? DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
+      // Restrict the start date to be BEFORE the currently selected end date
+      lastDate: _semesterEnd != null 
+          ? _semesterEnd!.subtract(const Duration(days: 1)) 
+          : DateTime(2030),
     );
     if (picked != null && mounted) setState(() => _semesterStart = picked);
   }
@@ -62,7 +70,10 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _semesterEnd ?? DateTime.now(),
-      firstDate: _semesterStart ?? DateTime(2020),
+      // Restrict the end date to be AFTER the currently selected start date
+      firstDate: _semesterStart != null 
+          ? _semesterStart!.add(const Duration(days: 1)) 
+          : DateTime(2020),
       lastDate: DateTime(2030),
     );
     if (picked != null && mounted) setState(() => _semesterEnd = picked);
@@ -70,12 +81,30 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
 
   Future<void> _save() async {
     if (_semesterStart == null || _semesterEnd == null) return;
+
+    // Safety fallback
+    if (!_semesterStart!.isBefore(_semesterEnd!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semester end must be after the start date.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
     await SemesterConfigStorage.saveSemesterStart(_semesterStart!);
     await SemesterConfigStorage.saveSemesterEnd(_semesterEnd!);
+    
     if (mounted) {
+      // 1. Invalidate the date providers so they pull fresh from storage
+      ref.invalidate(effectiveSemesterStartProvider);
       ref.invalidate(effectiveSemesterEndProvider);
-      ref.invalidate(insightsDataProvider);
+      
+      // 2. FORCE the main insights provider to rebuild and wait for it
+      await ref.read(insightsDataProvider.notifier).refresh();
+      
       setState(() => _saving = false);
       Navigator.of(context).pop();
     }
@@ -84,12 +113,23 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
   Future<void> _resetToDefault() async {
     await SemesterConfigStorage.clearSemester();
     if (mounted) {
+      setState(() => _saving = true);
+      
+      // 1. Invalidate the dates
+      ref.invalidate(effectiveSemesterStartProvider);
       ref.invalidate(effectiveSemesterEndProvider);
-      ref.invalidate(insightsDataProvider);
+      
+      // 2. FORCE the main insights provider to rebuild
+      await ref.read(insightsDataProvider.notifier).refresh();
+      
       setState(() {
         _semesterStart = CBAConstants.semesterStart;
         _semesterEnd = CBAConstants.semesterEnd;
+        _saving = false;
       });
+      
+      // Pop the modal after a successful reset
+      Navigator.of(context).pop(); 
     }
   }
 
@@ -176,7 +216,8 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: _saving ? null : _save,
+                      // Disable the button if it's saving OR if the dates are invalid
+                      onPressed: (_saving || !_isValid) ? null : _save, 
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.homePrimary,
                         foregroundColor: Colors.white,
@@ -185,7 +226,7 @@ class _SemesterSetupModalState extends ConsumerState<SemesterSetupModal> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Text('Save'),
                     ),

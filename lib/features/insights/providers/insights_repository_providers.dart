@@ -15,9 +15,17 @@ final insightsRepositoryProvider = Provider.autoDispose<InsightsRepository>((ref
   );
 });
 
+
+
 /// Effective semester end: custom from storage if set, else [CBAConstants.semesterEnd].
 /// Invalidate after saving in the semester setup modal to refresh insights.
+// Make sure they are FutureProviders that read from storage!
+final effectiveSemesterStartProvider = FutureProvider<DateTime>((ref) async {
+  final storedDate = await SemesterConfigStorage.loadSemesterStart();
+  return storedDate ?? CBAConstants.semesterStart;
+});
+
 final effectiveSemesterEndProvider = FutureProvider<DateTime>((ref) async {
-  final custom = await SemesterConfigStorage.loadSemesterEnd();
-  return custom ?? CBAConstants.semesterEnd;
+  final storedDate = await SemesterConfigStorage.loadSemesterEnd();
+  return storedDate ?? CBAConstants.semesterEnd;
 });

@@ -2,9 +2,14 @@ import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'package:lakbyke_mobile/features/insights/domain/cba_constants.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_calculations.dart';
+import 'package:lakbyke_mobile/features/insights/domain/insights_date_utils.dart';
 import 'package:lakbyke_mobile/features/insights/domain/insights_model.dart';
 import 'package:lakbyke_mobile/features/history/data/repositories/transaction_repository.dart';
 import 'package:lakbyke_mobile/features/history/data/repositories/kwh_repository.dart';
+import 'package:lakbyke_mobile/features/insights/data/repositories/rider_persona.dart';
+import 'package:lakbyke_mobile/features/insights/data/repositories/unit_health.dart';
+import 'package:lakbyke_mobile/features/insights/data/repositories/earnings_prediction.dart';
+import 'package:lakbyke_mobile/features/insights/data/repositories/timestamps_utils.dart';
 
 /// Repository for insights data and calculations.
 /// Uses TransactionRepository and KwhRepository (single source of truth).
@@ -56,49 +61,96 @@ class InsightsRepository {
   }
 
   /// Build an immutable snapshot for the UI. Call after [loadInsightsData].
-  /// [semesterEnd] overrides the default from CBAConstants when provided (e.g. from user settings).
-  InsightsModel toModel({DateTime? semesterEnd}) {
-    final initialInvestment = _initialCapex;
-    final roiProgressPercent =
-        initialInvestment > 0 ? (totalEarnings / initialInvestment) * 100 : 0.0;
-    final remainingToBreakeven = math.max(0, initialInvestment - totalEarnings);
-    final dailyAverageEarnings =
-        daysWithActivity > 0 ? totalEarnings / daysWithActivity : 0.0;
-
+  /// [semesterStart] and [semesterEnd] override the defaults from CBAConstants when provided (e.g. from user settings).
+  InsightsModel toModel({DateTime? semesterStart, DateTime? semesterEnd}) {
     final now = DateTime.now();
+    final effectiveSemesterStart = semesterStart ?? CBAConstants.semesterStart;
     final effectiveSemesterEnd = semesterEnd ?? CBAConstants.semesterEnd;
+
+    // ---------------------------------------------------------
+    // 1. THE INDUSTRY STANDARD FIX: Period-Bounded Filtering
+    // ---------------------------------------------------------
+    // We create isolated variables specifically for this semester's math
+    double semesterEarnings = 0.0;
+    Set<String> semesterActiveDates = {};
+    int semesterSessions = 0;
+    double semesterDurationHours = 0.0;
+
+    for (final t in recentTransactions) {
+      final ts = t['timestamp'] as DateTime? ?? t['timeStamp'] as DateTime?;
+      if (ts == null) continue;
+
+      // Use your exact utility to filter out past/future transactions!
+      if (isTimestampInWindow(ts, effectiveSemesterStart, effectiveSemesterEnd)) {
+        semesterEarnings += (t['payout'] as num?)?.toDouble() ?? (t['amount'] as num?)?.toDouble() ?? 0.0;
+        semesterActiveDates.add(DateFormat('yyyy-MM-dd').format(ts));
+        semesterSessions++;
+        semesterDurationHours += ((t['durationSeconds'] as num?)?.toDouble() ?? 0.0) / 3600.0;
+      }
+    }
+    
+    final int semesterDaysWithActivity = semesterActiveDates.length;
+
+    // ---------------------------------------------------------
+    // 2. ALL-TIME METRICS (ROI & Breakeven)
+    // ---------------------------------------------------------
+    // Initial investment and Breakeven use ALL-TIME totalEarnings, 
+    // because you don't reset the cost of the bike every semester.
+    final initialInvestment = _initialCapex;
+    final roiProgressPercent = initialInvestment > 0 ? (totalEarnings / initialInvestment) * 100 : 0.0;
+    final remainingToBreakeven = math.max(0, initialInvestment - totalEarnings);
+
+    // ---------------------------------------------------------
+    // 3. TIME-BOUND METRICS (Semester Projections)
+    // ---------------------------------------------------------
+    // Calculate the daily average using ONLY the days worked this semester
+    final double rawDailyAvg = semesterDaysWithActivity > 0 ? semesterEarnings / semesterDaysWithActivity : 0.0;
+    final double dailyAverageEarnings = double.parse(rawDailyAvg.toStringAsFixed(2));
+
     final estimatedBreakevenDate = InsightsCalculations.estimateBreakevenDate(
       remainingToBreakeven.toDouble(),
-      dailyAverageEarnings,
+      dailyAverageEarnings, // Using current semester pace to predict all-time breakeven is standard practice
       now,
     );
-    final remainingSchoolDays =
-        InsightsCalculations.countRemainingSchoolDays(now, effectiveSemesterEnd);
-    final projectedSemesterEarnings =
-        _projectSemesterEarnings(dailyAverageEarnings, remainingSchoolDays);
-    final bonusEarningsFor15MinMore =
-        _bonusFor15MinMore(dailyAverageEarnings, remainingSchoolDays);
+
+    // Ensure we don't start counting remaining days until the semester actually starts
+    final DateTime countingStartDate = now.isBefore(effectiveSemesterStart) ? effectiveSemesterStart : now;
+    final remainingSchoolDays = InsightsCalculations.countRemainingSchoolDays(countingStartDate, effectiveSemesterEnd);
+
+    // Calculate remaining potential
+    final remainingPotential = dailyAverageEarnings * remainingSchoolDays;
+    
+    // True Semester Projection = Earned THIS SEMESTER + Remaining Potential THIS SEMESTER
+    final projectedSemesterEarnings = semesterEarnings + remainingPotential;
+
+    // Bonus math now uses ONLY this semester's sessions and durations
+    final bonusEarningsFor15MinMore = bonusFor15MinMore(
+      dailyAverageEarnings, 
+      remainingSchoolDays, 
+      semesterSessions, 
+      semesterDurationHours
+    );
 
     final unitHealthStatus = InsightsCalculations.classifyUnitHealth(totalDistanceKm);
-    final (String unitHealthLabel, String unitHealthDescription) =
-        _unitHealthLabelAndDescription(unitHealthStatus);
+    final (String unitHealthLabel, String unitHealthDescription) = unitHealthLabelAndDescription(unitHealthStatus);
 
-    final last5 = _getLast5RideTimestamps();
+    final last5 = getLast5RideTimestamps(recentTransactions);
     final hasEnoughDataForPersona = last5.length >= 3;
     final riderPersona = InsightsCalculations.classifyRiderPersona(last5);
-    final (String riderPersonaName, String riderPersonaAdvice) =
-        _riderPersonaNameAndAdvice(riderPersona);
-    final averageRideHour = _averageRideHour(last5);
-
+    final (String riderPersonaName, String riderPersonaAdvice) = riderPersonaNameAndAdvice(riderPersona);
+    final averageRideHour = averageRideHourFromTimestamps(last5);
     final displayTag = _mntTag.isEmpty ? 'MNT0001' : _mntTag.toUpperCase();
 
     return InsightsModel(
-      totalEarnings: totalEarnings,
+      // NOTE: I am passing the isolated `semesterEarnings` into your model's `totalEarnings` field 
+      // so your UI breakdown automatically shows the correct "Earned so far this semester" number!
+      totalEarnings: semesterEarnings, 
+      
       initialInvestment: initialInvestment,
       roiProgressPercent: roiProgressPercent.toDouble(),
       remainingToBreakeven: remainingToBreakeven.toDouble(),
       estimatedBreakevenDate: estimatedBreakevenDate,
-      dailyAverageEarnings: dailyAverageEarnings.toDouble(),
+      dailyAverageEarnings: dailyAverageEarnings, 
       projectedSemesterEarnings: projectedSemesterEarnings,
       semesterEndDate: effectiveSemesterEnd,
       remainingSchoolDays: remainingSchoolDays,
@@ -118,80 +170,8 @@ class InsightsRepository {
     );
   }
 
-  double _projectSemesterEarnings(double dailyAverageEarnings, int remainingSchoolDays) {
-    return dailyAverageEarnings * remainingSchoolDays;
-  }
+  // semester projection now provided by earnings_prediction.dart
 
-  double _bonusFor15MinMore(double dailyAverageEarnings, int remainingSchoolDays) {
-    if (totalSessions <= 0 || totalDurationHours <= 0) return 0.0;
-    final avgSessionMinutes = (totalDurationHours * 60) / totalSessions;
-    if (avgSessionMinutes <= 0) return 0.0;
-    final earningRatePerMinute = dailyAverageEarnings / avgSessionMinutes;
-    return earningRatePerMinute * 15 * remainingSchoolDays;
-  }
-
-  (String, String) _unitHealthLabelAndDescription(String status) {
-    switch (status) {
-      case 'excellent':
-        return ('Condition: Excellent', 'No maintenance actions needed.');
-      case 'bolt_check':
-        return (
-          'Maintenance Due: Check Mounting Bolts',
-          'Have a technician verify mounting bolts for safety.',
-        );
-      case 'motor_inspection':
-        return (
-          'Maintenance Due: Inspect Motor Brushes',
-          'Schedule motor brush inspection to maintain performance.',
-        );
-      default:
-        return ('Condition: Unknown', 'No maintenance actions needed.');
-    }
-  }
-
-  List<DateTime> _getLast5RideTimestamps() {
-    final withTs = <DateTime>[];
-    for (final t in recentTransactions) {
-      final ts = t['timestamp'] as DateTime? ?? t['timeStamp'] as DateTime?;
-      if (ts != null) withTs.add(ts);
-    }
-    withTs.sort((a, b) => b.compareTo(a));
-    return withTs.take(5).toList();
-  }
-
-  double _averageRideHour(List<DateTime> timestamps) {
-    if (timestamps.isEmpty) return 0.0;
-    double sum = 0.0;
-    for (final t in timestamps) {
-      sum += t.hour + t.minute / 60.0 + t.second / 3600.0;
-    }
-    return sum / timestamps.length;
-  }
-
-  (String, String) _riderPersonaNameAndAdvice(String persona) {
-    switch (persona) {
-      case 'early_bird':
-        return (
-          'Early Bird',
-          'Ride early to stay cool and beat the midday rush.',
-        );
-      case 'peak_provider':
-        return (
-          'Peak Provider',
-          'You ride when the station is busiest—great for earning.',
-        );
-      case 'sunset_cruiser':
-        return (
-          'Sunset Cruiser',
-          'Evening rides help you wind down and still contribute.',
-        );
-      default:
-        return (
-          'Unknown',
-          'Complete at least 3 rides to unlock your Rider Persona.',
-        );
-    }
-  }
 
   void resetData() {
     totalSessions = 0;
