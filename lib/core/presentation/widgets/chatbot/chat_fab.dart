@@ -163,7 +163,7 @@ class _ChatFABState extends State<ChatFAB> with SingleTickerProviderStateMixin {
       );
     });
 
-    Overlay.of(context, rootOverlay: true)?.insert(_overlayEntry!);
+    Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
   }
 
   Future<void> _openChat(BuildContext context) async {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lakbyke_mobile/core/presentation/chatbot_theme.dart';
 import 'package:lakbyke_mobile/core/presentation/widgets/header/account_button.dart';
 
 /// Height used for header overlay (dashboard-style screens).
