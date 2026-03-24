@@ -49,7 +49,10 @@ class BadgeShowcaseModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentPersona = model.riderPersona;
-    final hasUnlocked = model.hasEnoughDataForPersona;
+    
+    // FIX: We now look at a list of ALL unlocked personas, not just the active one!
+    // (Note: You will need to add `unlockedPersonas` to your InsightsModel in Step 2)
+    final unlockedList = model.unlockedPersonas; 
 
     return Container(
       decoration: const BoxDecoration(
@@ -74,16 +77,30 @@ class BadgeShowcaseModal extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'Complete at least 3 rides to unlock your badge. Tap a badge to see what you\'ve earned.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.35,
-                ),
+          
+          // FIX: Updated instructions to include the 30-day reset mechanic
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.homePrimary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.homePrimary.withValues(alpha: 0.1)),
+            ),
+            child: Text(
+              'Complete at least 3 rides to unlock a badge. Unlocked badges are yours to keep, but all progress will reset after 30 days of inactivity.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+            ),
           ),
+          
           const SizedBox(height: 20),
           ..._allBadges.map((badge) {
-            final isUnlocked = hasUnlocked && model.riderPersona == badge.id;
+            
+            // FIX: Check if this specific badge ID is inside the unlocked list
+            final isUnlocked = unlockedList.contains(badge.id);
+            
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _BadgeTile(
@@ -148,7 +165,6 @@ class _BadgeTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Unlocked: full color. Locked: silhouette (grey shape)
           isUnlocked
               ? Container(
                   padding: const EdgeInsets.all(10),
@@ -214,7 +230,7 @@ class _BadgeTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          'Your badge',
+                          'Active',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -225,7 +241,7 @@ class _BadgeTile extends StatelessWidget {
                     ],
                     if (!isUnlocked) ...[
                       const SizedBox(width: 8),
-                      Icon(
+                      const Icon(
                         Icons.lock_outline,
                         size: 16,
                         color: AppColors.textTertiary,

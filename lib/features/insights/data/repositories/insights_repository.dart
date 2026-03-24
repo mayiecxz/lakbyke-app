@@ -10,6 +10,7 @@ import 'package:lakbyke_mobile/features/insights/data/repositories/rider_persona
 import 'package:lakbyke_mobile/features/insights/data/repositories/unit_health.dart';
 import 'package:lakbyke_mobile/features/insights/data/repositories/earnings_prediction.dart';
 import 'package:lakbyke_mobile/features/insights/data/repositories/timestamps_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Repository for insights data and calculations.
 /// Uses TransactionRepository and KwhRepository (single source of truth).
@@ -40,6 +41,10 @@ class InsightsRepository {
   int sessionsPerWeek = 1;
 
   String _mntTag = '';
+  static const String _keyUnlockedPersonas = 'insights_unlocked_personas';
+
+  /// Persistent list of unlocked personas loaded from SharedPreferences.
+  List<String> unlockedPersonas = [];
 
   /// Load all insights data from Firebase.
   Future<void> loadInsightsData() async {
@@ -54,7 +59,52 @@ class InsightsRepository {
         kwhHistory = [];
       }
 
+      // Load persisted unlocked personas early so we can update/save them.
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        unlockedPersonas = prefs.getStringList(_keyUnlockedPersonas) ?? [];
+      } catch (_) {
+        unlockedPersonas = [];
+      }
+
       calculateHistoricalAverages();
+
+      // After computing historical aggregates, update persona badges and inactivity.
+      final last5 = getLast5RideTimestamps(recentTransactions);
+      final hasEnoughDataForPersona = last5.length >= 3;
+      final riderPersona = InsightsCalculations.classifyRiderPersona(last5);
+
+      // 1) Find date of their very last ride (most recent)
+      DateTime? lastRideDate = last5.isNotEmpty ? last5.first : null;
+
+      // 2) Check for 30 days of inactivity
+      bool isInactive = false;
+      if (lastRideDate != null) {
+        final daysSinceLastRide = DateTime.now().difference(lastRideDate).inDays;
+        if (daysSinceLastRide >= 30) {
+          isInactive = true;
+        }
+      }
+
+      // 3) Manage the persistent list of unlocked badges
+      final currentUnlocked = List<String>.from(unlockedPersonas);
+      if (isInactive) {
+        currentUnlocked.clear();
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setStringList(_keyUnlockedPersonas, currentUnlocked);
+        } catch (_) {}
+      } else if (hasEnoughDataForPersona && riderPersona.isNotEmpty) {
+        if (!currentUnlocked.contains(riderPersona)) {
+          currentUnlocked.add(riderPersona);
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setStringList(_keyUnlockedPersonas, currentUnlocked);
+          } catch (_) {}
+        }
+      }
+
+      unlockedPersonas = currentUnlocked;
     } catch (e, stackTrace) {
       Error.throwWithStackTrace(e, stackTrace);
     }
@@ -167,6 +217,7 @@ class InsightsRepository {
       peakStationHour: 12,
       recentRideTimestamps: last5,
       hasEnoughDataForPersona: hasEnoughDataForPersona,
+      unlockedPersonas: unlockedPersonas,
     );
   }
 

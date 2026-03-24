@@ -28,6 +28,7 @@ class InsightsModel {
     required this.peakStationHour,
     required this.recentRideTimestamps,
     required this.hasEnoughDataForPersona,
+    required this.unlockedPersonas,
   });
 
   // --- Investment Recovery (Hero Card) ---
@@ -59,6 +60,7 @@ class InsightsModel {
   final int peakStationHour;
   final List<DateTime> recentRideTimestamps;
   final bool hasEnoughDataForPersona;
+  final List<String> unlockedPersonas;
 
   bool get hasRecoveredInvestment => roiProgressPercent >= CBAConstants.cyclistRoiRecoveredPercent;
 
